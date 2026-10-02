@@ -1,0 +1,85 @@
+services:
+  vegan-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vegan-api
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      # ── Application ──
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 3000
+      API_PREFIX: /api/v1
+      APP_NAME: vegan-support-api
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:3000}
+      TRUST_PROXY: ${TRUST_PROXY:-1}
+      SHUTDOWN_TIMEOUT_MS: ${SHUTDOWN_TIMEOUT_MS:-10000}
+      JSON_BODY_LIMIT: ${JSON_BODY_LIMIT:-1mb}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+
+      # ── MongoDB Atlas (user provides connection string) ──
+      MONGODB_URI: ${MONGODB_URI:?MONGODB_URI is required}
+      MONGODB_DB_NAME: ${MONGODB_DB_NAME:-vegan_support}
+      MONGODB_MIN_POOL_SIZE: ${MONGODB_MIN_POOL_SIZE:-2}
+      MONGODB_MAX_POOL_SIZE: ${MONGODB_MAX_POOL_SIZE:-10}
+      MONGODB_SERVER_SELECTION_TIMEOUT_MS: ${MONGODB_SERVER_SELECTION_TIMEOUT_MS:-10000}
+
+      # ── Firebase Admin ──
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:?FIREBASE_PROJECT_ID is required}
+      FIREBASE_CLIENT_EMAIL: ${FIREBASE_CLIENT_EMAIL:?FIREBASE_CLIENT_EMAIL is required}
+      FIREBASE_PRIVATE_KEY: ${FIREBASE_PRIVATE_KEY:?FIREBASE_PRIVATE_KEY is required}
+      FCM_ENABLED: ${FCM_ENABLED:-false}
+
+      # ── Cloudflare R2 ──
+      CLOUDFLARE_R2_ACCOUNT_ID: ${CLOUDFLARE_R2_ACCOUNT_ID:-}
+      CLOUDFLARE_R2_ACCESS_KEY_ID: ${CLOUDFLARE_R2_ACCESS_KEY_ID:-}
+      CLOUDFLARE_R2_SECRET_ACCESS_KEY: ${CLOUDFLARE_R2_SECRET_ACCESS_KEY:-}
+      CLOUDFLARE_R2_BUCKET_NAME: ${CLOUDFLARE_R2_BUCKET_NAME:-}
+      CLOUDFLARE_R2_PUBLIC_BASE_URL: ${CLOUDFLARE_R2_PUBLIC_BASE_URL:-}
+      CLOUDFLARE_R2_PRESIGNED_URL_EXPIRES_IN: ${CLOUDFLARE_R2_PRESIGNED_URL_EXPIRES_IN:-300}
+      CLOUDFLARE_R2_MAX_IMAGE_SIZE_BYTES: ${CLOUDFLARE_R2_MAX_IMAGE_SIZE_BYTES:-10485760}
+      CLOUDFLARE_R2_MAX_VIDEO_SIZE_BYTES: ${CLOUDFLARE_R2_MAX_VIDEO_SIZE_BYTES:-524288000}
+
+      # ── AI Provider ──
+      AI_ENABLED: ${AI_ENABLED:-false}
+      AI_PROVIDER: ${AI_PROVIDER:-openai-compatible}
+      AI_BASE_URL: ${AI_BASE_URL:-}
+      AI_API_KEY: ${AI_API_KEY:-}
+      AI_CHAT_MODEL: ${AI_CHAT_MODEL:-}
+      AI_VISION_MODEL: ${AI_VISION_MODEL:-}
+      AI_TIMEOUT_MS: ${AI_TIMEOUT_MS:-30000}
+      AI_MAX_RETRIES: ${AI_MAX_RETRIES:-1}
+
+      # ── Reminder Scheduler ──
+      REMINDER_SCHEDULER_ENABLED: ${REMINDER_SCHEDULER_ENABLED:-false}
+      REMINDER_POLL_INTERVAL_MS: ${REMINDER_POLL_INTERVAL_MS:-60000}
+      REMINDER_BATCH_SIZE: ${REMINDER_BATCH_SIZE:-50}
+      REMINDER_LOCK_TTL_MS: ${REMINDER_LOCK_TTL_MS:-120000}
+
+      # ── Rate Limiting ──
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-900000}
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-200}
+      AUTH_RATE_LIMIT_MAX: ${AUTH_RATE_LIMIT_MAX:-30}
+      UPLOAD_RATE_LIMIT_MAX: ${UPLOAD_RATE_LIMIT_MAX:-30}
+      AI_RATE_LIMIT_MAX: ${AI_RATE_LIMIT_MAX:-20}
+
+      # ── Swagger ──
+      SWAGGER_ENABLED: ${SWAGGER_ENABLED:-false}
+
+      # ── Seed Admin ──
+      SEED_ADMIN_FIREBASE_UID: ${SEED_ADMIN_FIREBASE_UID:-}
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-}
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
