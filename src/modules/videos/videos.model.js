@@ -1,33 +1,35 @@
 import mongoose from "mongoose";
-
-const schema = new mongoose.Schema(
+import {
+  registerModel,
+  contentFields,
+  contentIndexes,
+  ref,
+  shortText,
+} from "../recipes/content-model.js";
+export const VideosModel = registerModel(
+  "Videos",
   {
-    authorId: String,
-    title: String,
-    slug: { type: String, unique: true },
-    description: String,
-    thumbnailMediaId: String,
-    videoMediaId: String,
-    categoryIds: [String],
-    tags: [String],
-    durationSeconds: Number,
-    difficulty: String,
-    recipeId: String,
-    transcript: String,
-    summary: String,
-    chapters: [{}],
-    status: { type: String, default: "draft" },
-    visibility: String,
-    viewCount: { type: Number, default: 0 },
-    commentCount: { type: Number, default: 0 },
-    reactionCount: { type: Number, default: 0 },
-    saveCount: { type: Number, default: 0 },
-    ratingCount: { type: Number, default: 0 },
-    ratingAverage: { type: Number, default: 0 },
-    publishedAt: Date,
-    deletedAt: Date,
+    ...contentFields,
+    slug: { ...shortText(240), required: true, unique: true },
+    description: shortText(10000),
+    thumbnailMediaId: ref("Media"),
+    videoMediaId: ref("Media", true),
+    durationSeconds: { type: Number, min: 1, max: 86400, required: true },
+    difficulty: { type: String, enum: ["easy", "medium", "hard"], default: "easy" },
+    recipeId: ref("Recipes"),
+    transcript: shortText(100000),
+    summary: shortText(10000),
+    chapters: [
+      new mongoose.Schema(
+        {
+          title: shortText(),
+          startSeconds: { type: Number, min: 0 },
+          endSeconds: { type: Number, min: 0 },
+        },
+        { _id: false },
+      ),
+    ],
   },
-  { timestamps: true, versionKey: false },
+  "videos",
+  contentIndexes,
 );
-
-export const VideosModel = mongoose.model("Videos", schema);

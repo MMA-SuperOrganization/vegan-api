@@ -1,6 +1,8 @@
-export * from "./admin-dashboard.routes.js";
-export * from "./admin-dashboard.controller.js";
-export * from "./admin-dashboard.service.js";
-export * from "./admin-dashboard.repository.js";
-export * from "./admin-dashboard.model.js";
-export * from "./admin-dashboard.validation.js";
+import { createAdminDashboardService, dashboardValidation } from "./admin-dashboard.service.js";
+export const createAdminDashboardModule = (deps) => ({
+  operations: createAdminDashboardService(deps),
+  validation: dashboardValidation,
+  services: {},
+  repositories: {},
+  models: {},
+});

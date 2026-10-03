@@ -1,6 +1,11 @@
-export * from "./ai-monitoring.routes.js";
-export * from "./ai-monitoring.controller.js";
-export * from "./ai-monitoring.service.js";
-export * from "./ai-monitoring.repository.js";
-export * from "./ai-monitoring.model.js";
-export * from "./ai-monitoring.validation.js";
+import { createAiMonitoringService, aiMonitoringValidation } from "./ai-monitoring.service.js";
+export const createAiMonitoringModule = (deps) => {
+  const operations = createAiMonitoringService(deps);
+  return {
+    operations,
+    validation: aiMonitoringValidation,
+    services: { aiMonitoring: { metrics: operations.getAiMetrics } },
+    repositories: {},
+    models: {},
+  };
+};

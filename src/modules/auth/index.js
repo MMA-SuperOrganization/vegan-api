@@ -1,6 +1,9 @@
-export * from "./auth.routes.js";
-export * from "./auth.controller.js";
-export * from "./auth.service.js";
-export * from "./auth.repository.js";
-export * from "./auth.model.js";
-export * from "./auth.validation.js";
+import { createAuthService } from "./auth.service.js";
+import { createAuthValidation } from "./auth.validation.js";
+export const createAuthModule = (deps) => ({
+  operations: createAuthService(deps),
+  validation: createAuthValidation(),
+  services: {},
+  repositories: {},
+  models: {},
+});

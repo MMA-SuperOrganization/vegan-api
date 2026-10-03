@@ -1,9 +1,9 @@
 import { z } from "zod";
-import { objectId, paginationSchema } from "../../common/validators/common.schemas.js";
-
+import { targetParams } from "../../common/validators/domain.schemas.js";
 export const createReactionsValidation = () => ({
   upsertReaction: {
-    body: z.object({}).passthrough(),
+    params: targetParams(["recipe", "post", "video", "comment"]),
+    body: z.object({ type: z.enum(["like", "love", "helpful"]) }).strict(),
   },
-  deleteReaction: {},
+  deleteReaction: { params: targetParams(["recipe", "post", "video", "comment"]) },
 });

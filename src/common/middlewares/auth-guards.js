@@ -1,49 +1,41 @@
-import { createAuthenticate } from "./authenticate.js";
-
-let authProviderInstance = null;
-let userRepositoryInstance = null;
-
-export const setAuthDependencies = (authProvider, userRepository) => {
-  authProviderInstance = authProvider;
-  userRepositoryInstance = userRepository;
-};
-
+import { extractBearerToken } from "./authenticate.js";
 import { AppError } from "../errors/app-error.js";
 
-const resolveUser = async (identity) => {
-  let user = await userRepositoryInstance.findByFirebaseUid(identity.firebaseUid);
-  
-  if (user && user.status === "BANNED") {
-    throw AppError.forbidden("Account is banned", "ACCOUNT_BANNED");
-  }
-
-  if (!user) {
-    user = await userRepositoryInstance.create({
-      firebaseUid: identity.firebaseUid,
-      email: identity.email ? identity.email.toLowerCase() : null,
-      role: "USER",
-      status: "ACTIVE",
-      username: null,
-      lastLoginAt: new Date(),
-    });
-  } else {
-    user = await userRepositoryInstance.updateById(user._id, { lastLoginAt: new Date() });
-  }
-  
-  return {
-    id: user._id,
-    role: user.role,
-    status: user.status
+export const createAuthGuards = ({ authProvider, usersService }) => {
+  const verify = async (req) => {
+    const token = extractBearerToken(req.headers.authorization);
+    if (!token)
+      throw AppError.unauthorized("Missing or malformed Authorization header", "TOKEN_MISSING");
+    if (token.length > 4096)
+      throw AppError.unauthorized("Invalid authentication token", "TOKEN_INVALID");
+    if (!authProvider)
+      throw AppError.serviceUnavailable(
+        "Firebase authentication is not configured",
+        "AUTH_PROVIDER_UNAVAILABLE",
+      );
+    return authProvider.verifyIdToken(token);
   };
-};
-
-export const authenticate = async (req, res, next) => {
-  if (!authProviderInstance) return next();
-  const mw = createAuthenticate({ authProvider: authProviderInstance, resolveUser });
-  return mw(req, res, next);
-};
-
-export const optionalAuthenticate = async (req, res, next) => {
-  if (!req.headers.authorization) return next();
-  return authenticate(req, res, next);
+  const firebaseAuthenticate = async (req, _res, next) => {
+    try {
+      req.auth = await verify(req);
+      next();
+    } catch (error) {
+      next(error);
+    }
+  };
+  const authenticate = async (req, _res, next) => {
+    try {
+      const identity = await verify(req);
+      const actor = await usersService.resolveIdentity(identity);
+      if (actor.status !== "active")
+        throw AppError.forbidden("Account is not active", "ACCOUNT_INACTIVE");
+      req.auth = { ...identity, ...actor, userId: String(actor.userId ?? actor.id) };
+      next();
+    } catch (error) {
+      next(error);
+    }
+  };
+  const optionalAuthenticate = (req, res, next) =>
+    req.headers.authorization ? authenticate(req, res, next) : next();
+  return { authenticate, optionalAuthenticate, firebaseAuthenticate };
 };

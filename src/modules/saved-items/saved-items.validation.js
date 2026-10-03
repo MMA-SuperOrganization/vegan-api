@@ -1,12 +1,13 @@
 import { z } from "zod";
-import { objectId, paginationSchema } from "../../common/validators/common.schemas.js";
-
+import { pagination, targetParams } from "../../common/validators/domain.schemas.js";
+import { empty } from "../recipes/content.validation.js";
+const params = targetParams(["recipe", "post", "video"]);
 export const createSavedItemsValidation = () => ({
   getSavedItems: {
-    query: paginationSchema.passthrough(),
+    query: pagination
+      .extend({ targetType: z.enum(["recipe", "post", "video"]).optional() })
+      .strict(),
   },
-  saveItem: {
-    body: z.object({}).passthrough(),
-  },
-  unsaveItem: {},
+  saveItem: { params, body: empty },
+  unsaveItem: { params },
 });

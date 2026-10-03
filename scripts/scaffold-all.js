@@ -1,3 +1,7 @@
+throw new Error(
+  "RETIRED: scaffold-all.js is historical scaffolding and would overwrite active code. Do not run it. Use npm run docs:generate only for maintained documentation.",
+);
+
 import fs from "fs";
 import path from "path";
 import { apiManifest } from "../src/routes/api-manifest.js";

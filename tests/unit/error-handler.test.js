@@ -70,7 +70,7 @@ describe("normalizeError", () => {
   it("maps leaked AWS SDK errors to STORAGE_PROVIDER_ERROR", () => {
     const error = Object.assign(new Error("AccessDenied"), { $metadata: { httpStatusCode: 403 } });
     expect(normalizeError(error)).toMatchObject({
-      statusCode: 502,
+      statusCode: 503,
       code: "STORAGE_PROVIDER_ERROR",
     });
   });
@@ -96,20 +96,19 @@ describe("error handler middleware", () => {
     const body = res.json.mock.calls[0][0];
     expect(body).toEqual({
       success: false,
-      message: "Internal server error",
-      code: "INTERNAL_ERROR",
-      errors: [],
-      requestId: "req-1",
+      error: { message: "Internal server error", code: "INTERNAL_ERROR", details: [] },
+      meta: { requestId: "req-1" },
     });
     expect(JSON.stringify(body)).not.toContain("secret detail");
   });
 
-  it("includes the stack for 5xx errors outside production", () => {
+  it("never exposes stack traces even outside production", () => {
     const handler = createErrorHandler({ logger, isProduction: false });
     const res = createRes();
 
     handler(new Error("boom"), { id: "req-2" }, res, vi.fn());
 
-    expect(res.json.mock.calls[0][0].stack).toContain("boom");
+    expect(res.json.mock.calls[0][0]).not.toHaveProperty("stack");
+    expect(JSON.stringify(res.json.mock.calls[0][0])).not.toContain("boom");
   });
 });

@@ -1,6 +1,17 @@
-export * from "./moderation.routes.js";
-export * from "./moderation.controller.js";
-export * from "./moderation.service.js";
-export * from "./moderation.repository.js";
-export * from "./moderation.model.js";
-export * from "./moderation.validation.js";
+import { buildRepository } from "../../common/persistence/repository.js";
+import { ModerationModel } from "./moderation.model.js";
+import { createModerationService, moderationValidation } from "./moderation.service.js";
+export const createModerationModule = (deps) => {
+  const repository = buildRepository({
+    repositories: deps.repositories,
+    key: "moderation",
+    model: ModerationModel,
+  });
+  return {
+    operations: createModerationService(deps, repository),
+    validation: moderationValidation,
+    services: {},
+    repositories: { moderation: repository },
+    models: { moderation: ModerationModel },
+  };
+};

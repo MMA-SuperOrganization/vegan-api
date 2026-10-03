@@ -11,7 +11,7 @@ import { AppError } from "../../common/errors/app-error.js";
 
 const toStorageError = (error, action) =>
   new AppError({
-    statusCode: 502,
+    statusCode: 503,
     code: ERROR_CODES.STORAGE_PROVIDER_ERROR,
     message: `Storage provider failed to ${action}`,
     isOperational: false,
@@ -48,6 +48,9 @@ export const createR2StorageProvider = ({
   const expiresAtFrom = (expiresIn) => new Date(now() + expiresIn * 1000);
 
   return {
+    destroy() {
+      s3Client.destroy?.();
+    },
     async createUploadUrl({ key, contentType, contentLength, expiresIn = defaultExpiresIn }) {
       // ContentType/ContentLength được ký vào URL: client phải PUT đúng header,
       // nếu không R2 trả SignatureDoesNotMatch. Nhờ vậy giới hạn được loại và dung lượng file.

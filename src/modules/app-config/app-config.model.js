@@ -1,10 +1,2 @@
-import mongoose from "mongoose";
-
-const schema = new mongoose.Schema(
-  {
-    dummy: String,
-  },
-  { timestamps: true, versionKey: false },
-);
-
-export const AppConfigModel = mongoose.model("AppConfig", schema);
+// Public configuration is composed from allowlisted deployment settings, not a collection.
+export const appConfigModels = {};

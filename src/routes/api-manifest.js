@@ -312,7 +312,7 @@ export const apiManifest = [
   {
     method: "GET",
     path: "/search",
-    auth: "public",
+    auth: "optional",
     module: "search",
     operationId: "searchContent",
   },
@@ -1141,7 +1141,7 @@ export const apiManifest = [
   {
     method: "GET",
     path: "/ratings/:targetType/:targetId/summary",
-    auth: "public",
+    auth: "optional",
     module: "ratings",
     operationId: "getRatingSummary",
   },

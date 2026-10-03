@@ -29,9 +29,7 @@ describe("loadEnv", () => {
   });
 
   it("fails fast with a readable message when required variables are missing", () => {
-    expect(() => loadEnv({ NODE_ENV: "development" })).toThrow(
-      /MONGODB_URI[\s\S]*FIREBASE_PROJECT_ID/,
-    );
+    expect(() => loadEnv({ NODE_ENV: "development" })).toThrow(/MONGODB_URI/);
   });
 
   it("treats empty strings from .env files as missing", () => {
@@ -42,9 +40,18 @@ describe("loadEnv", () => {
     expect(() => loadEnv({ ...baseDev, NODE_ENV: "production" })).toThrow(
       /CLOUDFLARE_R2_BUCKET_NAME/,
     );
-    expect(loadEnv({ ...baseDev, ...r2Env, NODE_ENV: "production" })).toMatchObject({
+    expect(
+      loadEnv({
+        ...baseDev,
+        ...r2Env,
+        NODE_ENV: "production",
+        APP_BASE_URL: "https://api.example.com",
+        FIREBASE_CLIENT_EMAIL: "svc@demo.iam.gserviceaccount.com",
+        FIREBASE_PRIVATE_KEY: "-----BEGIN PRIVATE KEY-----\\nabc\\n-----END PRIVATE KEY-----\\n",
+      }),
+    ).toMatchObject({
       isProduction: true,
-      swaggerEnabled: false,
+      swaggerEnabled: true,
       r2: { enabled: true },
     });
   });

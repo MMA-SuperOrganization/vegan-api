@@ -90,8 +90,10 @@ export const createInMemoryUserRepository = (seed = []) => {
 /** Fake storage provider theo contract của r2-storage.provider.js. */
 export const createFakeStorageProvider = () => {
   const calls = [];
+  const objects = new Map();
   return {
     calls,
+    objects,
     async createUploadUrl(input) {
       calls.push(input);
       return {
@@ -105,10 +107,12 @@ export const createFakeStorageProvider = () => {
         expiresAt: new Date(Date.now() + expiresIn * 1000),
       };
     },
-    async getObjectMetadata() {
-      return null;
+    async getObjectMetadata(input) {
+      return objects.get(typeof input === "string" ? input : input.key) ?? null;
     },
-    async deleteObject() {},
+    async deleteObject(input) {
+      objects.delete(typeof input === "string" ? input : input.key);
+    },
     getPublicUrl(key) {
       return `https://cdn.example.com/${key}`;
     },

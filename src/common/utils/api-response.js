@@ -1,20 +1,17 @@
-/**
- * Gửi response thành công theo format thống nhất:
- * { success: true, message, data, meta }
- */
-export const sendSuccess = (
-  res,
-  { statusCode = 200, message = "Request completed successfully", data = null, meta = null } = {},
-) => res.status(statusCode).json({ success: true, message, data, meta });
+export const sendSuccess = (res, { statusCode = 200, data = null, meta = {} } = {}) =>
+  res.status(statusCode).json({
+    success: true,
+    data,
+    meta: { ...meta, requestId: res.locals.requestId ?? res.req?.id ?? null },
+  });
 
-/**
- * Tạo body lỗi theo format thống nhất:
- * { success: false, message, code, errors, requestId }
- */
-export const buildErrorBody = ({ message, code, errors = [], requestId = null }) => ({
+export const buildErrorBody = ({ message, code, errors, details, requestId = null }) => ({
   success: false,
-  message,
-  code,
-  errors,
-  requestId,
+  error: { code, message, details: details ?? errors ?? [] },
+  meta: { requestId },
 });
+
+export const sendError = (res, { statusCode = 500, ...error }) =>
+  res
+    .status(statusCode)
+    .json(buildErrorBody({ ...error, requestId: res.locals.requestId ?? null }));

@@ -1,175 +1,132 @@
 import request from "supertest";
 import { describe, expect, it } from "vitest";
-
-import { bearer, buildTestApp, TEST_TOKENS } from "../helpers/test-app.js";
+import { bearer, buildTestApp, TEST_TOKENS, TEST_IDS } from "../helpers/test-app.js";
 
 describe("Authentication on /api/v1/users/me", () => {
-  it("rejects requests without a token", async () => {
+  it.each([
+    ["missing token", undefined, "TOKEN_MISSING"],
+    ["non-Bearer header", "Basic abc", "TOKEN_MISSING"],
+    ["invalid token", "Bearer not-a-real-token", "TOKEN_INVALID"],
+    ["expired token", "Bearer expired-token", "TOKEN_EXPIRED"],
+  ])("rejects %s", async (_label, header, code) => {
     const { app } = buildTestApp();
-
-    const res = await request(app).get("/api/v1/users/me");
-
+    let call = request(app).get("/api/v1/users/me");
+    if (header) call = call.set("Authorization", header);
+    const res = await call;
     expect(res.status).toBe(401);
-    expect(res.body).toMatchObject({ success: false, code: "TOKEN_MISSING", errors: [] });
-    expect(res.body.requestId).toBeTruthy();
+    expect(res.body).toMatchObject({ success: false, error: { code } });
+    expect(res.body.meta.requestId).toBeTruthy();
   });
-
-  it("rejects a non-Bearer Authorization header", async () => {
+  it.each([
+    ["suspended", TEST_TOKENS.suspended, "ACCOUNT_SUSPENDED"],
+    ["deleted", TEST_TOKENS.deleted, "ACCOUNT_DELETED"],
+  ])("rejects %s account", async (_kind, token, code) => {
     const { app } = buildTestApp();
-
-    const res = await request(app).get("/api/v1/users/me").set("Authorization", "Basic abc");
-
-    expect(res.status).toBe(401);
-    expect(res.body.code).toBe("TOKEN_MISSING");
-  });
-
-  it("rejects an invalid token", async () => {
-    const { app } = buildTestApp();
-
-    const res = await request(app).get("/api/v1/users/me").set(bearer("not-a-real-token"));
-
-    expect(res.status).toBe(401);
-    expect(res.body.code).toBe("TOKEN_INVALID");
-  });
-
-  it("rejects an expired token", async () => {
-    const { app } = buildTestApp();
-
-    const res = await request(app).get("/api/v1/users/me").set(bearer("expired-token"));
-
-    expect(res.status).toBe(401);
-    expect(res.body.code).toBe("TOKEN_EXPIRED");
-  });
-
-  it("rejects a banned account", async () => {
-    const { app } = buildTestApp();
-
-    const res = await request(app).get("/api/v1/users/me").set(bearer(TEST_TOKENS.banned));
-
+    const res = await request(app).get("/api/v1/users/me").set(bearer(token));
     expect(res.status).toBe(403);
-    expect(res.body.code).toBe("ACCOUNT_BANNED");
+    expect(res.body.error.code).toBe(code);
   });
 });
-
 describe("GET /api/v1/users/me", () => {
-  it("returns the current user without internal fields", async () => {
+  it("returns current account and profile without credentials or internal fields", async () => {
     const { app } = buildTestApp();
-
     const res = await request(app).get("/api/v1/users/me").set(bearer(TEST_TOKENS.user));
-
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({
       success: true,
-      message: "Current user retrieved successfully",
       data: {
-        firebaseUid: "uid-user",
-        email: "user@example.com",
-        username: "green_eater",
-        role: "USER",
-        status: "ACTIVE",
+        user: { userId: TEST_IDS.user, email: "user@example.com", role: "user", status: "active" },
+        profile: null,
+        nutritionProfile: null,
       },
-      meta: null,
     });
-    expect(res.body.data.id).toMatch(/^[a-f\d]{24}$/);
-    expect(res.body.data).not.toHaveProperty("_id");
-    expect(res.body.data).not.toHaveProperty("password");
-    expect(res.body.data.lastLoginAt).toBeTruthy();
+    expect(res.body.meta.requestId).toBeTruthy();
+    for (const key of ["firebaseUid", "password", "fcmTokens", "fcmTokensVersion"])
+      expect(res.body.data.user).not.toHaveProperty(key);
   });
-
-  it("creates a user record on first sign-in", async () => {
-    const { app, userRepository } = buildTestApp();
-
-    const res = await request(app).get("/api/v1/users/me").set(bearer(TEST_TOKENS.newcomer));
-
-    expect(res.status).toBe(200);
-    expect(res.body.data).toMatchObject({
-      firebaseUid: "uid-new",
-      email: "new.person@example.com",
-      role: "USER",
-      username: null,
-    });
-    expect(await userRepository.findByFirebaseUid("uid-new")).not.toBeNull();
+  it("creates a mapping only through explicit idempotent auth sync", async () => {
+    const { app, repositories } = buildTestApp();
+    const before = await request(app).get("/api/v1/users/me").set(bearer(TEST_TOKENS.newcomer));
+    expect(before.status).toBe(404);
+    expect(await repositories.users.findOne({ firebaseUid: "uid-new" })).toBeNull();
+    const synced = await request(app)
+      .post("/api/v1/auth/sync")
+      .set(bearer(TEST_TOKENS.newcomer))
+      .send({});
+    expect(synced.status).toBe(200);
+    expect(synced.body.data.role).toBe("user");
+    const again = await request(app)
+      .post("/api/v1/auth/sync")
+      .set(bearer(TEST_TOKENS.newcomer))
+      .send({});
+    expect(again.body.data.userId).toBe(synced.body.data.userId);
+    expect(
+      (await request(app).get("/api/v1/users/me").set(bearer(TEST_TOKENS.newcomer))).status,
+    ).toBe(200);
+    expect(await repositories.users.count({ firebaseUid: "uid-new" })).toBe(1);
   });
 });
-
 describe("PATCH /api/v1/users/me", () => {
-  it("updates allowed fields with sanitized input", async () => {
+  it("updates permitted display name and avatar with trimmed input", async () => {
     const { app } = buildTestApp();
-
     const res = await request(app)
       .patch("/api/v1/users/me")
       .set(bearer(TEST_TOKENS.user))
-      .send({ username: "  Plant_Lover  " });
-
+      .send({ displayName: "  Plant Lover  ", avatarUrl: "https://cdn.example.com/avatar.png" });
     expect(res.status).toBe(200);
-    expect(res.body.data.username).toBe("plant_lover");
+    expect(res.body.data).toMatchObject({
+      displayName: "Plant Lover",
+      avatarUrl: "https://cdn.example.com/avatar.png",
+    });
   });
-
   it.each([
-    ["role", { role: "ADMIN" }],
-    ["status", { status: "ACTIVE" }],
+    ["role", { role: "admin" }],
+    ["status", { status: "active" }],
     ["firebaseUid", { firebaseUid: "someone-else" }],
     ["email", { email: "hacker@example.com" }],
+    ["userId", { userId: TEST_IDS.other }],
   ])("rejects attempts to change %s", async (field, payload) => {
-    const { app, userRepository } = buildTestApp();
-
+    const { app, repositories } = buildTestApp();
     const res = await request(app)
       .patch("/api/v1/users/me")
       .set(bearer(TEST_TOKENS.user))
-      .send({ username: "valid_name", ...payload });
-
-    console.log('DEBUG 500:', res.status, res.body);
+      .send({ displayName: "Valid", ...payload });
     expect(res.status).toBe(400);
-    expect(res.body.code).toBe("VALIDATION_ERROR");
-    expect(res.body.errors[0]).toMatchObject({
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+    expect(res.body.error.details[0]).toMatchObject({
       location: "body",
       code: "unrecognized_keys",
       keys: [field],
     });
-
-    const stored = await userRepository.findByFirebaseUid("uid-user");
-    expect(stored).toMatchObject({ role: "USER", status: "ACTIVE", username: "green_eater" });
+    expect(await repositories.users.findById(TEST_IDS.user)).toMatchObject({
+      role: "user",
+      status: "active",
+      displayName: "user",
+    });
   });
-
-  it("rejects an invalid username", async () => {
+  it("rejects overlong name, empty patch, and unsupported historic username writes", async () => {
     const { app } = buildTestApp();
-
+    for (const body of [{ displayName: "a".repeat(101) }, {}, { username: "admin" }]) {
+      const res = await request(app)
+        .patch("/api/v1/users/me")
+        .set(bearer(TEST_TOKENS.user))
+        .send(body);
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe("VALIDATION_ERROR");
+    }
+  });
+  it("allows duplicate display names without treating them as credentials", async () => {
+    const { app } = buildTestApp();
     const res = await request(app)
       .patch("/api/v1/users/me")
       .set(bearer(TEST_TOKENS.user))
-      .send({ username: "a!" });
-
-    expect(res.status).toBe(400);
-    expect(res.body.code).toBe("VALIDATION_ERROR");
-    expect(res.body.errors.map((error) => error.path)).toContain("username");
+      .send({ displayName: "admin" });
+    expect(res.status).toBe(200);
+    expect(res.body.data.role).toBe("user");
   });
-
-  it("rejects an empty body", async () => {
-    const { app } = buildTestApp();
-
-    const res = await request(app).patch("/api/v1/users/me").set(bearer(TEST_TOKENS.user)).send({});
-
-    expect(res.status).toBe(400);
-    expect(res.body.code).toBe("VALIDATION_ERROR");
-  });
-
-  it("returns 409 when the username is taken by another user", async () => {
-    const { app } = buildTestApp();
-
-    const res = await request(app)
-      .patch("/api/v1/users/me")
-      .set(bearer(TEST_TOKENS.user))
-      .send({ username: "admin" });
-
-    expect(res.status).toBe(409);
-    expect(res.body.code).toBe("DUPLICATE_KEY");
-  });
-
   it("requires authentication before validation", async () => {
     const { app } = buildTestApp();
-
-    const res = await request(app).patch("/api/v1/users/me").send({ role: "ADMIN" });
-
+    const res = await request(app).patch("/api/v1/users/me").send({ role: "admin" });
     expect(res.status).toBe(401);
   });
 });

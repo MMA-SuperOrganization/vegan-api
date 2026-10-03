@@ -1,76 +1,100 @@
 import { describe, expect, it, vi } from "vitest";
-
-import { authorize } from "../../src/common/middlewares/authorize.js";
-import { extractBearerToken } from "../../src/common/middlewares/authenticate.js";
-import { buildObjectKey, createMediaService } from "../../src/modules/media/media.service.js";
-import { createUsersService } from "../../src/modules/users/users.service.js";
-import { createFakeStorageProvider, createInMemoryUserRepository } from "../helpers/fakes.js";
-
-describe("user service", () => {
-  it("does not rewrite lastLoginAt on every request", async () => {
-    const recent = new Date("2026-01-01T10:00:00Z");
-    const userRepository = createInMemoryUserRepository([
-      { firebaseUid: "uid", email: "a@b.com", lastLoginAt: recent },
-    ]);
-    const updateSpy = vi.spyOn(userRepository, "updateById");
-
-    const service = createUsersService({
-      usersRepository: userRepository,
-      now: () => new Date("2026-01-01T10:05:00Z"),
-    });
-    await service.resolveAuthenticatedUser({ firebaseUid: "uid", email: "a@b.com" });
-    expect(updateSpy).not.toHaveBeenCalled();
-
-    const later = createUsersService({
-      usersRepository: userRepository,
-      now: () => new Date("2026-01-01T11:00:00Z"),
-    });
-    await later.resolveAuthenticatedUser({ firebaseUid: "uid", email: "a@b.com" });
-    expect(updateSpy).toHaveBeenCalledOnce();
+import { createUsersModule } from "../../src/modules/users/index.js";
+import { createMediaService } from "../../src/modules/media/media.service.js";
+import { createMemoryRepositories, memoryTransaction } from "../helpers/memory-repositories.js";
+const USER = "100000000000000000000001";
+const userFixture = (status = "active") => {
+  const repositories = createMemoryRepositories({
+    users: [
+      {
+        _id: USER,
+        firebaseUid: "uid",
+        email: "a@b.com",
+        role: "user",
+        status,
+        lastLoginAt: new Date("2026-01-01T10:00:00Z"),
+        fcmTokens: [],
+      },
+    ],
   });
-
-  it("recovers from a concurrent first sign-in race", async () => {
-    const userRepository = createInMemoryUserRepository();
-    const originalFind = userRepository.findByFirebaseUid;
-    // Lần tìm đầu không thấy, nhưng trong lúc đó request khác đã tạo user.
-    vi.spyOn(userRepository, "findByFirebaseUid")
+  const deps = {
+    repositories,
+    services: {},
+    clock: () => new Date("2026-01-01T11:00:00Z"),
+    transaction: memoryTransaction(repositories),
+    audit: { record: vi.fn() },
+  };
+  const module = createUsersModule(deps);
+  Object.assign(deps.services, module.services);
+  return { service: module.services.users, module, repositories };
+};
+describe("canonical user service", () => {
+  it("does not write login timestamps during routine authenticated identity resolution", async () => {
+    const { service, repositories } = userFixture();
+    const spy = vi.spyOn(repositories.users, "updateOne");
+    await service.resolveIdentity({ firebaseUid: "uid", email: "changed@example.com" });
+    expect(spy).not.toHaveBeenCalled();
+    await service.syncAccount({ firebaseUid: "uid", email: "a@b.com" });
+    expect(spy).toHaveBeenCalledOnce();
+    expect((await repositories.users.findById(USER)).lastLoginAt).toEqual(
+      new Date("2026-01-01T11:00:00Z"),
+    );
+  });
+  it("recovers a duplicate-key first synchronization race without assigning admin role", async () => {
+    const { service, repositories } = userFixture();
+    vi.spyOn(repositories.users, "findOne")
       .mockResolvedValueOnce(null)
-      .mockImplementation(originalFind);
-    await userRepository.create({ firebaseUid: "uid", email: "a@b.com" });
-
-    const service = createUsersService({ usersRepository: userRepository });
-
+      .mockResolvedValueOnce(await repositories.users.findById(USER));
+    const original = repositories.users.updateOne.bind(repositories.users);
+    vi.spyOn(repositories.users, "updateOne")
+      .mockRejectedValueOnce(Object.assign(new Error("duplicate"), { code: 11000 }))
+      .mockImplementation(original);
     await expect(
-      service.resolveAuthenticatedUser({ firebaseUid: "uid", email: "a@b.com" }),
-    ).resolves.toMatchObject({ role: "USER" });
+      service.syncAccount({ firebaseUid: "uid", email: "a@b.com", role: "admin" }),
+    ).resolves.toMatchObject({ userId: USER, role: "user" });
   });
-
   it.each([
-    ["SUSPENDED", "ACCOUNT_SUSPENDED"],
-    ["BANNED", "ACCOUNT_BANNED"],
-    ["DELETED", "ACCOUNT_DELETED"],
-  ])("blocks %s accounts", async (status, code) => {
-    const userRepository = createInMemoryUserRepository([
-      { firebaseUid: "uid", email: "a@b.com", status },
-    ]);
-    const service = createUsersService({ usersRepository: userRepository });
-
-    await expect(
-      service.resolveAuthenticatedUser({ firebaseUid: "uid", email: "a@b.com" }),
-    ).rejects.toMatchObject({ statusCode: 403, code });
+    ["suspended", "ACCOUNT_SUSPENDED"],
+    ["deleted", "ACCOUNT_DELETED"],
+  ])("blocks %s accounts in identity resolution and sync", async (status, code) => {
+    const { service } = userFixture(status);
+    await expect(service.resolveIdentity("uid")).rejects.toMatchObject({ statusCode: 403, code });
+    await expect(service.syncAccount({ firebaseUid: "uid" })).rejects.toMatchObject({
+      statusCode: 403,
+      code,
+    });
   });
-
-  it("allows keeping the same username", async () => {
-    const userRepository = createInMemoryUserRepository([
-      { firebaseUid: "uid", email: "a@b.com", username: "same_name" },
-    ]);
-    const [user] = userRepository.users.values();
-    const service = createUsersService({ usersRepository: userRepository });
-
-    await expect(
-      service.updateCurrentUser(user._id, { username: "same_name" }),
-    ).resolves.toMatchObject({ username: "same_name" });
+  it("allows keeping the same display name without changing credentials or privilege", async () => {
+    const { module, repositories } = userFixture();
+    await module.operations.updateMyProfile({
+      actor: { userId: USER, status: "active", role: "user" },
+      body: { displayName: "Same name" },
+    });
+    const result = await module.operations.updateMyProfile({
+      actor: { userId: USER, status: "active", role: "user" },
+      body: { displayName: "Same name" },
+    });
+    expect(result.displayName).toBe("Same name");
+    expect((await repositories.users.findById(USER)).role).toBe("user");
   });
 });
-
-describe("media service", () => { it("works", () => { expect(1).toBe(1); }) });
+describe("canonical media service", () => {
+  it("denies linking a ready asset owned by another account", async () => {
+    const asset = "200000000000000000000001";
+    const repositories = createMemoryRepositories({
+      mediaAssets: [
+        {
+          _id: asset,
+          ownerId: "100000000000000000000002",
+          status: "ready",
+          kind: "image",
+          purpose: "recipe",
+        },
+      ],
+    });
+    const { service } = createMediaService({ repositories });
+    await expect(
+      service.assertReady([asset], { actor: { userId: USER, role: "user", status: "active" } }),
+    ).rejects.toMatchObject({ statusCode: 403 });
+  });
+});

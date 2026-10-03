@@ -61,25 +61,28 @@ describe("validate middleware", () => {
 });
 
 describe("updateMeBodySchema", () => {
-  it("accepts and normalizes a valid username", () => {
-    expect(updateMeBodySchema.parse({ username: " Vegan.Chef_01 " })).toEqual({
-      username: "vegan.chef_01",
+  it("accepts and trims permitted display name", () => {
+    expect(updateMeBodySchema.parse({ displayName: "  Vegan Chef  " })).toEqual({
+      displayName: "Vegan Chef",
     });
   });
-
-  it.each([{ role: "ADMIN" }, { status: "BANNED" }, { firebaseUid: "x" }])(
-    "rejects system field %o",
-    (payload) => {
-      expect(updateMeBodySchema.safeParse({ username: "valid_name", ...payload }).success).toBe(
-        false,
-      );
-    },
-  );
-
-  it.each(["ab", "a".repeat(31), ".dot_start", "dot_end.", "has space", "emoji😀"])(
-    "rejects username %s",
-    (username) => {
-      expect(updateMeBodySchema.safeParse({ username }).success).toBe(false);
-    },
-  );
+  it.each([
+    { role: "admin" },
+    { status: "active" },
+    { firebaseUid: "x" },
+    { email: "x@example.com" },
+    { username: "historic_username" },
+  ])("rejects system or unsupported field %o", (payload) => {
+    expect(updateMeBodySchema.safeParse({ displayName: "Valid", ...payload }).success).toBe(false);
+  });
+  it.each(["", "  ", "a".repeat(101)])("rejects invalid display name %s", (displayName) => {
+    expect(updateMeBodySchema.safeParse({ displayName }).success).toBe(false);
+  });
+  it("rejects empty patches and unsafe avatar schemes", () => {
+    expect(updateMeBodySchema.safeParse({}).success).toBe(false);
+    expect(updateMeBodySchema.safeParse({ avatarUrl: "javascript:alert(1)" }).success).toBe(false);
+    expect(updateMeBodySchema.parse({ avatarUrl: "https://cdn.example.com/avatar.png" })).toEqual({
+      avatarUrl: "https://cdn.example.com/avatar.png",
+    });
+  });
 });

@@ -29,7 +29,7 @@ export const normalizeError = (error) => {
     const details = Object.values(error.errors).map((fieldError) => ({
       path: fieldError.path,
       code: fieldError.kind,
-      message: fieldError.message,
+      message: `Invalid value for ${fieldError.path}`,
     }));
     return AppError.badRequest("Validation failed", details, ERROR_CODES.VALIDATION_ERROR);
   }
@@ -70,7 +70,7 @@ export const normalizeError = (error) => {
   }
   if (error?.$metadata) {
     return new AppError({
-      statusCode: 502,
+      statusCode: 503,
       code: ERROR_CODES.STORAGE_PROVIDER_ERROR,
       message: "Storage provider request failed",
       isOperational: false,
@@ -99,7 +99,7 @@ export const createErrorHandler =
 
     if (appError.statusCode >= 500) {
       (req.log ?? logger).error(
-        { err: error, requestId, code: appError.code },
+        { requestId, code: appError.code, statusCode: appError.statusCode },
         "Unhandled request error",
       );
     }
@@ -115,10 +115,6 @@ export const createErrorHandler =
       errors: appError.details,
       requestId,
     });
-
-    if (!isProduction && appError.statusCode >= 500 && error instanceof Error) {
-      body.stack = error.stack;
-    }
 
     res.status(appError.statusCode).json(body);
   };

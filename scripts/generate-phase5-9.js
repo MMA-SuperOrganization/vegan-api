@@ -1,3 +1,7 @@
+throw new Error(
+  "RETIRED: generate-phase5-9.js is historical scaffolding and would overwrite active code. Do not run it.",
+);
+
 import { writeFileSync, mkdirSync } from "fs";
 import { join } from "path";
 

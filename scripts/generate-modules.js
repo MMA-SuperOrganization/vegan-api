@@ -1,3 +1,7 @@
+throw new Error(
+  "RETIRED: generate-modules.js is historical scaffolding and would overwrite active code. Do not run it.",
+);
+
 import fs from "fs";
 import path from "path";
 

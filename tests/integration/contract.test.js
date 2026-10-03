@@ -1,36 +1,35 @@
-import { describe, it, expect } from "vitest";
-import fs from "fs";
-import path from "path";
-import yaml from "yaml";
-import { apiManifest } from "../../src/routes/api-manifest.js";
-import { createApp } from "../../src/app.js";
-import { createContainer } from "../../src/container.js";
-import pino from "pino";
+import { describe, expect, it } from "vitest";
+import request from "supertest";
+import { buildTestApp, bearer, TEST_TOKENS } from "../helpers/test-app.js";
 
-describe("Contract Test: Manifest <-> OpenAPI <-> Express Routes", () => {
-  it("should match manifest endpoints with OpenAPI and Express", async () => {
-    // 1. Read OpenAPI
-    const openapiPath = path.join(process.cwd(), "docs", "openapi.yaml");
-    const openapiDoc = yaml.parse(fs.readFileSync(openapiPath, "utf8"));
-    const openapiPaths = Object.keys(openapiDoc.paths);
+// Full method/path/auth/docs/matrix comparison lives in tests/contract and uses
+// the independent source tables. This integration suite instead exercises the
+// actual prefix, optional-auth behavior and role ordering over HTTP.
+describe("Mounted contract runtime boundaries", () => {
+  it("mounts business routes only at the configured API prefix", async () => {
+    const { app } = buildTestApp({ envOverrides: { API_PREFIX: "/custom/v1" } });
+    expect((await request(app).get("/custom/v1/health")).status).toBe(200);
+    expect((await request(app).get("/api/v1/health")).status).toBe(404);
+    expect((await request(app).get("/health")).status).toBe(404);
+  });
 
-    // 2. Count endpoints in manifest
-    const manifestPaths = apiManifest.map((m) => m.path.replace(/:([a-zA-Z0-9_]+)/g, "{$1}"));
-
-    // Check mapping manifest <-> OpenAPI
-    manifestPaths.forEach((p) => {
-      expect(openapiPaths).toContain(p);
+  it("optional authentication allows guest search but rejects an invalid supplied token", async () => {
+    const { app } = buildTestApp();
+    expect((await request(app).get("/api/v1/search?q=tofu")).status).toBe(200);
+    const invalid = await request(app).get("/api/v1/search?q=tofu").set(bearer("invalid-token"));
+    expect(invalid.status).toBe(401);
+    expect(invalid.body).toMatchObject({
+      success: false,
+      error: { code: expect.any(String) },
+      meta: { requestId: expect.any(String) },
     });
+  });
 
-    // 3. Count endpoints mounted in express
-    const container = await createContainer({
-      env: {
-        firebase: { projectId: "test" },
-        r2: { endpoint: "e", accessKeyId: "a", secretAccessKey: "s", bucketName: "b" },
-      },
-      logger: pino({ level: "silent" }),
-    });
-    const app = createApp(container);
-    expect(apiManifest.length).toBeGreaterThan(0);
+  it("admin authentication and authorization precede request validation", async () => {
+    const { app } = buildTestApp();
+    const path = "/api/v1/admin/users?limit=invalid";
+    expect((await request(app).get(path)).status).toBe(401);
+    expect((await request(app).get(path).set(bearer(TEST_TOKENS.user))).status).toBe(403);
+    expect((await request(app).get(path).set(bearer(TEST_TOKENS.admin))).status).toBe(400);
   });
 });

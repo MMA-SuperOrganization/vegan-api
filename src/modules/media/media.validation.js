@@ -1,29 +1,50 @@
 import { z } from "zod";
-import { objectId, paginationSchema } from "../../common/validators/common.schemas.js";
-
-const VALID_CONTEXTS = ["AVATAR", "POST", "RECIPE", "FOOD_ITEM", "COMMENT_ATTACHMENT", "CHAT_ATTACHMENT", "ID_DOCUMENT"];
-const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "video/mp4"];
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB default
-
+import { text, pagination } from "../../common/validators/domain.schemas.js";
+import { idParams, empty } from "../recipes/content.validation.js";
+export const mediaPurposes = [
+  "avatar",
+  "recipe",
+  "recipe_step",
+  "post",
+  "video",
+  "video_thumbnail",
+  "ai_ingredient",
+  "other",
+];
 export const createMediaValidation = () => ({
   createUploadRequest: {
-    body: z.object({
-      context: z.enum(VALID_CONTEXTS, { message: "Invalid context" }),
-      contentType: z.string().refine((val) => ALLOWED_MIME_TYPES.includes(val), {
-        message: "Invalid content type",
-      }),
-      originalFileName: z.string().trim().max(255).optional(),
-      fileSize: z.number().int().positive().max(MAX_FILE_SIZE, { message: "File too large" }),
-    }).strict().refine((data) => {
-      if (data.context === "AVATAR" && data.contentType === "video/mp4") return false;
-      return true;
-    }, {
-      message: "MIME type not allowed for this context",
-      path: ["contentType"],
-    }),
+    body: z
+      .object({
+        filename: text(255),
+        mimeType: z.enum(["image/jpeg", "image/png", "image/webp", "video/mp4", "video/webm"]),
+        sizeBytes: z
+          .number()
+          .int()
+          .positive()
+          .max(1024 * 1024 * 1024),
+        purpose: z.enum(mediaPurposes),
+      })
+      .strict()
+      .refine(
+        ({ mimeType, purpose }) =>
+          !["avatar", "recipe_step", "video_thumbnail", "ai_ingredient"].includes(purpose) ||
+          mimeType.startsWith("image/"),
+        "Purpose requires an image",
+      )
+      .refine(
+        ({ mimeType, purpose }) => purpose !== "video" || mimeType.startsWith("video/"),
+        "Video purpose requires a video",
+      ),
   },
-  getMyMedia: {},
-  confirmMediaUpload: {},
-  getMediaAsset: {},
-  deleteMediaAsset: {},
+  getMyMedia: {
+    query: pagination
+      .extend({
+        status: z.enum(["pending", "ready", "rejected", "deleting", "deleted"]).optional(),
+        purpose: z.enum(mediaPurposes).optional(),
+      })
+      .strict(),
+  },
+  confirmMediaUpload: { params: idParams, body: empty },
+  getMediaAsset: { params: idParams },
+  deleteMediaAsset: { params: idParams },
 });

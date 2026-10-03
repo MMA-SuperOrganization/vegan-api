@@ -1,15 +1,16 @@
 import { z } from "zod";
-import { objectId, paginationSchema } from "../../common/validators/common.schemas.js";
-
+import { emptyBody, text, uuid } from "../../common/validators/domain.schemas.js";
 export const createAuthValidation = () => ({
-  syncAuth: {
-    body: z.object({}).passthrough(),
-  },
-  getMe: {
-    query: paginationSchema.passthrough(),
-  },
+  syncAuth: { body: emptyBody },
+  getMe: {},
   addFcmToken: {
-    body: z.object({}).passthrough(),
+    body: z
+      .object({
+        token: text(4096, 1),
+        platform: z.literal("android").default("android"),
+        deviceName: text(100).optional(),
+      })
+      .strict(),
   },
-  removeFcmToken: {},
+  removeFcmToken: { params: z.object({ tokenId: uuid }).strict() },
 });

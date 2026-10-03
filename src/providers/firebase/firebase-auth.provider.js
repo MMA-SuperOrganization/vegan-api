@@ -75,6 +75,11 @@ export const createFirebaseAuthProvider = ({ firebaseAuth, checkRevoked = true }
         firebaseUid: decoded.uid,
         email: decoded.email?.toLowerCase() ?? null,
         emailVerified: decoded.email_verified === true,
+        displayName: typeof decoded.name === "string" ? decoded.name.slice(0, 100) : null,
+        avatarUrl:
+          typeof decoded.picture === "string" && decoded.picture.startsWith("https://")
+            ? decoded.picture
+            : null,
         authTime: decoded.auth_time ? new Date(decoded.auth_time * 1000) : null,
       };
     } catch (error) {

@@ -1,12 +1,12 @@
 import mongoose from "mongoose";
-
-const schema = new mongoose.Schema(
+import { registerModel, ref } from "../recipes/content-model.js";
+export const SavedItemsModel = registerModel(
+  "SavedItems",
   {
-    userId: String,
-    targetType: String,
-    targetId: String,
+    userId: ref("User", true),
+    targetType: { type: String, enum: ["recipe", "post", "video"], required: true },
+    targetId: { type: mongoose.Schema.Types.ObjectId, required: true },
   },
-  { timestamps: true, versionKey: false },
+  "saveditems",
+  [[{ userId: 1, targetType: 1, targetId: 1 }, { unique: true }], [{ userId: 1, createdAt: -1 }]],
 );
-
-export const SavedItemsModel = mongoose.model("SavedItems", schema);

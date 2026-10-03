@@ -1,24 +1,46 @@
 import { z } from "zod";
-import { objectId, paginationSchema } from "../../common/validators/common.schemas.js";
-
+import {
+  id,
+  uuid,
+  text,
+  positive,
+  dateTime,
+  pagination,
+  patch,
+  units,
+} from "../../common/validators/domain.schemas.js";
+export const pantryItemInput = z
+  .object({
+    foodItemId: id,
+    quantity: positive(),
+    unit: units,
+    expiresAt: dateTime.nullable().optional(),
+    note: text(1000, 0).optional(),
+  })
+  .strict();
+const itemParams = z.object({ itemId: uuid }).strict();
 export const createPantriesValidation = () => ({
-  getPantry: {
-    query: paginationSchema.passthrough(),
-  },
-  addPantryItem: {
-    body: z.object({}).passthrough(),
-  },
+  getPantry: {},
+  addPantryItem: { body: pantryItemInput },
   addPantryItemsBulk: {
-    body: z.object({}).passthrough(),
+    body: z
+      .object({ items: z.array(pantryItemInput).min(1).max(100), idempotencyKey: text(128) })
+      .strict(),
   },
-  updatePantryItem: {
-    body: z.object({}).passthrough(),
-  },
-  deletePantryItem: {},
+  updatePantryItem: { params: itemParams, body: patch(pantryItemInput.omit({ foodItemId: true })) },
+  deletePantryItem: { params: itemParams },
   getExpiringPantryItems: {
-    query: paginationSchema.passthrough(),
+    query: pagination
+      .extend({
+        days: z.coerce.number().int().min(0).max(90).default(7),
+        includeExpired: z
+          .enum(["true", "false"])
+          .transform((v) => v === "true")
+          .default(false),
+      })
+      .strict(),
   },
   getPantryRecipeSuggestions: {
-    query: paginationSchema.passthrough(),
+    query: pagination.extend({ minMatch: z.coerce.number().min(0).max(1).default(0) }).strict(),
   },
 });

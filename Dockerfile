@@ -10,6 +10,7 @@ RUN npm ci --omit=dev
 FROM node:24-alpine AS runner
 
 WORKDIR /app
+ENV NODE_ENV=production PORT=3000
 
 # Create non-root user for security
 RUN addgroup --system --gid 1001 nodejs && \
@@ -32,11 +33,9 @@ USER appuser
 # Expose the default port
 EXPOSE 3000
 
-# Health check — hit the /api/v1/health endpoint
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/v1/health || exit 1
+# Readiness includes MongoDB availability. Native fetch respects runtime port/prefix.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+(process.env.API_PREFIX||'/api/v1')+'/health/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
 
-# Use --env-file so .env is loaded by Node.js at startup
-# In Docker, env vars are injected via docker-compose or -e flags,
-# so we start without --env-file here (env vars come from container runtime)
+# No .env is copied/read. Inject secrets through the container runtime.
 CMD ["node", "src/server.js"]

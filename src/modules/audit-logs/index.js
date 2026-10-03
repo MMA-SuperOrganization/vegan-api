@@ -1,6 +1,23 @@
-export * from "./audit-logs.routes.js";
-export * from "./audit-logs.controller.js";
-export * from "./audit-logs.service.js";
-export * from "./audit-logs.repository.js";
-export * from "./audit-logs.model.js";
-export * from "./audit-logs.validation.js";
+import { buildRepository } from "../../common/persistence/repository.js";
+import { AuditLogsModel } from "./audit-logs.model.js";
+import {
+  createAuditService,
+  createAuditLogsService,
+  auditValidation,
+} from "./audit-logs.service.js";
+export { createAuditService, sanitizeAudit } from "./audit-logs.service.js";
+export const createAuditLogsModule = (deps) => {
+  const repository = buildRepository({
+    repositories: deps.repositories,
+    key: "auditLogs",
+    model: AuditLogsModel,
+  });
+  const audit = createAuditService({ repository, clock: deps.clock });
+  return {
+    operations: createAuditLogsService(deps, repository),
+    validation: auditValidation,
+    services: { audit },
+    repositories: { auditLogs: repository },
+    models: { auditLogs: AuditLogsModel },
+  };
+};

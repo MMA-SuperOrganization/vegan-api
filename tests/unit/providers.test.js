@@ -23,6 +23,8 @@ describe("Firebase auth provider", () => {
       firebaseUid: "uid-1",
       email: "user@example.com",
       emailVerified: true,
+      displayName: null,
+      avatarUrl: null,
       authTime: new Date(1_700_000_000_000),
     });
     expect(firebaseAuth.verifyIdToken).toHaveBeenCalledWith("token", true);
@@ -116,7 +118,7 @@ describe("R2 storage provider", () => {
     });
 
     await expect(provider.deleteObject("k")).rejects.toMatchObject({
-      statusCode: 502,
+      statusCode: 503,
       code: "STORAGE_PROVIDER_ERROR",
     });
   });

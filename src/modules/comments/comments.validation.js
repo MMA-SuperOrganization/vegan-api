@@ -1,18 +1,30 @@
 import { z } from "zod";
-import { objectId, paginationSchema } from "../../common/validators/common.schemas.js";
-
+import { id, text, pagination } from "../../common/validators/domain.schemas.js";
+import { idParams } from "../recipes/content.validation.js";
 export const createCommentsValidation = () => ({
   getComments: {
-    query: paginationSchema.passthrough(),
+    query: pagination
+      .extend({
+        targetType: z.enum(["recipe", "post", "video"]),
+        targetId: id,
+        parentCommentId: id.optional(),
+        sort: z.enum(["newest", "oldest"]).default("newest"),
+      })
+      .strict(),
   },
   createComment: {
-    body: z.object({}).passthrough(),
+    body: z
+      .object({
+        targetType: z.enum(["recipe", "post", "video"]),
+        targetId: id,
+        parentCommentId: id.optional().nullable(),
+        content: text(5000),
+      })
+      .strict(),
   },
   updateComment: {
-    params: z.object({ id: z.string().optional(), idOrSlug: z.string().optional() }).passthrough(),
-    body: z.object({}).passthrough(),
+    params: idParams,
+    body: z.object({ content: text(5000), version: z.number().int().min(0).optional() }).strict(),
   },
-  deleteComment: {
-    params: z.object({ id: z.string().optional(), idOrSlug: z.string().optional() }).passthrough(),
-  },
+  deleteComment: { params: idParams },
 });

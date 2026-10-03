@@ -8,6 +8,6 @@ export const createHealthService = ({ healthRepository, getDatabaseStatus }) => 
     return await healthRepository.findAll(req.query);
   },
   getDatabaseStatus() {
-    return getDatabaseStatus ? getDatabaseStatus() : 'disconnected';
-  }
+    return getDatabaseStatus ? getDatabaseStatus() : "disconnected";
+  },
 });

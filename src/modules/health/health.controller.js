@@ -10,7 +10,7 @@ export const createHealthController = ({ healthService }) => ({
         database: healthService.getDatabaseStatus(),
       },
     };
-    
+
     if (!isConnected) {
       return res.status(503).json({
         success: false,
@@ -18,7 +18,7 @@ export const createHealthController = ({ healthService }) => ({
         data: result,
       });
     }
-    
+
     return sendSuccess(res, { data: result, message: "Service is healthy" });
   },
   async checkReadiness(req, res) {

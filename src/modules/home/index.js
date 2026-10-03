@@ -1,6 +1,8 @@
-export * from "./home.routes.js";
-export * from "./home.controller.js";
-export * from "./home.service.js";
-export * from "./home.repository.js";
-export * from "./home.model.js";
-export * from "./home.validation.js";
+import { createHomeService, homeValidation } from "./home.service.js";
+export const createHomeModule = (deps) => ({
+  operations: createHomeService(deps),
+  validation: homeValidation,
+  services: {},
+  repositories: {},
+  models: {},
+});

@@ -1,87 +1,95 @@
-import { z } from 'zod';
-import { objectId, paginationSchema } from '../../common/validators/common.schemas.js';
+import { z } from "zod";
+import {
+  id,
+  text,
+  dateOnly,
+  dateTime,
+  dietTypes,
+  pagination,
+  patch,
+  emptyBody,
+  url,
+  timezone,
+} from "../../common/validators/domain.schemas.js";
 
-export const updateMeBodySchema = z
+export const profileSchema = z
   .object({
-    username: z
-      .string()
-      .trim()
-      .toLowerCase()
-      .min(3)
-      .max(30)
-      .regex(/^[a-z0-9._]+$/)
-      .refine(
-        (v) => !v.startsWith(".") && !v.endsWith("."),
-        "Username cannot start or end with a dot",
-      )
+    bio: text(500, 0).optional(),
+    dateOfBirth: z
+      .union([dateOnly, dateTime])
+      .refine((v) => new Date(v) <= new Date(), "Birth date cannot be in the future")
+      .nullable()
       .optional(),
-    displayName: z.string().trim().max(100).optional(),
-    avatarUrl: z.string().trim().url().max(1024).optional(),
+    gender: z
+      .enum(["female", "male", "non_binary", "other", "prefer_not_to_say"])
+      .nullable()
+      .optional(),
+    dietType: dietTypes.optional(),
+    preferredCuisines: z
+      .array(text(60))
+      .max(20)
+      .transform((v) => [...new Set(v)])
+      .optional(),
+    dislikedFoodItemIds: z
+      .array(id)
+      .max(50)
+      .transform((v) => [...new Set(v)])
+      .optional(),
+    locale: text(35)
+      .regex(/^[a-zA-Z]{2,3}(?:[-_][a-zA-Z0-9]{2,8})*$/)
+      .optional(),
+    timezone: timezone.optional(),
   })
-  .strict()
-  .refine((body) => Object.keys(body).length > 0, {
-    message: "At least one updatable field is required",
-  });
-
+  .strict();
+export const updateMeBodySchema = patch(
+  z.object({ displayName: text(100), avatarUrl: url.max(2048).nullable() }),
+);
+const idParams = z.object({ id }).strict();
 export const createUsersValidation = () => ({
   getMyProfileSummary: {},
-  updateMyProfile: {
-    body: updateMeBodySchema,
-  },
-  deleteMyAccount: {},
-  getPublicUserProfile: {
-    params: z.object({ idOrSlug: z.string() }),
-  },
+  updateMyProfile: { body: updateMeBodySchema },
+  deleteMyAccount: { body: emptyBody },
+  getPublicUserProfile: { params: z.object({ userId: id }).strict() },
   getMyContent: {
-    query: paginationSchema.passthrough(),
+    query: pagination
+      .extend({
+        type: z.enum(["recipe", "post", "video"]).default("recipe"),
+        status: z
+          .enum([
+            "draft",
+            "pending_review",
+            "published",
+            "rejected",
+            "hidden",
+            "deleted",
+            "processing",
+          ])
+          .optional(),
+      })
+      .strict(),
   },
-  getMyActivity: {
-    query: paginationSchema.passthrough(),
-  },
+  getMyActivity: {},
   getMyFullProfile: {},
   upsertMyProfile: {
-    body: z.object({
-      bio: z.string().trim().max(500).optional(),
-      dateOfBirth: z.string().datetime().optional(), // ISO 8601 string
-      gender: z.string().trim().max(50).optional(),
-      dietType: z
-        .enum([
-          "vegan",
-          "vegetarian",
-          "lacto_vegetarian",
-          "ovo_vegetarian",
-          "lacto_ovo_vegetarian",
-          "pescatarian",
-          "flexitarian",
-          "other",
-        ])
-        .optional(),
-      preferredCuisines: z.array(z.string().trim()).max(20).optional(),
-      dislikedFoodItemIds: z
-        .array(z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid ObjectId"))
-        .max(50)
-        .optional(),
-      locale: z.string().trim().max(10).optional(),
-      timezone: z.string().trim().max(50).optional(),
-    }).strict(),
+    body: profileSchema.refine(
+      (v) => Object.keys(v).length > 0,
+      "At least one profile field is required",
+    ),
   },
-  suspendUser: {
-    params: z.object({ id: z.string() }).passthrough(),
-  },
-  activateUser: {
-    params: z.object({ id: z.string() }).passthrough(),
-  },
+  suspendUser: { params: idParams, body: z.object({ reason: text(500).optional() }).strict() },
+  activateUser: { params: idParams, body: emptyBody },
   getAdminUsers: {
-    query: paginationSchema.passthrough(),
+    query: pagination
+      .extend({
+        q: text(100).optional(),
+        status: z.enum(["active", "suspended", "deleted"]).optional(),
+        role: z.enum(["user", "admin"]).optional(),
+      })
+      .strict(),
   },
-  getAdminUserDetail: {
-    params: z.object({ id: z.string() }).passthrough(),
-  },
+  getAdminUserDetail: { params: idParams },
   changeUserRole: {
-    params: z.object({ id: z.string() }).passthrough(),
-    body: z.object({
-      role: z.enum(["USER", "ADMIN"])
-    }).strict(),
+    params: idParams,
+    body: z.object({ role: z.enum(["user", "admin"]) }).strict(),
   },
 });
-

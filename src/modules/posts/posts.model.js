@@ -1,23 +1,19 @@
-import mongoose from "mongoose";
-
-const schema = new mongoose.Schema(
+import {
+  registerModel,
+  contentFields,
+  contentIndexes,
+  ref,
+  shortText,
+} from "../recipes/content-model.js";
+export const PostsModel = registerModel(
+  "Posts",
   {
-    authorId: String,
-    title: String,
-    content: String,
-    mediaIds: [String],
-    tags: [String],
-    categoryIds: [String],
-    postType: String,
-    status: { type: String, default: "draft" },
-    visibility: String,
-    commentCount: { type: Number, default: 0 },
-    reactionCount: { type: Number, default: 0 },
-    saveCount: { type: Number, default: 0 },
-    publishedAt: Date,
-    deletedAt: Date,
+    ...contentFields,
+    content: { ...shortText(30000), required: true },
+    mediaIds: [ref("Media")],
+    postType: { type: String, enum: ["community", "blog"], default: "community" },
+    visibility: { type: String, enum: ["public", "private"], default: "public" },
   },
-  { timestamps: true, versionKey: false },
+  "posts",
+  contentIndexes,
 );
-
-export const PostsModel = mongoose.model("Posts", schema);

@@ -3,7 +3,11 @@ import { sendSuccess } from "../../common/utils/api-response.js";
 export const createMediaController = ({ mediaService }) => ({
   async createUploadRequest(req, res) {
     const result = await mediaService.createUploadRequest(req);
-    return sendSuccess(res, { data: result || {}, message: "Upload request created", statusCode: 201 });
+    return sendSuccess(res, {
+      data: result || {},
+      message: "Upload request created",
+      statusCode: 201,
+    });
   },
   async getMyMedia(req, res) {
     const result = await mediaService.getMyMedia(req);

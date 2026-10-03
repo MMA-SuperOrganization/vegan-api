@@ -1,188 +1,218 @@
-# vegan-api-mma302
+# Vegan Support API — MMA302
 
-Backend API cho Vegan Support Mobile Application (MMA302). Hệ thống được xây dựng để cung cấp các luồng nghiệp vụ đầy đủ cho app hỗ trợ chế độ ăn thực vật, bao gồm: quản lý tài khoản, công thức nấu ăn, theo dõi dinh dưỡng, kế hoạch bữa ăn, nhật ký sức khỏe, mua sắm, nhận diện nguyên liệu, AI hỗ trợ, và mạng xã hội.
+Modular-monolith backend for a vegan-support mobile app: Firebase identity, master food/allergen data, recipes and community content, pantry/meal/grocery planning, nutrition and health diaries, private media, optional AI assistance, notifications/reminders, moderation and administration. Mobile UI, Firebase password provisioning, adaptive video transcoding and medical advice are outside this repository's scope.
 
-## 1. Mô tả dự án và phạm vi
+**Verification boundary:** Node.js **24+ is required** (`package.json`). The remediation host currently provides **Node 22.19.0**, not the supported runtime. Local credentials are placeholders. Offline tests are not evidence that MongoDB/Atlas, Firebase, R2, FCM, AI or production deployment works. No real database seed/migration/cleanup or external-provider operation was performed during remediation; provision real configuration and validate on staging before deploying.
 
-Dự án này là Backend hoàn chỉnh cung cấp API cho ứng dụng di động MMA302. Nó thực hiện xác thực qua Firebase, lưu trữ media trực tiếp qua Cloudflare R2 bằng Presigned URL, xử lý logic nghiệp vụ về dinh dưỡng, AI, và lên kế hoạch bữa ăn. Kiến trúc được thiết kế theo hướng Modular Monolith, đảm bảo khả năng bảo trì và dễ dàng test.
+## Architecture
 
-## 2. Kiến trúc và luồng request
+`HTTP → manifest-mounted route → authentication/owner/admin guards → strict Zod validation → operation/controller adapter → service → repository → canonical Mongoose model → MongoDB`.
 
-Hệ thống sử dụng **Modular Monolith** với thủ công Dependency Injection (DI) qua `src/container.js`.
-Luồng xử lý một request tiêu chuẩn:
-`Client Request -> Route -> authenticate/authorize (Middleware) -> validate Zod (Middleware) -> Controller -> Service -> Repository -> Mongoose Model -> Database`.
+`src/container.js` explicitly assembles module factories and returns `{ models, repositories, services, operations, validation, env, logger, ... }`. Providers, clock, transaction runner and repositories are injectable for offline testing. Importing configuration/scripts does not connect to a database or send provider requests; server/script `main()` performs startup. Historical singular files are not the persistence authority: see [persistence mapping](docs/persistence-mapping.md).
 
-- **Controller**: Chịu trách nhiệm nhận HTTP request, đọc `req.validated` và `req.auth`, gọi Service và trả về API Response chuẩn.
-- **Service**: Nơi tập trung business logic, throw `AppError` nếu có lỗi.
-- **Repository**: Nơi duy nhất gọi đến MongoDB. Trả dữ liệu dạng Plain JS Object (`.lean()`).
-- **Model**: Định nghĩa Schema, Index, Validation mức DB.
+Growing lists are paginated. IDs are internal MongoDB ObjectIds; Firebase UIDs identify authentication identities. State transitions and ownership checks belong in services, not generic CRUD handlers. Cross-document invariants require MongoDB transactions and a **replica set/Atlas**, not a standalone MongoDB server. Production database startup disables automatic index building; development enables Mongoose auto-indexing. Deploy the reviewed canonical indexes explicitly before production traffic.
 
-## 3. Yêu cầu hệ thống
+## Requirements and installation
 
-- **Node.js**: >= 24 (Sử dụng `--env-file` và `--watch` built-in, không dùng dotenv hay nodemon).
-- **npm**: >= 10.
-- **MongoDB**: v8+ (Local, Docker hoặc Atlas).
-- **Firebase**: Project đã bật Authentication. Cần Service Account để verify ID Token.
-- **Cloudflare R2**: Bucket S3-compatible cho media upload (video, avatar, recipe image).
-- **AI Provider**: (Tùy chọn) OpenAI-compatible API cho các tính năng Meal Plan, Chatbot.
-
-## 4. Hướng dẫn cài đặt
-
-Thực hiện các bước sau để chạy local:
+- Node.js 24+ and npm 10+; built-in `--env-file`, watch mode and native `fetch` are used, not dotenv/nodemon.
+- MongoDB 8+ replica set or Atlas with database/network permissions for the configured user.
+- Firebase Authentication project and Admin service-account credentials to verify real ID tokens. In development unconfigured auth fails closed; production requires credentials.
+- Private Cloudflare R2 bucket with scoped S3-compatible credentials for media. Production requires R2 configuration.
+- Optional OpenAI-compatible HTTPS API supporting the configured chat/vision models and structured JSON responses. No additional AI SDK is required.
 
 ```bash
-git clone <repo_url>
 cd vegan-api-mma302
-npm install
+node --version                 # must report v24 or newer
+npm ci
+cp .env.example .env
+# Edit .env privately: replace required CHANGE_ME values; do not commit it.
+npm run dev
 ```
 
-## 5. Cấu hình biến môi trường (.env)
+For local replica-set MongoDB, use a URI such as `mongodb://localhost:27017/vegan_support?replicaSet=rs0` after the replica set has actually been initialized. Do not treat this URI as a working database by itself. Atlas requires a real user/password, IP/network access and the correct cluster hostname. `.env` is parsed by Node's env-file support; escaped `\n` in Firebase private keys is normalized by `loadEnv`.
 
-Copy file cấu hình mẫu và điền thông tin:
+## Environment contract (all 47 keys)
+
+The authoritative schema is `src/config/env.js`. Blank optional values become absent. Defaults below are schema defaults, not secrets or working credentials. `CHANGE_ME` values are not valid required credentials. Booleans accept `true`/`false` (and Zod stringbool forms); integers are validated and bounded.
+
+| Key                                      | Required / default                                          | Meaning                                                                                            |
+| ---------------------------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `NODE_ENV`                               | Optional; `development`                                     | `development`, `test`, `production`                                                                |
+| `PORT`                                   | Optional; `3000`                                            | Integer 1–65535                                                                                    |
+| `API_PREFIX`                             | Optional; `/api/v1`                                         | Absolute path prefix; health paths follow it                                                       |
+| `APP_NAME`                               | Optional; `vegan-support-api`                               | Log/app identifier                                                                                 |
+| `APP_BASE_URL`                           | Optional; `http://localhost:3000`                           | HTTPS in production; localhost HTTP only outside production                                        |
+| `TRUST_PROXY`                            | Optional; `0`                                               | Trusted proxy hops 0–10; set to actual topology, not blindly 1                                     |
+| `SHUTDOWN_TIMEOUT_MS`                    | Optional; `10000`                                           | Shutdown deadline 100–120000 ms                                                                    |
+| `JSON_BODY_LIMIT`                        | Optional; `1mb`                                             | JSON body size (`b`, `kb`, `mb`)                                                                   |
+| `CORS_ORIGINS`                           | Optional; empty                                             | Comma-separated exact origins; no `*`, no URL paths                                                |
+| `LOG_LEVEL`                              | Optional; `info`                                            | fatal/error/warn/info/debug/trace/silent                                                           |
+| `MONGODB_URI`                            | Required outside `test`; none                               | `mongodb://` or `mongodb+srv://`; scripts require a URI even in test mode                          |
+| `MONGODB_DB_NAME`                        | Optional; `vegan_support`                                   | Database name; overrides the URI database                                                          |
+| `MONGODB_MIN_POOL_SIZE`                  | Optional; `1`                                               | 0–1000, must not exceed max                                                                        |
+| `MONGODB_MAX_POOL_SIZE`                  | Optional; `10`                                              | 1–1000                                                                                             |
+| `MONGODB_SERVER_SELECTION_TIMEOUT_MS`    | Optional; `10000`                                           | 100–120000 ms                                                                                      |
+| `FIREBASE_PROJECT_ID`                    | Required in production or if FCM enabled; none              | Real Firebase project                                                                              |
+| `FIREBASE_CLIENT_EMAIL`                  | Required in production or if FCM enabled; none              | Service account email; paired with private key                                                     |
+| `FIREBASE_PRIVATE_KEY`                   | Required in production or if FCM enabled; none              | Service account PEM; escaped newlines normalized                                                   |
+| `FCM_ENABLED`                            | Optional; `false`                                           | Enables optional push delivery; in-app notifications remain independent                            |
+| `CLOUDFLARE_R2_ACCOUNT_ID`               | Required in production or if any core R2 key supplied; none | Derives the R2 endpoint                                                                            |
+| `CLOUDFLARE_R2_ACCESS_KEY_ID`            | Same R2 condition; none                                     | Scoped access key                                                                                  |
+| `CLOUDFLARE_R2_SECRET_ACCESS_KEY`        | Same R2 condition; none                                     | Secret access key                                                                                  |
+| `CLOUDFLARE_R2_BUCKET_NAME`              | Same R2 condition; none                                     | Private bucket                                                                                     |
+| `CLOUDFLARE_R2_PUBLIC_BASE_URL`          | Optional; none                                              | Legacy/public-asset configuration; not used to authorize draft/private media                       |
+| `CLOUDFLARE_R2_PRESIGNED_URL_EXPIRES_IN` | Optional; `300`                                             | Signed URL lifetime seconds, 60–3600                                                               |
+| `CLOUDFLARE_R2_MAX_IMAGE_SIZE_BYTES`     | Optional; `10485760`                                        | Image limit, 1024–104857600 bytes                                                                  |
+| `CLOUDFLARE_R2_MAX_VIDEO_SIZE_BYTES`     | Optional; `524288000`                                       | Video limit, 1024–2147483648 bytes                                                                 |
+| `AI_ENABLED`                             | Optional; `false`                                           | Disables provider-backed AI when false                                                             |
+| `AI_PROVIDER`                            | Optional; `openai-compatible`                               | Only supported adapter kind                                                                        |
+| `AI_BASE_URL`                            | Required if AI enabled; none                                | HTTPS API base (development localhost HTTP allowed by env schema)                                  |
+| `AI_API_KEY`                             | Required if AI enabled; none                                | Provider API secret                                                                                |
+| `AI_CHAT_MODEL`                          | Required if AI enabled; none                                | Chat/structured generation model; no model-name default                                            |
+| `AI_VISION_MODEL`                        | Required if AI enabled; none                                | Image recognition model; confirm capability with provider                                          |
+| `AI_TIMEOUT_MS`                          | Optional; `30000`                                           | Env bounds 100–300000 ms; adapter currently caps effective timeout at 120000 ms                    |
+| `AI_MAX_RETRIES`                         | Optional; `1`                                               | 0–3 transient retries; billing/idempotency ultimately provider-dependent                           |
+| `REMINDER_SCHEDULER_ENABLED`             | Optional; `false`                                           | Enables DB polling in server startup                                                               |
+| `REMINDER_POLL_INTERVAL_MS`              | Optional; `60000`                                           | 100–3600000 ms                                                                                     |
+| `REMINDER_BATCH_SIZE`                    | Optional; `50`                                              | 1–500                                                                                              |
+| `REMINDER_LOCK_TTL_MS`                   | Optional; `120000`                                          | 1000–3600000 ms; must be at least poll interval                                                    |
+| `RATE_LIMIT_WINDOW_MS`                   | Optional; `900000`                                          | 100–86400000 ms                                                                                    |
+| `RATE_LIMIT_MAX`                         | Optional; `200`                                             | Global API requests/window, 1–100000                                                               |
+| `AUTH_RATE_LIMIT_MAX`                    | Optional; `30`                                              | Auth requests/window                                                                               |
+| `UPLOAD_RATE_LIMIT_MAX`                  | Optional; `30`                                              | Upload request limit/window                                                                        |
+| `AI_RATE_LIMIT_MAX`                      | Optional; `20`                                              | AI request limit/window                                                                            |
+| `SWAGGER_ENABLED`                        | Optional; `true`                                            | Explicitly set false for production; not automatically disabled by schema                          |
+| `SEED_ADMIN_FIREBASE_UID`                | Required for default seed / cleanup admin; none             | Existing real Firebase user's UID, never CHANGE_ME; `--master-only` bypasses admin seed explicitly |
+| `SEED_ADMIN_EMAIL`                       | Required for default seed; none                             | Real matching admin email, not example/placeholder                                                 |
+
+There is **no** `MONGODB_URI_TEST`, `CLOUDFLARE_R2_ENDPOINT`, `CLOUDFLARE_R2_PUBLIC_URL` or `AI_MODEL` setting in the current runtime schema. `MONGODB_URI_TEST` and `RUN_DATABASE_TESTS` are **test-harness-only** opt-in values described below, not additional application settings. Offline tests inject repositories; real persistence tests require a separate explicitly named disposable database, never production configuration.
+
+## Firebase setup and authentication flow
+
+In the Firebase console, enable the client sign-in providers. Under project settings/service accounts, generate a dedicated Admin service-account private key. Copy the JSON's `project_id`, `client_email` and complete `private_key` to the matching environment keys, preserving PEM boundaries and newlines. Keep the JSON/key outside version control and rotate exposed credentials.
+
+The mobile client signs in with the Firebase client SDK, gets a fresh ID token, and sends `Authorization: Bearer <idToken>`. The backend verifies the token, synchronizes/maps its UID to an internal user, checks active status and role, then enforces owner/admin permissions. Clients cannot self-assign role/status. Seed only maps an already-existing UID to MongoDB; it neither creates a Firebase account nor creates/stores a password.
+
+## Private R2 media and browser CORS
+
+Create a private bucket; disable public `r2.dev` and public/custom-domain access to the bucket used for private/draft content. Scope credentials to that bucket and necessary object actions. **A public URL is directly accessible regardless of API authorization; hiding it in a DTO does not protect a draft.** A public custom domain is only appropriate for separately reviewed public assets in separate storage/access rules. `CLOUDFLARE_R2_PUBLIC_BASE_URL` does not make private media safe.
+
+Configure bucket CORS for the exact browser/web origins that need direct uploads, allowed methods `PUT`, `GET`, `HEAD`, necessary headers such as `Content-Type` (and checksum headers if used), and expose `ETag` when needed. Do not use wildcard origins for an authenticated web app. Native Android/iOS HTTP clients are not browser-CORS-enforced; the upload authorization still comes from the signed URL. API CORS is configured separately with `CORS_ORIGINS`.
+
+1. Authenticated client requests `POST /api/v1/media/upload-requests` with filename, MIME type, size and purpose.
+2. Service checks allowed MIME/size, generates a server-controlled owner namespace key and a `pending` record, and returns short-lived signed `PUT` URL plus required headers.
+3. Client uploads raw bytes directly to R2 with those headers. No file bytes pass through Express.
+4. Client calls `POST /api/v1/media/:id/confirm`. Backend `HeadObject` checks MIME and byte count before making the asset `ready`.
+5. Content linking requires ready, correct-owner/purpose/kind media. Authorized retrieval returns short-lived signed **GET**, not a synthesized public CDN URL. Unpublished content is not anonymous-accessible. Existing signed GET URLs remain usable until expiry; choose an appropriately short TTL.
+6. Delete checks references and uses a deleting/retry state. Storage deletion and MongoDB cannot share a distributed transaction; a failed deletion may require a controlled retry.
+
+## AI behavior and limitations
+
+With `AI_ENABLED=false`, provider-backed AI endpoints return `503 AI_DISABLED`; the app should hide/disable those actions while pantry/planning/community features continue. The adapter uses native fetch, abort/deadline handling and bounded transient retries. Structured output is parsed/validated, references are resolved against allowed canonical records, and pantry/meal-plan changes require explicit owner confirmation; proposal retries reuse consumed results rather than mutate twice. Unconfirmed proposals expire after one hour; consumed rows/results are retained for retry idempotency. Unresolved recognized food IDs block pantry confirmation with a conflict rather than invent master data. Safety responses are not medical advice, and prompts/media/transcripts are untrusted input, not instructions overriding the safety policy.
+
+Video summarization supports the available transcript/context path; **raw video understanding is not implemented by the default OpenAI-compatible image/chat adapter**. A video without an available transcript is not proof of an AI video capability; the client must handle `422 AI_VIDEO_UNSUPPORTED` when there is no transcript. Ingredient vision requires a configured image-capable model and authorized media. No provider/model capability was verified externally here.
+
+## Reminder delivery semantics
+
+The optional scheduler polls due MongoDB reminders, atomically claims a bounded batch with owner/expiry fencing, and advances recurrence. In-app notification `deliveryKey` is uniquely indexed for per-occurrence deduplication. FCM is **at-least-once**, not exactly-once: a crash after provider acceptance but before recording success can resend. Mobile clients should deduplicate by `deliveryKey`/`notificationId`. Disabled push, type preferences and quiet hours do not erase in-app notification history; invalid device tokens are removed. Raw FCM tokens must never appear in responses/logs.
+
+Recurring schedules use an IANA timezone. DST spring-forward nonexistent local times shift forward by the gap; fall-back ambiguous times use the **earlier occurrence**. Quiet hours use the user's local timezone, including overnight ranges. Missed recurring slots are skipped rather than replayed as a burst. Polling remains a **single-scheduler-instance deployment**: atomic claims help race safety but do not turn this into a supported horizontally scaled queue. Rate limits likewise use process-local memory. Scale-out requires a reviewed distributed scheduler/rate-limit design.
+
+## Commands and safe maintenance
 
 ```bash
-cp .env.example .env
+npm run dev                    # watch, loads local .env
+npm start                      # loads local .env (requires it)
+node src/server.js             # injected production env; does not load .env
+npm run test:run               # offline Vitest suite
+npm run test:contract          # manifest/docs/mounted route contract tests
+npm test                       # test watch mode
+npm run docs:generate          # maintained docs generation
+npm run docs:check             # detect stale generated docs
+npm run smoke                  # local HTTP/import/listen smoke with mocked integrations
+npm run format:check
+npm run format
 ```
 
-Bảng mô tả các biến môi trường:
+The default tests inject fake auth/storage/AI/messaging/repositories and do not call real providers or MongoDB. Node 24 is the acceptance runtime even if selected tests can be executed on the Node 22 host. Do not claim a real integration pass from offline tests.
 
-| Biến                                     | Bắt buộc      | Mặc định            | Ghi chú                                             |
-| ---------------------------------------- | ------------- | ------------------- | --------------------------------------------------- |
-| `NODE_ENV`                               | Có            | `development`       | `development`, `test`, `production`                 |
-| `PORT`                                   | Không         | `3000`              | Cổng chạy app                                       |
-| `MONGODB_URI`                            | Có            | -                   | URI kết nối MongoDB (Local hoặc Atlas)              |
-| `MONGODB_URI_TEST`                       | Không         | -                   | Dùng riêng cho Integration test (tùy chọn)          |
-| `CORS_ORIGINS`                           | Không         | `*`                 | Origin cho phép, phân tách bằng dấu phẩy            |
-| `LOG_LEVEL`                              | Không         | `info`              | Mức log của Pino (`debug`, `info`, `warn`, `error`) |
-| `TRUST_PROXY`                            | Không         | `0`                 | Số lượng proxy nếu chạy sau Nginx/Cloudflare        |
-| `SWAGGER_ENABLED`                        | Không         | `true`              | Bật/tắt `/api-docs`                                 |
-| `FIREBASE_PROJECT_ID`                    | Có            | -                   | ID dự án Firebase                                   |
-| `FIREBASE_CLIENT_EMAIL`                  | Tùy chọn      | -                   | Email từ Service Account                            |
-| `FIREBASE_PRIVATE_KEY`                   | Tùy chọn      | -                   | Khóa bí mật từ Service Account (giữ nguyên `\n`)    |
-| `CLOUDFLARE_R2_ENDPOINT`                 | Có            | -                   | S3 Endpoint API của Cloudflare R2                   |
-| `CLOUDFLARE_R2_ACCESS_KEY_ID`            | Có            | -                   | Access key R2                                       |
-| `CLOUDFLARE_R2_SECRET_ACCESS_KEY`        | Có            | -                   | Secret key R2                                       |
-| `CLOUDFLARE_R2_BUCKET_NAME`              | Có            | -                   | Tên bucket R2                                       |
-| `CLOUDFLARE_R2_PUBLIC_URL`               | Không         | -                   | URL Public/Custom Domain của R2 để lấy file         |
-| `CLOUDFLARE_R2_PRESIGNED_URL_EXPIRES_IN` | Không         | `300`               | TTL cho URL upload (giây)                           |
-| `AI_ENABLED`                             | Không         | `false`             | Bật/tắt gọi AI Provider                             |
-| `AI_BASE_URL`                            | Có khi AI bật | -                   | Base URL của OpenAI-compatible API                  |
-| `AI_API_KEY`                             | Có khi AI bật | -                   | Key gọi AI API                                      |
-| `AI_MODEL`                               | Không         | `gpt-4o-mini`       | Model sử dụng                                       |
-| `SEED_ADMIN_FIREBASE_UID`                | Không         | `CHANGE_ME`         | UID Firebase để cấp quyền Admin khi seed            |
-| `SEED_ADMIN_EMAIL`                       | Không         | `admin@example.com` | Email hiển thị của Admin khi seed                   |
+### Optional real MongoDB persistence tests
 
-## 6. Firebase Admin Credentials
+`tests/database/persistence.test.js` is skipped unless **both** `RUN_DATABASE_TESTS=true` and `MONGODB_URI_TEST` are supplied. This is an operational opt-in, not a routine offline test. Use a new empty replica-set/Atlas DB named exactly `test_vegan_<unique lowercase suffix of 8–64 letters/digits/underscores>`. The guard rejects the application URI/database, unnamed/default/production DB names and standalone URIs; startup verifies replica-set/Atlas capability, empty DB and an exclusive test lock. Providers remain disabled/injected.
 
-Để backend xác minh được `idToken` gửi từ mobile, cần thông tin Service Account.
+```bash
+# Example syntax only; run AFTER explicit authorization for this disposable DB.
+RUN_DATABASE_TESTS=true MONGODB_URI_TEST='mongodb://localhost:27017/test_vegan_unique_run_01?replicaSet=rs0' npm run test:database
+```
 
-1. Truy cập Firebase Console -> Project Settings -> Service Accounts.
-2. Bấm "Generate new private key".
-3. Mở file JSON tải về, copy `project_id`, `client_email`, và toàn bộ `private_key` (bao gồm các ký tự `\n`).
-4. Dán vào `.env`. Backend tự parse `\n` thành newline thật.
+The suite builds canonical indexes with `createIndexes` (never `syncIndexes`), checks actual UID/engagement/delivery/stable owner-week slot constraints and sequential activation of distinct plans, transaction rollback and last-admin guard, seed-twice ID/count stability, pantry compare-and-set concurrency and AI pantry confirmation idempotency/rollback. Cleanup removes only tracked fixture IDs under the run's own lock; it never drops the database, deletes all records or touches the application DB. Empty collections/indexes may remain. A failed/killed run can leave test fixtures/lock; choose a new isolated suffix rather than remove arbitrary records. This suite was **not connected or run against MongoDB during remediation**; only its skipped path and pure URI safety tests were executed.
 
-## 7. Cấu hình Cloudflare R2 CORS
+### Seed (writes; run only with explicit database authorization)
 
-Để ứng dụng di động (Android/iOS) có thể gọi `PUT` trực tiếp lên R2 thông qua presigned URL mà không bị lỗi trình duyệt, bạn cần thiết lập CORS Policy cho Bucket.
-Tạo một quy tắc CORS trong dashboard Cloudflare R2 cho phép:
+```bash
+npm run seed                               # real admin UID/email + master data + 8 demo recipes
+npm run seed -- --master-only               # skips admin AND recipes, seeds master data only
+npm run seed -- --master-only --with-demo-content
+# last form explicitly creates a non-login internal demo author + all 8 recipes, no admin
+```
 
-- Allowed Origins: `*` (hoặc các domain của bạn)
-- Allowed Methods: `GET`, `PUT`
-- Allowed Headers: `*`
-  Nếu bạn dùng Custom Domain cho public access, hãy điền tên miền vào biến `CLOUDFLARE_R2_PUBLIC_URL`.
+The seed uses **container.models**, not retired singular models. It upserts 12 categories, 5 allergens and 20 plant-based foods with canonical slugs/full unit-bearing nutrition; 8 recipes have resolved ingredient snapshots and calculated per-serving nutrition. Original macronutrients are approximate demo data; zero unspecified micronutrients mean unknown demo values, not verified absence. `aliases: ['demo fixture']`, recipe tags and descriptions label fixtures. Idempotent fixture upserts log inserted/updated/unchanged counts and never delete existing records or reset engagement counters. Colliding non-demo food/recipe records fail closed rather than silently overwrite. Default admin config must match a real existing Firebase account; seed does not verify/provision it through Firebase. An existing suspended/deleted or mismatched account is refused rather than reactivated. The internal demo UID `internal:vegan-demo-fixtures:v1` has role `user`, email `vegan-demo-fixtures@example.invalid`, and recipes use `sourceType: community`; no password or login identity is provisioned. Do not create a real Firebase login using that internal UID.
 
-## 8. Các lệnh khởi chạy
+### Migration and cleanup (default dry-run)
 
-- **Chạy môi trường phát triển (Watch mode):**
-  ```bash
-  npm run dev
-  ```
-- **Chạy môi trường Production:**
-  _(Biến môi trường cần được truyền từ hệ thống/container, không dùng `.env` file)_
-  ```bash
-  npm start
-  ```
-- **Chạy Tests (Unit & Integration):**
-  ```bash
-  npm run test:run
-  npm test          # Watch mode
-  ```
-- **Format Code (Prettier):**
-  ```bash
-  npm run format
-  npm run format:check
-  ```
-- **Nạp dữ liệu mẫu (Seed):**
-  ```bash
-  npm run db:seed
-  ```
-  _(Lưu ý: Bạn phải thiết lập `SEED_ADMIN_FIREBASE_UID` khác `CHANGE_ME` để gán quyền admin. Không xóa dữ liệu cũ, chạy idempotent)._
+```bash
+npm run migrate                            # DB inventory only
+npm run migrate -- --apply                 # explicit safe normalization transaction
+npm run media:cleanup                      # owned stale pending inventory only
+npm run media:cleanup -- --apply --limit 50 --older-than-hours 24
+node scripts/seed.js --help
+node scripts/migrate.js --help
+node scripts/cleanup-media.js --help
+```
 
-## 9. Luồng xác thực Firebase
+Dry-run still connects/reads the configured DB; it is not an offline test. Migration inventories actual canonical/legacy collection casing, preserves IDs/references/snapshots, and refuses conflicts/legacy aliases/string refs/truncation on apply. Only recognized role/status and absent server versions are automatically normalized. Backup, stop writers, review the report and stage first; see [persistence mapping](docs/persistence-mapping.md) for details.
 
-1. Mobile app tích hợp Firebase SDK, người dùng login/register qua Client (Google, Email, v.v.).
-2. Mobile gọi SDK lấy `idToken`.
-3. Mobile gửi HTTP request đến Backend với Header: `Authorization: Bearer <idToken>`.
-4. Backend nhận request, dùng `firebase-admin` verify token, giải mã ra `uid`.
-5. Backend ánh xạ `uid` vào MongoDB, xác định `userId` nội bộ, role và status.
+Cleanup requires an explicitly configured active admin UID and selects **only that admin's own** pending uploads older than at least 24 hours with expired signed-upload windows, no references, and the expected owner namespace/bucket. Ready/other-owner uploads are excluded. Apply atomically claims each still-pending candidate then calls the guarded canonical delete operation; it reports skipped/failed results and never performs blind bucket-wide deletion. It is intentionally not a global garbage collector or an automatic retry job for already-deleting assets.
 
-## 10. Luồng Upload Media (Cloudflare R2)
+Retired `build-phase5-9`, `generate-modules`, `generate-phase5-9`, `scaffold-all`, `relink-all`, `restore-users`, `fix-auth`, `fix-tests`, and `fix-validation` scripts now throw before running their historical writes. Maintained docs generators are not retired.
 
-1. Mobile yêu cầu upload một file (VD: ảnh avatar): Gửi `POST /api/v1/media/upload-requests` với `{ filename, mimeType, sizeBytes, purpose }`.
-2. Backend kiểm tra giới hạn size, mimeType và tạo Object Key an toàn theo namespace (vd: `avatars/<uuid>.jpg`).
-3. Backend tạo bản ghi `MediaAsset` với status `pending` và sinh Presigned URL từ R2 (S3 API).
-4. Backend trả về Presigned URL cho Mobile.
-5. Mobile tự gọi phương thức `PUT` kèm file lên Presigned URL.
-6. Mobile gọi `POST /api/v1/media/<id>/confirm` báo hoàn tất. Backend `HeadObject` kiểm tra tồn tại và size, chuyển file sang trạng thái `ready`.
+## Modules and API docs
 
-## 11. Hành vi của AI Provider
+Modules include health, app-config/home/onboarding; auth/users/nutrition-profiles; categories/allergens/food-items; recipes/search/recommendations; pantries/meal-plans/grocery-lists/diary/weight-logs/water-logs; media/posts/videos/comments/reactions/ratings/saved-items/view-history; AI/AI monitoring; notifications/reminders; reports/moderation/admin dashboard/audit logs.
 
-- Nếu `AI_ENABLED=false`, các endpoint AI sẽ trả về lỗi `503 AI_DISABLED`, app di động sẽ xử lý gracefully (ẩn tính năng AI) mà không crash.
-- Mọi giao tiếp với AI API dùng `fetch` native với timeout bằng `AbortController`.
-- Bất kỳ kết quả trả về từ AI (Meal Plan, Pantry Proposal, Ingredient recognition) đều được parse bằng `Zod` schema. Nếu sai cấu trúc, backend reject lỗi 500/502.
-- Người dùng LUÔN PHẢI GỌI bước xác nhận `confirm` từ endpoint để thay đổi CSDL; AI không được phép tự ghi đè CSDL của người dùng.
+`src/routes/api-manifest.js` is the HTTP contract, `docs/openapi.yaml` is the generated OpenAPI contract, and `docs/api-matrix.md` maps business operations. Swagger UI is at `http://localhost:3000/api-docs` when explicitly enabled. Default health paths are `/api/v1/health` (liveness) and `/api/v1/health/ready`; liveness is not DB readiness.
 
-## 12. Scheduler Nhắc Nhở (Reminders)
+## Business rules and security
 
-- Backend tích hợp một cơ chế poll database đơn giản bằng `setInterval` để xử lý các reminders `nextRunAt <= now()`.
-- Chống race condition bằng cách `findOneAndUpdate` kết hợp trạng thái `locked` và `lockedBy`.
-- **Hạn chế:** Hệ thống scheduler này chỉ được thiết kế cho **một instance duy nhất**. Nếu triển khai nhiều instance (scale horizontal), cần chuyển sang hệ thống Queue (Redis/BullMQ) hoặc Leader Election.
+- One Firebase UID maps to one internal user. Suspended/deleted identities cannot authenticate normally; admin operations are audited and the last active admin is protected.
+- Food items are master data. Recipe ingredients resolve foods and snapshot nutrition/allergens; historical snapshots do not change when master data changes.
+- Private/draft/hidden/deleted content is filtered from anonymous discovery. Media links require ownership/readiness; counters/version are server-controlled, never trusted client updates.
+- Pantry consumption needs explicit owner consent; completing a meal does not silently consume inventory. Only one active meal plan per owner/week is allowed, serialized by a stable unique active-slot pointer and transactional status changes.
+- Engagement/delivery unique indexes and transactionally guarded aggregates prevent duplicates; indexes must actually exist in the deployed DB. Content view deduplication retains at most 10,000 receipts per 30-minute window and fails closed for counting at saturation; owner progress/history can still update. This bounds memory/state rather than guaranteeing unlimited exact view accounting.
+- Owner checks cover personal planning/tracking/history/AI/notification data; strict validation rejects unknown fields and unsafe nested updates.
+- Soft-delete/state transitions preserve important history. Do not use a generic bulk delete to clean production data.
+- Do not log credentials, bearer tokens, private keys, raw FCM tokens, signed URL query strings, sensitive health notes, or raw AI prompts/provider response bodies. AI conversation content is intentionally persisted owner-scoped; this is not a claim that no prompts are ever stored. Plan retention/access/export/deletion policies before handling real users.
+- Use HTTPS, narrowly scoped service accounts/R2 credentials, exact CORS origins and correct trusted-proxy settings. CORS is not authentication; rate limits and helmet are defense-in-depth, not complete abuse prevention.
 
-## 13. Danh sách Module & API Docs
+## Docker / deployment checklist
 
-- Swagger UI có sẵn tại: `http://localhost:3000/api-docs` (Khi chạy môi trường Dev).
-- Các module tích hợp: `users`, `auth`, `categories`, `allergens`, `food-items`, `recipes`, `nutrition-profiles`, `posts`, `comments`, `reactions`, `saved-items`, `media`, `pantries`, `meal-plans`, `grocery-lists`, `diary`, `weight-logs`, `water-logs`, `ai`, `notifications`, `reminders`, `reports`, `moderation`, `admin-dashboard`, `ai-monitoring`.
+The Dockerfile uses Node 24 Alpine, production-only lockfile dependencies, non-root execution and native-fetch readiness healthchecks. It excludes `.env` and starts `node src/server.js`, using runtime-injected configuration. Compose targets external Atlas/replica-set MongoDB; it does **not** provision or initialize a database. Compose requires the production app HTTPS URL, Firebase credentials and private R2 settings. Compose variable interpolation may read a local `.env` to inject variables; the application image does not read/copy that file.
 
-## 14. Business Rules Quan Trọng
+```bash
+# Only after configuration is provisioned/reviewed on staging:
+docker compose build
+docker compose up -d
+# Health requests are local checks; they do not prove all providers work.
+```
 
-1. Một Firebase UID chỉ ánh xạ đến MỘT người dùng MongoDB duy nhất.
-2. FoodItem là Master Data (Admin quản lý). Ingredient trong công thức là FoodItem + lượng + đơn vị.
-3. Không tự ý trừ Pantry khi hoàn thành bữa ăn trừ khi user đồng ý.
-4. Xóa mềm (Soft-delete): Các dữ liệu quan trọng như Recipe, Post, Account được đánh cờ xóa, không xóa vật lý để giữ tính nhất quán của dữ liệu cũ.
-5. AI được coi là trợ lý tham khảo, mọi gợi ý (meal plan) cần người dùng "confirm" trước khi active. AI không thay thế tư vấn y tế.
+- [ ] Replace all placeholders securely; `NODE_ENV=production`, HTTPS `APP_BASE_URL`, explicit origins/trust proxy, `SWAGGER_ENABLED=false`.
+- [ ] Back up DB and verify restore; review active/legacy persistence mapping and run the authorized dry-run inventory.
+- [ ] Use replica set/Atlas, resolve duplicate/orphan records, build reviewed indexes before traffic; production startup does not auto-create indexes. Existing deployments must backfill/review stable meal-plan owner/week slots and explicitly retire the old `one_active_plan_per_owner_week` partial index during a stopped-writer maintenance window, not via live `syncIndexes` (see persistence mapping).
+- [ ] Verify Firebase token verification, suspended-user denial and owner/admin boundaries on staging.
+- [ ] Keep bucket private; validate signed PUT/HEAD/authorized GET, MIME/size checks and expired/referenced delete safeguards.
+- [ ] Validate AI model capabilities only if enabled; handle disabled/invalid-output/timeout/unsupported-video paths.
+- [ ] Run one scheduler instance; verify timezone/DST, quiet hours and client push deduplication.
+- [ ] Check `/api/v1/health` and `/api/v1/health/ready` (or your configured prefix); test graceful shutdown (`SIGTERM`) and DB/provider failures.
+- [ ] Monitor redacted request/error logs, notification failures, pending-media backlog and operational limits.
 
-## 15. Security & Privacy
-
-- **Những thứ không lưu / không log:** Không lưu password, API Key, Token thô, dữ liệu prompt rác của AI, FCM token, hoặc IP người dùng vào text logs tĩnh chưa redact.
-- Dùng `helmet`, chống NoSQL Injection bằng cách filter object, cấu hình CORS nghiêm ngặt cho app.
-- Role/Status không bao giờ được thay đổi qua `req.body` từ client; Zod `.strict()` loại bỏ mọi trường lạ.
-
-## 16. Deployment Checklist
-
-Trước khi đưa lên Production, hãy rà soát:
-
-- [ ] Môi trường nạp biến hệ thống (`NODE_ENV=production`), không đọc file `.env`.
-- [ ] MongoDB URL đã thay thành Replica Set/Atlas chuyên dụng.
-- [ ] Các Index của Mongoose đã được build xong (`pantryItemSchema.index`, `diarySchema.index`, v.v.).
-- [ ] Health Check (`/api/v1/health/ready`) pass.
-- [ ] CORS đã cấu hình đúng với Origin cần thiết (nếu truy cập từ Web). Mobile bỏ qua CORS nhưng R2 Bucket vẫn cần CORS.
-- [ ] R2 Bucket đã sinh Presigned URL hoạt động.
-- [ ] Firebase Service Account đã config đúng, không bị lộ.
-- [ ] Tính năng Swagger đã tự động tắt (`SWAGGER_ENABLED=false`).
-- [ ] Đã triển khai Graceful Shutdown để không làm đứt request.
-
-## 17. Known Limitations & Tương Lai
-
-- **Reminders Engine**: Poll memory DB đơn giản chỉ phù hợp với lưu lượng vừa/nhỏ và Single Instance. Tương lai cần thay bằng Message Queue (RabbitMQ/BullMQ).
-- **Phân tích Media/Video Streaming**: Hiện video được tải thẳng qua R2. Nếu lượng user cao, cần Cloudflare Stream hoặc Mux để adaptive streaming, transcode thành HLS/DASH thay vì `video/mp4` nguyên gốc.
-- **Tính toán lượng calo**: Tạm thời cộng dồn theo Food Items, có sai số với việc hao hụt trong chế biến.
+Known limitations: no video transcoding/adaptive streaming; no native raw-video AI in the default adapter; demo food values are not a researched clinical dataset; nutrition does not model cooking loss; no distributed scheduler/rate limiter; MongoDB and object storage do not share transactions; conservative migration does not automatically repair legacy records; external credentials and supported Node runtime remain deployment prerequisites. Offline tests cannot replace a real staging smoke test.

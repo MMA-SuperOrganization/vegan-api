@@ -1,6 +1,19 @@
-export * from "./pantries.routes.js";
-export * from "./pantries.controller.js";
-export * from "./pantries.service.js";
-export * from "./pantries.repository.js";
-export * from "./pantries.model.js";
-export * from "./pantries.validation.js";
+import { PantriesModel } from "./pantries.model.js";
+import { createPantriesRepository } from "./pantries.repository.js";
+import { createPantriesService } from "./pantries.service.js";
+import { createPantriesValidation } from "./pantries.validation.js";
+export { PantriesModel, createPantriesService, createPantriesRepository, createPantriesValidation };
+export function createPantriesModule(deps = {}) {
+  const repository = createPantriesRepository({
+    repositories: deps.repositories ?? {},
+    PantriesModel,
+  });
+  const service = createPantriesService({ ...deps, pantriesRepository: repository });
+  return {
+    operations: service.operations,
+    validation: createPantriesValidation(),
+    services: { pantries: service.publicService },
+    repositories: { pantries: repository },
+    models: { PantriesModel },
+  };
+}
