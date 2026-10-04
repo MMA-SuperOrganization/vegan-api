@@ -96,6 +96,8 @@ export const createErrorHandler =
   (error, req, res, _next) => {
     const appError = normalizeError(error);
     const requestId = req.id ?? null;
+    // Chỉ dùng nội bộ cho debug HTTP logger (in stack trace), không trả ra client.
+    if (res.locals) res.locals.debugError = error;
 
     if (appError.statusCode >= 500) {
       (req.log ?? logger).error(

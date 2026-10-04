@@ -7,6 +7,10 @@ import helmet from "helmet";
 import { pinoHttp } from "pino-http";
 import swaggerUi from "swagger-ui-express";
 import YAML from "yaml";
+import {
+  createDebugHttpLogger,
+  isDebugHttpLogEnabled,
+} from "./common/middlewares/debug-http-logger.js";
 import { createErrorHandler } from "./common/middlewares/error-handler.js";
 import { notFound } from "./common/middlewares/not-found.js";
 import { AppError } from "./common/errors/app-error.js";
@@ -26,6 +30,8 @@ export const createApp = (container) => {
     res.setHeader("X-Request-Id", req.id);
     next();
   });
+  // Dev-only: in chi tiết request/response dạng khối đẹp khi LOG_LEVEL=debug|trace.
+  if (isDebugHttpLogEnabled(env)) app.use(createDebugHttpLogger());
   app.use(
     pinoHttp({
       logger,
