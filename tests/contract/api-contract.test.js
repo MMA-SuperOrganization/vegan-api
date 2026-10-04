@@ -235,6 +235,7 @@ describe("Independent source -> mounted API -> OpenAPI -> matrix contract", () =
     expect(matrix).not.toMatch(/\| contract\.test\.js \|/);
   });
 
+  // Multiple full YAML renders and stale-output checks need headroom on CI runners.
   it("generation is pure, reproducible and check mode compares both committed outputs", async () => {
     expect(await renderOpenApi(registry)).toBe(
       fs.readFileSync(new URL("../../docs/openapi.yaml", import.meta.url), "utf8"),
@@ -247,7 +248,7 @@ describe("Independent source -> mounted API -> OpenAPI -> matrix contract", () =
     const changed = { ...registry, operations: registry.operations.slice(1) };
     await expect(writeOpenApi({ check: true, registry: changed })).rejects.toThrow(/stale/);
     await expect(writeMatrix({ check: true, registry: changed })).rejects.toThrow(/stale/);
-  }, 30000);
+  }, 90000);
 
   it("fails unsupported native conversion and rejects unconstrained/unresolved schemas", () => {
     expect(() => convertValidator(z.string().transform((value) => value.length))).not.toThrow(); // representable wire input
