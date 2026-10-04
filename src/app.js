@@ -55,6 +55,10 @@ export const createApp = (container) => {
   app.use(container.apiRateLimiter);
   if (env.swaggerEnabled) {
     const spec = YAML.parse(readFileSync(new URL("../docs/openapi.yaml", import.meta.url), "utf8"));
+    // Swagger Try it out follows the configured mount, including deployments
+    // that do not use the default /api/v1 prefix.
+    spec.servers[0].url = env.apiPrefix;
+    spec.servers[1].variables.apiPrefix.default = env.apiPrefix;
     app.get("/api-docs/openapi.yaml", (_req, res) =>
       res.type("application/yaml").send(YAML.stringify(spec)),
     );

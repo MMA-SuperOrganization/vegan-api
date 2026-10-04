@@ -142,7 +142,13 @@ export function createRemindersService({
             type: reminder.type,
             title: reminder.title,
             body: reminder.body,
-            data: { reminderId: String(reminder._id), scheduledAt: scheduledAt.toISOString() },
+            data: {
+              reminderId: String(reminder._id),
+              scheduledAt: scheduledAt.toISOString(),
+              route: { meal: "meal-plans", water: "water-logs", custom: "reminders" }[
+                reminder.type
+              ],
+            },
             deliveryKey: `${reminder._id}:${scheduledAt.toISOString()}`,
             assertClaim,
           });

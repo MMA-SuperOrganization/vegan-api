@@ -4,6 +4,16 @@ import yaml from "yaml";
 import prettier from "prettier";
 import { createContractRegistry, ref } from "../src/contracts/registry.js";
 import { readSourceEndpoints } from "../src/contracts/source-spec.js";
+import {
+  annotateSchemas,
+  moduleNotes,
+  fieldDescription,
+  schemaExample,
+  requestExamples,
+  operationDescription,
+  requestIdHeader,
+  errorExample,
+} from "./openapi-details.js";
 
 export const openApiPath = (path) => path.replace(/:([a-zA-Z0-9_]+)/g, "{$1}");
 const jsonContent = (schema) => ({ "application/json": { schema } });
@@ -18,18 +28,40 @@ export function generateOpenApi(registry = createContractRegistry()) {
       title: "Vegan Support API (MMA302)",
       version: "0.1.0",
       description:
-        "Generated from the explicit container registry and native Zod 4 input schemas. Source contract: chapters 11 and 13 of AI_AGENT_PROMPT_BUILD_VEGAN_BE_A_TO_Z.md. Owner authorization is enforced by operation services; optional authentication permits guests and rejects invalid supplied tokens.",
+        "Tài liệu 184 API backend, sinh từ route registry và Zod validator.\n\nĐăng nhập bằng Firebase client SDK, lấy ID token, bấm Authorize và nhập token (không thêm chữ Bearer trong ô Swagger). Gọi POST /auth/sync trước API cá nhân. Optional auth cho phép guest nhưng từ chối token đã gửi mà không hợp lệ.\n\nRequest có body dùng Content-Type: application/json. Response thành công: {success:true,data,meta}; lỗi: {success:false,error:{code,message,details},meta}. X-Request-Id dùng đối chiếu log. Query page bắt đầu từ 1, giới hạn/default xem từng schema. ObjectId gồm 24 ký tự hexadecimal; ID bữa ăn là UUID. Ngày lịch YYYY-MM-DD, timestamp ISO 8601 có timezone offset, timezone là tên IANA.\n\nVí dụ là dữ liệu tổng hợp để minh họa schema, không phải bản ghi seed hoặc cam kết giá trị nghiệp vụ. Thay ID, token, URL và ngày bằng dữ liệu thực tế có quyền truy cập; không thực thi thao tác ghi chỉ để thử ví dụ trên production. Ràng buộc kiểm tra chéo và điều kiện service được giải thích trong từng operation; JSON Schema không thể biểu diễn đầy đủ mọi điều kiện nghiệp vụ.",
     },
-    servers: [{ url: "http://localhost:3000/api/v1", description: "Local development" }],
+    servers: [
+      { url: "/api/v1", description: "Cùng origin với Swagger UI; API prefix mặc định" },
+      {
+        url: "{baseUrl}{apiPrefix}",
+        description: "Môi trường khác/custom API prefix",
+        variables: {
+          baseUrl: {
+            default: "http://localhost:3000",
+            description: "Origin backend, không có dấu / cuối",
+          },
+          apiPrefix: {
+            default: "/api/v1",
+            description: "API_PREFIX cấu hình ở backend, có dấu / đầu",
+          },
+        },
+      },
+    ],
     tags: [...new Set(registry.operations.map((route) => route.module))]
       .sort()
-      .map((name) => ({ name })),
+      .map((name) => ({ name, description: moduleNotes[name] })),
     paths: {},
     components: {
       securitySchemes: {
-        bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "Firebase ID Token" },
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "Firebase ID Token",
+          description:
+            "Firebase ID token từ client SDK. Swagger tự thêm Bearer; không dùng custom token/refresh token/FCM token.",
+        },
       },
-      schemas: registry.schemas,
+      schemas: annotateSchemas(registry.schemas),
     },
   };
   for (const route of registry.operations) {
@@ -45,8 +77,14 @@ export function generateOpenApi(registry = createContractRegistry()) {
           name,
           in: location === "params" ? "path" : "query",
           required: location === "params" || (schema.required ?? []).includes(name),
+          description: fieldDescription(name, property),
           schema: property,
           ...(property.type === "array" ? { style: "form", explode: true } : {}),
+          // Preprocessed CSV query schemas have no expressible wire type. Do not
+          // invent an example that bypasses the actual validator.
+          ...(property.type || property.anyOf || property.oneOf || property.enum
+            ? { example: schemaExample(property, registry.schemas, name) }
+            : {}),
         });
       }
     }
@@ -96,24 +134,90 @@ export function generateOpenApi(registry = createContractRegistry()) {
         description: "Request exceeds JSON body limit",
         content: jsonContent(ref("ErrorEnvelope")),
       };
-    if (["ai", "media", "health", "videos"].includes(route.module))
-      responses[503] = {
-        description: "Required dependency unavailable or feature disabled",
-        content: jsonContent(ref("ErrorEnvelope")),
-      };
-    if (route.module === "ai" || route.operationId === "generateVideoSummaryFromVideoId") {
+    // Shared service/provider/transaction dependencies can fail outside AI/media.
+    responses[503] = {
+      description: "Required dependency unavailable or feature disabled",
+      content: jsonContent(ref("ErrorEnvelope")),
+    };
+    if (
+      [
+        "sendAiMessage",
+        "createMealPlanProposal",
+        "confirmMealPlanProposal",
+        "recognizeIngredients",
+        "confirmPantryProposal",
+        "generateVideoSummary",
+        "generateVideoSummaryFromVideoId",
+      ].includes(route.operationId)
+    ) {
       responses[502] = {
         description: "AI provider failure or invalid structured output",
         content: jsonContent(ref("ErrorEnvelope")),
       };
+    }
+    if (["generateVideoSummary", "generateVideoSummaryFromVideoId"].includes(route.operationId)) {
       responses[422] = {
         description: "Video summary unsupported by the configured provider",
         content: jsonContent(ref("ErrorEnvelope")),
       };
     }
+    for (const [status, response] of Object.entries(responses)) {
+      const codes = {
+        400: "BAD_REQUEST, VALIDATION_ERROR, INVALID_JSON, INVALID_ID",
+        401: "TOKEN_MISSING, TOKEN_INVALID, TOKEN_EXPIRED, TOKEN_REVOKED, UNAUTHORIZED",
+        403: "FORBIDDEN, ACCOUNT_DISABLED, ACCOUNT_SUSPENDED, ACCOUNT_DELETED",
+        404: "NOT_FOUND, USER_NOT_FOUND, ROUTE_NOT_FOUND",
+        409: "CONFLICT, DUPLICATE_KEY, VERSION_CONFLICT, COUNTER_CONFLICT",
+        413: "PAYLOAD_TOO_LARGE",
+        422: "AI_VIDEO_UNSUPPORTED",
+        429: "TOO_MANY_REQUESTS",
+        500: "INTERNAL_ERROR",
+        502: "AI_PROVIDER_ERROR, AI_TIMEOUT, AI_INVALID_OUTPUT",
+        503: "SERVICE_UNAVAILABLE, DEPENDENCY_UNAVAILABLE, TRANSACTIONS_REQUIRED; Firebase: AUTH_PROVIDER_ERROR; AI: AI_DISABLED/AI_UNAVAILABLE; storage: STORAGE_PROVIDER_ERROR; readiness: DATABASE_UNAVAILABLE",
+      };
+      if (codes[status])
+        response.description += `. Các mã có thể gặp từ middleware/service: ${codes[status]}. Mã cụ thể phụ thuộc nhánh thực thi.`;
+      if (
+        status === "409" &&
+        ["confirmMealPlanProposal", "confirmPantryProposal"].includes(route.operationId)
+      )
+        response.description +=
+          " Proposal hết hạn: AI_PROPOSAL_EXPIRED; tranh chấp claim: AI_PROPOSAL_UNAVAILABLE; nguyên liệu chưa giải quyết được: AI_UNRESOLVED_INGREDIENTS; trạng thái/xác nhận khác: CONFLICT.";
+      response.headers = { "X-Request-Id": requestIdHeader };
+      if (status === "429") {
+        response.headers.RateLimit = {
+          description:
+            "Thông tin quota và thời gian reset của limiter (draft-8); tên policy/quota phụ thuộc cấu hình.",
+          schema: { type: "string" },
+        };
+        response.headers["RateLimit-Policy"] = {
+          description: "Chính sách quota/window hiện áp dụng (draft-8).",
+          schema: { type: "string" },
+        };
+        response.headers["Retry-After"] = {
+          description:
+            "Số giây trước khi nên retry request bị giới hạn; chỉ có khi limiter phát header.",
+          schema: { type: "string" },
+        };
+      }
+      response.content["application/json"].examples = {
+        example: {
+          summary:
+            Number(status) < 400 ? "Kết quả thành công minh họa" : `Lỗi HTTP ${status} minh họa`,
+          description:
+            "Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.",
+          value:
+            Number(status) < 400
+              ? schemaExample(registry.schemas[route.response], registry.schemas)
+              : errorExample(status),
+        },
+      };
+    }
+    const summary = baseline.get(`${route.method} ${route.path}`)?.summary ?? route.operationId;
     const operation = {
       tags: [route.module],
-      summary: baseline.get(`${route.method} ${route.path}`)?.summary ?? route.operationId,
+      summary,
+      description: operationDescription(route, summary, registry),
       operationId: route.operationId,
       "x-auth": route.auth,
       "x-tests": route.tests,
@@ -127,8 +231,16 @@ export function generateOpenApi(registry = createContractRegistry()) {
       ...(route.request.body
         ? {
             requestBody: {
-              required: (registry.schemas[route.request.body].required ?? []).length > 0,
-              content: jsonContent(ref(route.request.body)),
+              required: !registry.container.validation[route.operationId].body.safeParse({})
+                .success,
+              description:
+                "JSON theo schema. Trường không có trong schema bị từ chối khi additionalProperties=false; bỏ qua trường optional khác với gửi null. Thay ID ví dụ bằng resource thật có quyền truy cập.",
+              content: {
+                "application/json": {
+                  schema: ref(route.request.body),
+                  examples: requestExamples(route, registry),
+                },
+              },
             },
           }
         : {}),

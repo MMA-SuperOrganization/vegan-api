@@ -358,7 +358,14 @@ describe("Discovery behavior and input safety", () => {
     async (dietType) => {
       const h = harness({
         foodItems: [
-          { _id: IDS.food, name: "Plant food", status: "active", isVegetarian: true },
+          {
+            _id: IDS.food,
+            name: "Plant food",
+            status: "active",
+            isVegetarian: true,
+            containsEggs: false,
+            containsDairy: false,
+          },
           {
             _id: IDS.allergicFood,
             name: "Meat",

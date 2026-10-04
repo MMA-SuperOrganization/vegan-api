@@ -8,7 +8,7 @@ export const appConfigValidation = {
 };
 export const createAppConfigService = (deps) => {
   const config = () => {
-    const input = deps.publicConfig ?? {};
+    const input = deps.publicConfig ?? deps.env?.publicConfig ?? {};
     return {
       versionPolicy: {
         minimum:

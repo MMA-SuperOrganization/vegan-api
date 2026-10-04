@@ -334,6 +334,86 @@ suite(
         "pending",
       );
       expect((await pantryModel.findOne({ userId: owner._id }).lean()).items).toHaveLength(3);
+      const selectedContext = {
+        actor,
+        params: { proposalId: String(unresolved._id) },
+        body: { items: [{ foodItemId: String(food._id), quantity: 42, unit: "g" }] },
+      };
+      await container.operations.confirmPantryProposal(selectedContext);
+      await container.operations.confirmPantryProposal(selectedContext);
+      const updatedPantry = await pantryModel.findOne({ userId: owner._id }).lean();
+      expect(updatedPantry.items).toHaveLength(4);
+      expect(updatedPantry.items.at(-1).quantity).toBe(42);
+      expect(
+        (await container.models.aiProposals.findById(unresolved._id).lean()).structuredData.items[0]
+          .name,
+      ).toBe(food.name);
+    });
+    it("persists dietary composition snapshots and clears known flags when replaced by unknown ingredients", async () => {
+      const category = await create(container.models.categories, {
+        name: "Diet test",
+        slug: `diet-${suffix}`,
+        type: "food",
+        status: "active",
+      });
+      const baseFood = {
+        name: "Diet ingredient",
+        normalizedName: "diet ingredient",
+        categoryId: category._id,
+        defaultServing: { amount: 100, unit: "g", gramEquivalent: 100 },
+        nutritionPer100g: { caloriesKcal: 100 },
+        status: "active",
+        isVegan: false,
+        isVegetarian: true,
+      };
+      const dairy = await create(container.models.foodItems, {
+        ...baseFood,
+        slug: `dairy-${suffix}`,
+        containsEggs: false,
+        containsDairy: true,
+      });
+      const unknown = await create(container.models.foodItems, {
+        ...baseFood,
+        slug: `unknown-${suffix}`,
+      });
+      const actor = { userId: String(owner._id), role: "user", status: "active" };
+      const recipe = await container.operations.createRecipe({
+        actor,
+        body: {
+          title: "Diet snapshot",
+          servings: 1,
+          ingredients: [{ foodItemId: String(dairy._id), quantity: 100, unit: "g" }],
+          steps: [{ order: 1, instruction: "Cook" }],
+        },
+      });
+      track(container.models.recipes, recipe._id);
+      expect((await container.models.recipes.findById(recipe._id).lean()).containsEggs).toBe(false);
+      await container.repositories.foodItems.updateOne(
+        { _id: dairy._id },
+        { $set: { containsEggs: true } },
+      );
+      expect((await container.models.recipes.findById(recipe._id).lean()).containsEggs).toBe(false);
+      await container.operations.updateRecipe({
+        actor,
+        params: { id: String(recipe._id) },
+        body: {
+          ingredients: [{ foodItemId: String(unknown._id), quantity: 100, unit: "g" }],
+        },
+      });
+      const saved = await container.models.recipes.findById(recipe._id).lean();
+      expect(saved.containsEggs).toBeNull();
+      expect(saved.containsDairy).toBeNull();
+      expect(
+        (
+          await container.services.foodItems.getUnsafeIds(
+            [String(dairy._id), String(unknown._id)],
+            {
+              dietType: "lacto_vegetarian",
+            },
+          )
+        ).sort(),
+      ).toEqual([String(dairy._id), String(unknown._id)].sort());
+      await findTrack(container.models.auditLogs, { targetId: String(recipe._id) });
     });
     it("aggregates real cross-domain pages, casts filters and retains old pending content", async () => {
       const a = await create(container.models.recipes, {

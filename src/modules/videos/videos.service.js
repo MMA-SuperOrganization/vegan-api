@@ -139,6 +139,7 @@ export const createVideosService = (deps) => {
           Object.assign(changes, { status: "draft", rejectionReason: null });
         const candidate = { ...before, ...changes };
         await validateReferences(candidate, actor, session);
+        if (before.status === "published") await validatePublication(candidate, actor, session);
         await syncMedia(deps, "video", before, candidate, actor, session);
         const after = await casUpdate(repo, before, changes, { version, session });
         await auditAdmin(deps, context, "video", before, after, "video.update", session);

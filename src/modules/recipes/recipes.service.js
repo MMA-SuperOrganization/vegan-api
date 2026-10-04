@@ -47,6 +47,8 @@ export const createRecipesService = (deps) => {
         allergenIds: (food.allergenIds ?? []).map(objectIdString),
         isVegan: food.isVegan === true,
         isVegetarian: food.isVegetarian === true || food.isVegan === true,
+        containsEggs: food.isVegan === true ? false : food.containsEggs,
+        containsDairy: food.isVegan === true ? false : food.containsDairy,
         quantity: input.quantity,
         unit: input.unit,
         gramEquivalent,
@@ -69,6 +71,16 @@ export const createRecipesService = (deps) => {
       allergenIds: [...new Set(ingredients.flatMap((ingredient) => ingredient.allergenIds ?? []))],
       isVegan: ingredients.length > 0 && ingredients.every((i) => i.isVegan),
       isVegetarian: ingredients.length > 0 && ingredients.every((i) => i.isVegetarian),
+      ...Object.fromEntries(
+        ["containsEggs", "containsDairy"].map((key) => [
+          key,
+          ingredients.some((i) => i[key] === true)
+            ? true
+            : ingredients.length > 0 && ingredients.every((i) => i[key] === false)
+              ? false
+              : null,
+        ]),
+      ),
     };
   };
   const validatePublication = async (recipe, actor, session) => {

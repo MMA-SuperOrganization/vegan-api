@@ -4,6 +4,7 @@ import { AI_DISCLAIMER } from "../../providers/ai/ai.provider.js";
 import { chatOutput, mealPlanOutput, pantryOutput, summaryOutput } from "./ai.validation.js";
 const own = (actor) => {
   if (!actor?.userId) throw AppError.unauthorized();
+  if (actor.status && actor.status !== "active") throw AppError.forbidden("Account is not active");
   return actor.userId;
 };
 const invalidOutput = () =>
@@ -146,10 +147,12 @@ export function createAiService({
       throw invalidOutput();
     return food;
   }
-  async function verifyPantry(data, userId, session) {
+  async function verifyPantry(data, userId, session, { resolveNames = false } = {}) {
     const safety = await dietarySafety(userId, session);
-    for (const item of data.items.filter((value) => value.foodItemId))
-      await verifyFood(item.foodItemId, safety, session);
+    for (const item of data.items.filter((value) => value.foodItemId)) {
+      const food = await verifyFood(item.foodItemId, safety, session);
+      if (resolveNames && food.name) item.name = food.name;
+    }
   }
   async function verifyRecipes(data, userId, session) {
     const safety = await dietarySafety(userId, session);
@@ -241,10 +244,20 @@ export function createAiService({
           "AI_PROPOSAL_UNAVAILABLE",
         );
       let resource;
+      let confirmedData;
       if (type === "meal_plan") {
-        const parsed = mealPlanOutput.safeParse(current.structuredData);
+        const parsed = mealPlanOutput.safeParse({
+          ...current.structuredData,
+          ...(body.title !== undefined ? { title: body.title } : {}),
+          ...(body.days !== undefined ? { days: body.days } : {}),
+        });
         if (!parsed.success) throw invalidOutput();
+        const originalDates = (current.structuredData.days ?? []).map((day) => day.date).sort();
+        const selectedDates = parsed.data.days.map((day) => day.date).sort();
+        if (JSON.stringify(originalDates) !== JSON.stringify(selectedDates))
+          throw AppError.badRequest("Selected meals must keep the proposal dates");
         await verifyRecipes(parsed.data, userId, session);
+        confirmedData = parsed.data;
         if (!services.mealPlans?.createForUser)
           throw AppError.serviceUnavailable("Meal plan service is unavailable");
         resource = await services.mealPlans.createForUser(
@@ -267,7 +280,14 @@ export function createAiService({
           });
         }
       } else {
-        const parsed = pantryOutput.safeParse(current.structuredData);
+        const parsed = pantryOutput.safeParse({
+          ...current.structuredData,
+          ...(body.items !== undefined
+            ? {
+                items: body.items.map((item) => ({ ...item, name: item.foodItemId })),
+              }
+            : {}),
+        });
         if (!parsed.success) throw invalidOutput();
         if (parsed.data.items.some((item) => !item.foodItemId))
           throw AppError.conflict(
@@ -275,7 +295,8 @@ export function createAiService({
             [],
             "AI_UNRESOLVED_INGREDIENTS",
           );
-        await verifyPantry(parsed.data, userId, session);
+        await verifyPantry(parsed.data, userId, session, { resolveNames: true });
+        confirmedData = parsed.data;
         if (!services.pantries?.addItems)
           throw AppError.serviceUnavailable("Pantry service is unavailable");
         resource = await services.pantries.addItems(
@@ -293,7 +314,7 @@ export function createAiService({
       if (
         !(await repos.aiProposals.updateOne(
           { _id: current._id, userId, status: "confirmed" },
-          { $set: { result } },
+          { $set: { result, structuredData: confirmedData } },
           { session },
         ))
       )

@@ -100,6 +100,85 @@ function fixture(overrides = {}) {
   return { ...createAiModule(deps), deps, outputs, provider: aiProvider, repos: repositories };
 }
 describe("AI complete domain", () => {
+  it("confirms selected pantry items, resolving unknown recognition without another provider call", async () => {
+    const f = fixture();
+    f.outputs.ingredient_recognition = {
+      items: [{ name: "Unknown bean", quantity: 1, unit: "piece" }],
+    };
+    const proposal = await f.operations.recognizeIngredients({ actor, body: { mediaId } });
+    expect(f.repos.pantries.records).toHaveLength(0);
+    const input = {
+      actor,
+      params: { proposalId: proposal.proposalId },
+      body: { items: [{ foodItemId: foodId, quantity: 200, unit: "g", expiryDate: "2026-10-10" }] },
+    };
+    const result = await f.operations.confirmPantryProposal(input);
+    expect(result.resource.items).toEqual([
+      { foodItemId: foodId, quantity: 200, unit: "g", expiresAt: "2026-10-10T00:00:00.000Z" },
+    ]);
+    expect(
+      await f.operations.confirmPantryProposal({
+        ...input,
+        body: { items: [{ foodItemId: foodId, quantity: 999, unit: "g" }] },
+      }),
+    ).toEqual(result);
+    expect(f.repos.pantries.records).toHaveLength(1);
+    expect(f.provider.generate).toHaveBeenCalledTimes(1);
+  });
+  it("confirms edited meals but rejects changed dates, foreign proposals and unsafe food atomically", async () => {
+    const f = fixture();
+    const proposal = await f.operations.createMealPlanProposal({
+      actor,
+      body: { startDate: "2026-10-05", days: 1 },
+    });
+    const input = {
+      actor,
+      params: { proposalId: proposal.proposalId },
+      body: {
+        title: "My chosen meals",
+        days: [{ date: "2026-10-05", meals: [{ slot: "dinner", recipeId, servings: 2 }] }],
+      },
+    };
+    await expect(
+      f.operations.confirmMealPlanProposal({
+        ...input,
+        body: { days: [{ ...input.body.days[0], date: "2026-10-06" }] },
+      }),
+    ).rejects.toMatchObject({ statusCode: 400 });
+    await expect(
+      f.operations.confirmMealPlanProposal({ ...input, actor: { userId: other } }),
+    ).rejects.toMatchObject({ statusCode: 404 });
+    f.deps.services.foodItems.getById.mockResolvedValueOnce({
+      _id: foodId,
+      status: "active",
+      isVegan: false,
+    });
+    await expect(f.operations.confirmMealPlanProposal(input)).rejects.toMatchObject({
+      code: "AI_INVALID_OUTPUT",
+    });
+    expect(f.repos.aiProposals.records[0].status).toBe("pending");
+    expect(f.repos.mealPlans.records).toHaveLength(0);
+    const result = await f.operations.confirmMealPlanProposal(input);
+    expect(result.resource).toMatchObject({
+      title: "My chosen meals",
+      days: [{ date: "2026-10-05", meals: [{ type: "dinner", servings: 2 }] }],
+    });
+    expect(f.deps.services.mealPlans.activate).not.toHaveBeenCalled();
+    expect(f.provider.generate).toHaveBeenCalledTimes(1);
+  });
+  it("rejects privileged fields and empty selections in confirmation payloads", () => {
+    const f = fixture();
+    for (const payload of [
+      { items: [] },
+      { items: [{ foodItemId: foodId, quantity: 2, unit: "g", userId: other }] },
+      { role: "admin" },
+    ]) {
+      expect(f.validation.confirmPantryProposal.body.safeParse(payload).success).toBe(false);
+    }
+    expect(
+      f.validation.confirmMealPlanProposal.body.safeParse({ days: [], activate: true }).success,
+    ).toBe(false);
+  });
   it("exports exact operations and strict schemas", () => {
     const f = fixture();
     expect(Object.keys(f.operations).sort()).toEqual(Object.keys(f.validation).sort());

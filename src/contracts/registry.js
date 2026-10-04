@@ -593,14 +593,31 @@ export function createContractRegistry(container = createContractContainer()) {
   list("getDiaryEntries", ref("DiaryEntry"));
   assign("createDiaryEntry updateDiaryEntry", ref("DiaryEntry"));
   assign("deleteDiaryEntry deleteWeightLog deleteWaterLog", object({ id, deleted: boolean }));
+  const targetNutrients = ["caloriesKcal", "proteinG", "carbsG", "fatG", "fiberG"];
+  const nullableNumber = { anyOf: [number, { type: "null" }] };
+  const targetComparison = object(
+    Object.fromEntries(
+      targetNutrients.map((key) => [
+        key,
+        object({
+          consumed: number,
+          target: nullableNumber,
+          remaining: nullableNumber,
+          percentage: nullableNumber,
+        }),
+      ]),
+    ),
+  );
   assign(
     "getDiarySummary",
     object({
       from: string,
       to: string,
-      days: array(object({ date: string, entryCount: count, nutrition })),
+      days: array(object({ date: string, entryCount: count, nutrition, targetComparison })),
       entryCount: count,
       nutrition,
+      dailyTargets: object(Object.fromEntries(targetNutrients.map((key) => [key, nullableNumber]))),
+      targetComparison,
     }),
   );
   list("getWeightLogs", entity("WeightLogsModel"));

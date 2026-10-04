@@ -16,6 +16,18 @@ const r2Env = {
 };
 
 describe("loadEnv", () => {
+  it("rejects malformed or reversed app versions", () => {
+    expect(() =>
+      loadEnv({ NODE_ENV: "test", APP_MINIMUM_VERSION: "2.0.0", APP_LATEST_VERSION: "1.9.9" }),
+    ).toThrow(/APP_LATEST_VERSION/);
+    expect(() => loadEnv({ NODE_ENV: "test", APP_MINIMUM_VERSION: "latest" })).toThrow(
+      /APP_MINIMUM_VERSION/,
+    );
+    expect(
+      loadEnv({ NODE_ENV: "test", APP_MINIMUM_VERSION: "1.9.0", APP_LATEST_VERSION: "1.10.0" })
+        .publicConfig.latestVersion,
+    ).toBe("1.10.0");
+  });
   it("applies defaults in test environment without any credentials", () => {
     const env = loadEnv({ NODE_ENV: "test" });
 

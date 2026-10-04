@@ -18,6 +18,36 @@ const publicEntry = (entry) => {
 };
 const mongoId = (id) =>
   mongoose.isValidObjectId(id) ? new mongoose.Types.ObjectId(String(id)) : id;
+const targetFields = {
+  caloriesKcal: "dailyCalorieTarget",
+  proteinG: "proteinTargetG",
+  carbsG: "carbTargetG",
+  fatG: "fatTargetG",
+  fiberG: "fiberTargetG",
+};
+const dailyTargets = (profile) =>
+  Object.fromEntries(
+    Object.entries(targetFields).map(([nutrient, field]) => [
+      nutrient,
+      Number.isFinite(profile?.[field]) && profile[field] > 0 ? profile[field] : null,
+    ]),
+  );
+const compareTargets = (nutrition, targets, dayCount = 1) =>
+  Object.fromEntries(
+    Object.entries(targets).map(([key, dailyTarget]) => {
+      const target = dailyTarget === null ? null : dailyTarget * dayCount;
+      const consumed = nutrition[key] ?? 0;
+      return [
+        key,
+        {
+          consumed,
+          target,
+          remaining: target === null ? null : target - consumed,
+          percentage: target === null ? null : Math.round((consumed / target) * 10000) / 100,
+        },
+      ];
+    }),
+  );
 export function createDiaryService({
   diaryRepository: repo,
   services = {},
@@ -25,7 +55,17 @@ export function createDiaryService({
 }) {
   const now = () => new Date(typeof clock === "function" ? clock() : clock.now());
   function range(query = {}) {
-    const today = now().toISOString().slice(0, 10);
+    const parts = Object.fromEntries(
+      new Intl.DateTimeFormat("en-US", {
+        timeZone: query.timezone ?? "UTC",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      })
+        .formatToParts(now())
+        .map((part) => [part.type, part.value]),
+    );
+    const today = `${parts.year}-${parts.month}-${parts.day}`;
     const to = query.date ?? query.to ?? today;
     const from =
       query.date ??
@@ -179,12 +219,20 @@ export function createDiaryService({
         entryCount: row.entryCount,
         nutrition: normalizeNutrition(row),
       }));
+      const targets = dailyTargets(await services.users?.getNutrition?.(userId));
+      const nutrition = sumNutrition(days.map((day) => day.nutrition));
+      const dayCount = Math.round((Date.parse(to) - Date.parse(from)) / 86400000) + 1;
       return {
         from,
         to,
-        days,
+        days: days.map((day) => ({
+          ...day,
+          targetComparison: compareTargets(day.nutrition, targets),
+        })),
         entryCount: days.reduce((sum, day) => sum + day.entryCount, 0),
-        nutrition: sumNutrition(days.map((day) => day.nutrition)),
+        nutrition,
+        dailyTargets: targets,
+        targetComparison: compareTargets(nutrition, targets, dayCount),
       };
     },
   };

@@ -4,6 +4,7 @@ import { z } from "zod";
 import {
   user,
   integer,
+  pagination,
   service,
   repository,
   publicFilter,
@@ -12,7 +13,7 @@ import {
   listData,
   now,
 } from "../app-config/index.js";
-const querySchema = z.object({ page: integer(10, 1), limit: integer(30, 10) }).strict();
+const querySchema = z.object({ page: pagination.page, limit: integer(30, 10) }).strict();
 export const recommendationValidation = Object.fromEntries(
   ["discoverContent", "getRecipeRecommendations", "getContentRecommendations"].map((key) => [
     key,
@@ -46,7 +47,11 @@ export const createRecommendationsService = (deps) => {
     const items = Array.isArray(pantry) ? pantry : (pantry?.items ?? listData(pantry));
     return {
       allergies: new Set(
-        (nutrition?.allergenIds ?? profile?.allergenIds ?? profile?.allergies ?? []).map(stringId),
+        [
+          ...(nutrition?.allergenIds ?? []),
+          ...(profile?.allergenIds ?? []),
+          ...(profile?.allergies ?? []),
+        ].map(stringId),
       ),
       pantry: new Set(
         items
@@ -79,6 +84,8 @@ export const createRecommendationsService = (deps) => {
         ...contentCardProjection,
         isVegan: 1,
         isVegetarian: 1,
+        containsEggs: 1,
+        containsDairy: 1,
         dietTypes: 1,
         "ingredients.foodItemId": 1,
         "ingredients.allergenIds": 1,
@@ -95,7 +102,13 @@ export const createRecommendationsService = (deps) => {
       ),
     ];
     const ingredientAllergies = new Set();
-    if (ctx.allergies.size && foodIds.length) {
+    if (foodIds.length && deps.services.foodItems?.getUnsafeIds) {
+      for (const id of await deps.services.foodItems.getUnsafeIds(foodIds, {
+        allergenIds: [...ctx.allergies],
+        dietType: ctx.dietType,
+      }))
+        ingredientAllergies.add(id);
+    } else if (ctx.allergies.size && foodIds.length) {
       for (let index = 0; index < foodIds.length; index += 100) {
         const foods = await repository(deps, "foodItems").findMany(
           {

@@ -202,11 +202,36 @@ export function createPantriesService({
       const userId = ownerId(actor);
       if (!services.recipes?.listPublic)
         throw AppError.serviceUnavailable("Recipe service is unavailable");
+      const [profile, nutrition] = await Promise.all([
+        services.users?.getProfile?.(userId),
+        services.users?.getNutrition?.(userId),
+      ]);
+      const excludeAllergenIds = [
+        ...new Set(
+          [...(profile?.allergenIds ?? []), ...(nutrition?.allergenIds ?? [])].map(String),
+        ),
+      ];
       const results = await services.recipes.listPublic({
         page: query.page ?? 1,
         limit: query.limit ?? 20,
+        ...(profile?.dietType ? { dietType: profile.dietType } : {}),
+        ...(excludeAllergenIds.length ? { excludeAllergenIds } : {}),
       });
-      const data = (await match(userId, results.data ?? results)).filter(
+      const recipes = results.data ?? results;
+      const foodIds = recipes
+        .flatMap((recipe) => (recipe.ingredients ?? []).map((item) => item.foodItemId))
+        .filter(Boolean);
+      const unsafeIds = new Set(
+        (await services.foodItems?.getUnsafeIds?.(foodIds, {
+          allergenIds: excludeAllergenIds,
+          dietType: profile?.dietType,
+        })) ?? [],
+      );
+      const safeRecipes = recipes.filter(
+        (recipe) =>
+          !(recipe.ingredients ?? []).some((item) => unsafeIds.has(String(item.foodItemId))),
+      );
+      const data = (await match(userId, safeRecipes)).filter(
         (result) => result.matchRatio >= (query.minMatch ?? 0),
       );
       return {

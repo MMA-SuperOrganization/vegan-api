@@ -1,5 +1,7 @@
 # Đối chiếu backend và kế hoạch sửa — 04/10/2026
 
+> Báo cáo này lưu baseline và lần khắc phục trước. Lần đối chiếu checklist sản phẩm tiếp theo đã bổ sung diet trứng/sữa, runtime version policy, AI reviewed selections, diary target comparisons và bằng chứng nghiệm thu mới; xem [backend checklist acceptance](backend-checklist-acceptance-2026-10-04.md) để biết trạng thái hiện tại.
+
 Nguồn yêu cầu: `../../AI_AGENT_PROMPT_BUILD_VEGAN_BE_A_TO_Z.md`. Phạm vi khảo sát: code đang được `src/container.js` và `src/routes/index.js` sử dụng, model/repository/provider, tài liệu, script vận hành và kiểm thử. Phần khảo sát dưới đây lưu baseline trước sửa. Sau yêu cầu tiếp theo của người dùng, đã sửa code và bổ sung bằng chứng trong phần Kết quả khắc phục cuối tài liệu.
 
 ## Kết luận

@@ -29,6 +29,24 @@ const openapi = yaml.parse(
 );
 const matrix = fs.readFileSync(new URL("../../docs/api-matrix.md", import.meta.url), "utf8");
 
+// OpenAPI annotations must not change any runtime validation constraint.
+function withoutDescriptions(value) {
+  if (Array.isArray(value)) return value.map(withoutDescriptions);
+  if (!value || typeof value !== "object") return value;
+  return Object.fromEntries(
+    Object.entries(value)
+      .filter(([key]) => key !== "description")
+      .map(([key, item]) => [
+        key,
+        key === "properties"
+          ? Object.fromEntries(
+              Object.entries(item).map(([name, schema]) => [name, withoutDescriptions(schema)]),
+            )
+          : withoutDescriptions(item),
+      ]),
+  );
+}
+
 function assertEndpointSet(actual, expected) {
   const actualKeys = actual.map(key);
   const expectedKeys = expected.map(key);
@@ -174,7 +192,7 @@ describe("Independent source -> mounted API -> OpenAPI -> matrix contract", () =
         expect(operation.requestBody.content["application/json"].schema.$ref).toBe(
           `#/components/schemas/${route.request.body}`,
         );
-        expect(openapi.components.schemas[route.request.body]).toEqual(
+        expect(withoutDescriptions(openapi.components.schemas[route.request.body])).toEqual(
           convertValidator(registry.container.validation[route.operationId].body),
         );
       } else expect(operation.requestBody).toBeUndefined();

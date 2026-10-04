@@ -32,19 +32,22 @@ const shape = {
     .optional(),
   isVegan: z.boolean(),
   isVegetarian: z.boolean(),
+  containsEggs: z.boolean().optional(),
+  containsDairy: z.boolean().optional(),
   status: z.enum(["active", "inactive"]).optional(),
 };
-const consistent = (v) => !v.isVegan || v.isVegetarian !== false;
+const consistent = (v) =>
+  !v.isVegan || (v.isVegetarian !== false && !v.containsEggs && !v.containsDairy);
 export const foodItemSchema = z
   .object(shape)
   .strict()
-  .refine(consistent, "A vegan food must also be vegetarian");
+  .refine(consistent, "Vegan foods must be vegetarian and cannot contain eggs or dairy");
 export const foodItemPatchSchema = z
   .object(shape)
   .partial()
   .strict()
   .refine((v) => Object.keys(v).length > 0, "At least one field is required")
-  .refine(consistent, "A vegan food must also be vegetarian");
+  .refine(consistent, "Vegan foods must be vegetarian and cannot contain eggs or dairy");
 const booleanQuery = z.enum(["true", "false"]).transform((v) => v === "true");
 const idsQuery = z
   .union([

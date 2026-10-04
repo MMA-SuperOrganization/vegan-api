@@ -43,6 +43,8 @@ const schema = new Schema(
     allergenIds: [{ type: Schema.Types.ObjectId, ref: "Allergens", index: true }],
     isVegan: { type: Boolean, required: true },
     isVegetarian: { type: Boolean, required: true },
+    containsEggs: Boolean,
+    containsDairy: Boolean,
     status: { type: String, enum: ["active", "inactive"], default: "active" },
     createdBy: { type: Schema.Types.ObjectId, ref: "Users" },
     updatedBy: { type: Schema.Types.ObjectId, ref: "Users" },

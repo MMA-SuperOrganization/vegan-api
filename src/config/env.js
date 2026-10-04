@@ -27,6 +27,19 @@ export const envSchema = z
       .default("/api/v1"),
     APP_NAME: z.string().min(1).max(100).default("vegan-support-api"),
     APP_BASE_URL: z.url().default("http://localhost:3000"),
+    APP_MINIMUM_VERSION: z
+      .string()
+      .regex(/^\d+\.\d+\.\d+$/)
+      .max(30)
+      .default("1.0.0"),
+    APP_LATEST_VERSION: z
+      .string()
+      .regex(/^\d+\.\d+\.\d+$/)
+      .max(30)
+      .default("1.0.0"),
+    APP_FORCE_UPDATE: boolean(false),
+    VIDEOS_ENABLED: boolean(true),
+    COMMUNITY_ENABLED: boolean(true),
     TRUST_PROXY: integer(0, 0, 10),
     SHUTDOWN_TIMEOUT_MS: integer(10000, 100, 120000),
     JSON_BODY_LIMIT: z
@@ -83,6 +96,11 @@ export const envSchema = z
     const requireReal = (key) => {
       if (!supplied(env[key])) issue(key, "Replace placeholder with a valid configuration value");
     };
+    const minimum = env.APP_MINIMUM_VERSION.split(".").map(Number);
+    const latest = env.APP_LATEST_VERSION.split(".").map(Number);
+    const firstDifference = minimum.findIndex((value, index) => value !== latest[index]);
+    if (firstDifference >= 0 && minimum[firstDifference] > latest[firstDifference])
+      issue("APP_LATEST_VERSION", "Latest version must be at least the minimum supported version");
     if (env.NODE_ENV !== "test") requireReal("MONGODB_URI");
     if (supplied(env.MONGODB_URI) && !/^mongodb(?:\+srv)?:\/\//.test(env.MONGODB_URI))
       issue("MONGODB_URI", "Expected a MongoDB connection URI");
@@ -160,6 +178,13 @@ export const loadEnv = (source = process.env) => {
     apiPrefix: e.API_PREFIX,
     appName: e.APP_NAME,
     appBaseUrl: e.APP_BASE_URL,
+    publicConfig: {
+      minimumVersion: e.APP_MINIMUM_VERSION,
+      latestVersion: e.APP_LATEST_VERSION,
+      forceUpdate: e.APP_FORCE_UPDATE,
+      videosEnabled: e.VIDEOS_ENABLED,
+      communityEnabled: e.COMMUNITY_ENABLED,
+    },
     trustProxy: e.TRUST_PROXY,
     shutdownTimeoutMs: e.SHUTDOWN_TIMEOUT_MS,
     jsonBodyLimit: e.JSON_BODY_LIMIT,

@@ -1,6 +1,7 @@
 import { AppError } from "../../common/errors/app-error.js";
 import { id } from "../../common/validators/domain.schemas.js";
 import { requireFound, slug, escapeRegex } from "../../common/domain.js";
+import { dietFilter } from "../../common/utils/diet.js";
 const publicFields = [
   "_id",
   "name",
@@ -13,6 +14,8 @@ const publicFields = [
   "allergenIds",
   "isVegan",
   "isVegetarian",
+  "containsEggs",
+  "containsDairy",
   "status",
   "createdAt",
   "updatedAt",
@@ -36,6 +39,23 @@ export const createFoodItemsService = ({ deps, repository }) => {
     const result = [];
     for (const value of ids) result.push(await getById(value, options));
     return result;
+  };
+  const getUnsafeIds = async (values, { allergenIds = [], dietType } = {}) => {
+    const ids = [...new Set(values.map((value) => id.parse(String(value))))];
+    const conditions = [];
+    if (allergenIds.length) conditions.push({ allergenIds: { $in: allergenIds } });
+    const diet = dietFilter(dietType);
+    if (Object.keys(diet).length) conditions.push({ $nor: [diet] });
+    if (!conditions.length) return [];
+    const unsafe = [];
+    for (let index = 0; index < ids.length; index += 100) {
+      const result = await repository.findMany(
+        { _id: { $in: ids.slice(index, index + 100) }, $or: conditions },
+        { page: 1, limit: 100, projection: { _id: 1 } },
+      );
+      unsafe.push(...result.data.map((food) => String(food._id)));
+    }
+    return unsafe;
   };
   const references = async (data, session) => {
     if (data.categoryId) {
@@ -138,6 +158,9 @@ export const createFoodItemsService = ({ deps, repository }) => {
           if (data.name) data.normalizedName = data.name.normalize("NFKC").toLowerCase();
           if ((data.isVegan ?? before.isVegan) && !(data.isVegetarian ?? before.isVegetarian))
             throw AppError.badRequest("A vegan food must also be vegetarian");
+          const candidate = { ...before, ...data };
+          if (candidate.isVegan && (candidate.containsEggs || candidate.containsDairy))
+            throw AppError.badRequest("Vegan foods cannot contain eggs or dairy");
           await references(data, session);
           if (data.slug) await unique(data.slug, before._id, session);
           return {
@@ -166,6 +189,6 @@ export const createFoodItemsService = ({ deps, repository }) => {
           };
         }),
     },
-    services: { getById, getMany },
+    services: { getById, getMany, getUnsafeIds },
   };
 };

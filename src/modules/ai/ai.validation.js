@@ -81,10 +81,23 @@ export const createAiValidation = () => ({
   },
   confirmMealPlanProposal: {
     params: z.strictObject({ proposalId: id }),
-    body: z.strictObject({ activate: z.boolean().default(false) }),
+    body: z.strictObject({
+      activate: z.boolean().default(false),
+      title: mealPlanOutput.shape.title.optional(),
+      days: mealPlanOutput.shape.days.optional(),
+    }),
   },
   recognizeIngredients: { body: z.strictObject({ mediaId: id }) },
-  confirmPantryProposal: { params: z.strictObject({ proposalId: id }), body: z.strictObject({}) },
+  confirmPantryProposal: {
+    params: z.strictObject({ proposalId: id }),
+    body: z.strictObject({
+      items: z
+        .array(pantryOutput.shape.items.element.omit({ name: true }).extend({ foodItemId: id }))
+        .min(1)
+        .max(50)
+        .optional(),
+    }),
+  },
   generateVideoSummary: {
     body: z.strictObject({ mediaId: id, transcript: text(20000).optional() }),
   },

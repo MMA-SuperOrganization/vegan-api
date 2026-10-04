@@ -15,6 +15,8 @@ const ingredient = new mongoose.Schema(
     allergenIds: [ref("Allergens")],
     isVegan: Boolean,
     isVegetarian: Boolean,
+    containsEggs: Boolean,
+    containsDairy: Boolean,
     quantity: { type: Number, min: 0, required: true },
     unit: {
       type: String,
@@ -61,6 +63,8 @@ export const RecipesModel = registerModel(
     allergenIds: [ref("Allergens")],
     isVegan: Boolean,
     isVegetarian: Boolean,
+    containsEggs: Boolean,
+    containsDairy: Boolean,
     sourceType: { type: String, enum: ["admin", "community", "ai_assisted"], default: "community" },
   },
   "recipes",
