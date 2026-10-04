@@ -129,6 +129,7 @@ Recurring schedules use an IANA timezone. DST spring-forward nonexistent local t
 npm run dev                    # watch, loads local .env
 npm start                      # loads local .env (requires it)
 node src/server.js             # injected production env; does not load .env
+npm run build                  # Node 24+, syntax, docs consistency and offline startup smoke
 npm run test:run               # offline Vitest suite
 npm run test:contract          # manifest/docs/mounted route contract tests
 npm test                       # test watch mode
@@ -138,6 +139,8 @@ npm run smoke                  # local HTTP/import/listen smoke with mocked inte
 npm run format:check
 npm run format
 ```
+
+`npm run build` is the verification build for this native JavaScript backend: it checks every JavaScript file in `src/` and `scripts/`, validates committed generated documentation, and starts/stops an HTTP server with mocked dependencies. It exits nonzero when a check fails and does not load `.env`, call real providers, or generate a `dist/` directory. Run `npm run test:run` separately for the full suite. To package a deployable image, run `docker build -t vegan-api .`.
 
 The default tests inject fake auth/storage/AI/messaging/repositories and do not call real providers or MongoDB. Node 24 is the acceptance runtime even if selected tests can be executed on the Node 22 host. Do not claim a real integration pass from offline tests.
 
