@@ -15,7 +15,41 @@ const boolean = (fallback) =>
     z.union([z.boolean(), z.stringbool()]),
   );
 const supplied = (value) => Boolean(value && !value.includes("CHANGE_ME"));
-export const normalizePrivateKey = (value) => value?.replace(/\\n/g, "\n");
+const PEM_PATTERN = /-----BEGIN ([A-Z ]+)-----([\s\S]*?)-----END \1-----/;
+const stripQuotes = (value) => {
+  let result = value.trim();
+  while (
+    result.length >= 2 &&
+    ((result.startsWith('"') && result.endsWith('"')) ||
+      (result.startsWith("'") && result.endsWith("'")))
+  )
+    result = result.slice(1, -1).trim();
+  return result;
+};
+/**
+ * Chuẩn hoá FIREBASE_PRIVATE_KEY bất kể cách dán vào dashboard (Coolify giữ nguyên dấu nháy):
+ * có/không nháy, `\n` dạng chữ, xuống dòng thật, CRLF, một dòng có khoảng trắng, hoặc base64.
+ */
+export const normalizePrivateKey = (value) => {
+  if (typeof value !== "string") return value;
+  let key = stripQuotes(value)
+    .replace(/\\+r\\+n|\\+n/g, "\n")
+    .replace(/\r\n?/g, "\n");
+  if (!key.includes("-----BEGIN")) {
+    try {
+      const decoded = Buffer.from(key, "base64").toString("utf8");
+      if (decoded.includes("-----BEGIN")) key = normalizePrivateKey(decoded);
+    } catch {
+      /* not base64 */
+    }
+  }
+  const match = key.match(PEM_PATTERN);
+  if (!match) return key;
+  const [, label, body] = match;
+  const compact = body.replace(/[^A-Za-z0-9+/=]/g, "");
+  const lines = compact.match(/.{1,64}/g) ?? [];
+  return `-----BEGIN ${label}-----\n${lines.join("\n")}\n-----END ${label}-----\n`;
+};
 
 export const envSchema = z
   .object({

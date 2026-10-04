@@ -107,4 +107,20 @@ describe("normalizePrivateKey", () => {
     expect(normalizePrivateKey("a\nb")).toBe("a\nb");
     expect(normalizePrivateKey(undefined)).toBeUndefined();
   });
+
+  it("rebuilds a canonical PEM from dashboard-pasted variants", () => {
+    const body = "A".repeat(70);
+    const expected = `-----BEGIN PRIVATE KEY-----\n${"A".repeat(64)}\nAAAAAA\n-----END PRIVATE KEY-----\n`;
+    const variants = [
+      `"-----BEGIN PRIVATE KEY-----\\n${body}\\n-----END PRIVATE KEY-----\\n"`,
+      `'-----BEGIN PRIVATE KEY-----\\n${body}\\n-----END PRIVATE KEY-----\\n'`,
+      `-----BEGIN PRIVATE KEY-----\\\\n${body}\\\\n-----END PRIVATE KEY-----\\\\n`,
+      `-----BEGIN PRIVATE KEY-----\r\n${body}\r\n-----END PRIVATE KEY-----\r\n`,
+      `-----BEGIN PRIVATE KEY----- ${body} -----END PRIVATE KEY-----`,
+      Buffer.from(`-----BEGIN PRIVATE KEY-----\n${body}\n-----END PRIVATE KEY-----\n`).toString(
+        "base64",
+      ),
+    ];
+    for (const variant of variants) expect(normalizePrivateKey(variant)).toBe(expected);
+  });
 });
