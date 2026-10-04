@@ -406,9 +406,6 @@ export const createDebugHttpLogger = (config = {}) => {
   };
 };
 
-/** Bật debug HTTP log khi LOG_LEVEL là debug/trace, không phải production/test, và đang chạy trong Terminal (TTY). */
+/** Bật debug HTTP log khi LOG_LEVEL là debug/trace và không phải production/test. */
 export const isDebugHttpLogEnabled = (env) =>
-  ["debug", "trace"].includes(env.logLevel) &&
-  !env.isProduction &&
-  !env.isTest &&
-  Boolean(process.stdout.isTTY);
+  ["debug", "trace"].includes(env.logLevel) && !env.isProduction && !env.isTest;
