@@ -97,8 +97,13 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       void shutdown("uncaughtException", true);
     });
   } catch (error) {
+    const isEnvError = error instanceof Error && error.message.startsWith("Invalid environment");
+    const detail =
+      error instanceof Error
+        ? `${error.name}: ${error.message}`.replace(/\/\/[^@/\s]+@/g, "//[REDACTED]@")
+        : String(error);
     process.stderr.write(
-      `${error instanceof Error && error.message.startsWith("Invalid environment") ? error.message : "Startup failed; check configuration and database availability"}\n`,
+      `${isEnvError ? error.message : `Startup failed; check configuration and database availability\n  cause: ${detail}`}\n`,
     );
     await disconnectDatabase().catch(() => {});
     process.exitCode = 1;
