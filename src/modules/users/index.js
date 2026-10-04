@@ -1,9 +1,10 @@
+import { createUsersController } from "./users.controller.js";
 import { buildRepository } from "../../common/persistence/repository.js";
 import { UsersModel, UserProfilesModel, AdminGuardsModel } from "./users.model.js";
 import { createUsersService } from "./users.service.js";
 import { createUsersValidation } from "./users.validation.js";
 
-export const createUsersModule = (deps) => {
+const buildUsersModule = (deps) => {
   deps.repositories ??= {};
   const users = buildRepository({
     repositories: deps.repositories,
@@ -30,3 +31,11 @@ export const createUsersModule = (deps) => {
   };
 };
 export { UsersModel, UserProfilesModel, AdminGuardsModel };
+
+export const createUsersModule = (deps) => {
+  const module = buildUsersModule(deps);
+  return {
+    ...module,
+    controllers: createUsersController({ operations: module.operations, clock: deps.clock }),
+  };
+};

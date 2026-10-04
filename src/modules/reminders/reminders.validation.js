@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { timezoneSchema } from "../notifications/notifications.validation.js";
+import { timezoneSchema } from "../notifications/index.js";
 const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 const id = z.string().regex(/^[a-f\d]{24}$/i);
 export const reminderScheduleSchema = z.discriminatedUnion("mode", [

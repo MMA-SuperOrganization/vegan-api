@@ -304,12 +304,19 @@ export const stubAdvancedAggregates = (repositories, { empty = false } = {}) => 
           : [{ total: 2, helpful: 1, runsWithFeedback: 2 }],
     );
   const trendAggregates = Object.fromEntries(
-    ["recipes", "posts", "videos", "reports", "users", "auditLogs"].map((key) => [
-      key,
-      vi
-        .spyOn(repositories[key], "aggregate")
-        .mockResolvedValue(empty ? [] : [{ bucket: WHEN, count: 1 }]),
-    ]),
+    ["recipes", "posts", "videos", "reports", "users", "auditLogs"].map((key) => {
+      const original = repositories[key].aggregate.bind(repositories[key]);
+      return [
+        key,
+        vi
+          .spyOn(repositories[key], "aggregate")
+          .mockImplementation((pipeline, internal) =>
+            pipeline.some((stage) => stage.$group) && !internal?.rows
+              ? Promise.resolve(empty ? [] : [{ bucket: WHEN, count: 1 }])
+              : original(pipeline, internal),
+          ),
+      ];
+    }),
   );
   return { runAggregate, feedbackAggregate, trendAggregates };
 };

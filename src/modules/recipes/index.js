@@ -1,9 +1,10 @@
+import { createRecipesController } from "./recipes.controller.js";
 import { buildRepository } from "../../common/persistence/repository.js";
 import { RecipesModel } from "./recipes.model.js";
 import { createRecipesService } from "./recipes.service.js";
 import { createRecipesValidation } from "./recipes.validation.js";
-import { createContentFacade } from "./content.service.js";
-export const createRecipesModule = (deps) => {
+import { createContentFacade } from "../../common/content-service.js";
+const buildRecipesModule = (deps) => {
   buildRepository({ repositories: deps.repositories, key: "recipes", model: RecipesModel });
   const { operations, service } = createRecipesService(deps);
   return {
@@ -15,3 +16,13 @@ export const createRecipesModule = (deps) => {
   };
 };
 export { RecipesModel, createRecipesService, createRecipesValidation };
+
+export * from "../../common/content-service.js";
+
+export const createRecipesModule = (deps) => {
+  const module = buildRecipesModule(deps);
+  return {
+    ...module,
+    controllers: createRecipesController({ operations: module.operations, clock: deps.clock }),
+  };
+};

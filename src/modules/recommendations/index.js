@@ -1,8 +1,9 @@
+import { createRecommendationsController } from "./recommendations.controller.js";
 import {
   createRecommendationsService,
   recommendationValidation,
 } from "./recommendations.service.js";
-export const createRecommendationsModule = (deps) => {
+const buildRecommendationsModule = (deps) => {
   const operations = createRecommendationsService(deps);
   return {
     operations,
@@ -15,5 +16,16 @@ export const createRecommendationsModule = (deps) => {
     },
     repositories: {},
     models: {},
+  };
+};
+
+export const createRecommendationsModule = (deps) => {
+  const module = buildRecommendationsModule(deps);
+  return {
+    ...module,
+    controllers: createRecommendationsController({
+      operations: module.operations,
+      clock: deps.clock,
+    }),
   };
 };

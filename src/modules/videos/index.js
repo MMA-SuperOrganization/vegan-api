@@ -1,8 +1,9 @@
+import { createVideosController } from "./videos.controller.js";
 import { buildRepository } from "../../common/persistence/repository.js";
 import { VideosModel } from "./videos.model.js";
 import { createVideosService } from "./videos.service.js";
 import { createVideosValidation } from "./videos.validation.js";
-export const createVideosModule = (deps) => {
+const buildVideosModule = (deps) => {
   buildRepository({ repositories: deps.repositories, key: "videos", model: VideosModel });
   const { operations, service } = createVideosService(deps);
   return {
@@ -14,3 +15,11 @@ export const createVideosModule = (deps) => {
   };
 };
 export { VideosModel, createVideosService, createVideosValidation };
+
+export const createVideosModule = (deps) => {
+  const module = buildVideosModule(deps);
+  return {
+    ...module,
+    controllers: createVideosController({ operations: module.operations, clock: deps.clock }),
+  };
+};

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { text, pagination } from "../../common/validators/domain.schemas.js";
-import { idParams, empty } from "../recipes/content.validation.js";
+import { idParams, empty } from "../../common/validators/content.schemas.js";
 export const mediaPurposes = [
   "avatar",
   "recipe",

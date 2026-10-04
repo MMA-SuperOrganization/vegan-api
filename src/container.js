@@ -120,6 +120,7 @@ export const createContainer = ({ env, logger, overrides = {} }) => {
     messagingProvider,
     getDatabaseStatus: overrides.getDatabaseStatus ?? getDatabaseStatus,
   };
+  const controllers = {};
   const operations = {},
     validation = {},
     models = {},
@@ -131,6 +132,7 @@ export const createContainer = ({ env, logger, overrides = {} }) => {
     for (const key of Object.keys(module.operations))
       if (operations[key]) throw new Error(`Duplicate operation: ${key}`);
     Object.assign(operations, module.operations);
+    Object.assign(controllers, module.controllers);
     Object.assign(validation, module.validation);
     Object.assign(services, module.services);
     Object.assign(models, module.models);
@@ -141,6 +143,7 @@ export const createContainer = ({ env, logger, overrides = {} }) => {
     modules,
     models,
     operations,
+    controllers,
     validation,
     services,
     repositories,

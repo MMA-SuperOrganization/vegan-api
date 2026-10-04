@@ -1,3 +1,4 @@
+import { createGroceryListsController } from "./grocery-lists.controller.js";
 import { GroceryListsModel } from "./grocery-lists.model.js";
 import { createGroceryListsRepository } from "./grocery-lists.repository.js";
 import { createGroceryListsService } from "./grocery-lists.service.js";
@@ -8,7 +9,7 @@ export {
   createGroceryListsRepository,
   createGroceryListsValidation,
 };
-export function createGroceryListsModule(deps = {}) {
+function buildGroceryListsModule(deps = {}) {
   const repository = createGroceryListsRepository({
     repositories: deps.repositories ?? {},
     GroceryListsModel,
@@ -22,3 +23,11 @@ export function createGroceryListsModule(deps = {}) {
     models: { GroceryListsModel },
   };
 }
+
+export const createGroceryListsModule = (deps) => {
+  const module = buildGroceryListsModule(deps);
+  return {
+    ...module,
+    controllers: createGroceryListsController({ operations: module.operations, clock: deps.clock }),
+  };
+};

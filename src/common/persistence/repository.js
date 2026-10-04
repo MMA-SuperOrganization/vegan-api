@@ -9,6 +9,11 @@ const queryOptions = (query, { session, projection, sort } = {}) => {
 };
 
 export const createRepository = (model) => ({
+  collectionName: model.collection.name,
+  castFilter(filter) {
+    // Mongoose does not cast aggregation pipelines. Cast against the owning schema first.
+    return model.find(filter).cast(model);
+  },
   async findOne(filter, options = {}) {
     return queryOptions(model.findOne(filter), options).lean();
   },
@@ -38,12 +43,13 @@ export const createRepository = (model) => ({
     return document.toObject();
   },
   async updateOne(filter, update, options = {}) {
+    const { new: returnNew = true, ...queryOptions } = options;
     return model
       .findOneAndUpdate(filter, update, {
-        new: true,
+        returnDocument: returnNew ? "after" : "before",
         runValidators: true,
         setDefaultsOnInsert: true,
-        ...options,
+        ...queryOptions,
       })
       .lean();
   },

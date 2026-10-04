@@ -1,4 +1,4 @@
-import { requireActor, transaction, casUpdate } from "../recipes/content.service.js";
+import { requireActor, transaction, casUpdate } from "../../common/content-service.js";
 export const createReactionsService = (deps) => {
   const repo = deps.repositories.reactions;
   const operations = {

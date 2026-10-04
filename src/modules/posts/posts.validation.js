@@ -9,7 +9,7 @@ import {
   contentQuery,
   mineQuery,
   contentPatch,
-} from "../recipes/content.validation.js";
+} from "../../common/validators/content.schemas.js";
 export const postInput = z
   .object({
     title: text(200),

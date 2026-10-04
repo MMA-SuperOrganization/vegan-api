@@ -1,3 +1,4 @@
+import { createMediaCleanup } from "./media-cleanup.js";
 import { randomUUID } from "node:crypto";
 import { AppError } from "../../common/errors/app-error.js";
 import { requireFound, assertOwner, objectIdString } from "../../common/domain.js";
@@ -10,7 +11,7 @@ import {
   casUpdate,
   casFilter,
   isPublic,
-} from "../recipes/content.service.js";
+} from "../../common/content-service.js";
 
 export const createMediaService = (deps) => {
   const repo = deps.repositories.mediaAssets;
@@ -335,26 +336,7 @@ export const createMediaService = (deps) => {
     getMediaAsset: async ({ actor, params }) => getById(params.id, { actor }),
     deleteMediaAsset: deleteAsset,
   };
-  const cleanupPending = async ({
-    actor,
-    olderThan = new Date(now(deps).getTime() - 86400000),
-    limit = 50,
-  } = {}) => {
-    requireAdmin(actor);
-    const pending = await repo.findMany(
-      { status: { $in: ["pending", "rejected", "deleting"] }, createdAt: { $lt: olderThan } },
-      { limit: Math.min(limit, 100), sort: { createdAt: 1 } },
-    );
-    const results = [];
-    for (const asset of pending.data) {
-      try {
-        results.push(await deleteAsset({ actor, params: { id: asset._id } }));
-      } catch (error) {
-        results.push({ _id: asset._id, code: error.code ?? "DELETE_FAILED" });
-      }
-    }
-    return results;
-  };
+  const cleanupPending = createMediaCleanup(deps, deleteAsset);
   return {
     operations,
     service: { getById, getOwnedReady, assertReady, link, unlink, cleanupPending },

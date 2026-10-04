@@ -1,8 +1,9 @@
+import { createCommentsController } from "./comments.controller.js";
 import { buildRepository } from "../../common/persistence/repository.js";
 import { CommentsModel } from "./comments.model.js";
 import { createCommentsService } from "./comments.service.js";
 import { createCommentsValidation } from "./comments.validation.js";
-export const createCommentsModule = (deps) => {
+const buildCommentsModule = (deps) => {
   buildRepository({ repositories: deps.repositories, key: "comments", model: CommentsModel });
   const { operations, service } = createCommentsService(deps);
   return {
@@ -14,3 +15,11 @@ export const createCommentsModule = (deps) => {
   };
 };
 export { CommentsModel, createCommentsService, createCommentsValidation };
+
+export const createCommentsModule = (deps) => {
+  const module = buildCommentsModule(deps);
+  return {
+    ...module,
+    controllers: createCommentsController({ operations: module.operations, clock: deps.clock }),
+  };
+};

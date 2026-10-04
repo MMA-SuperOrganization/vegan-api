@@ -1,9 +1,6 @@
 import fs from "node:fs";
 
-export const sourceSpecUrl = new URL(
-  "../../../AI_AGENT_PROMPT_BUILD_VEGAN_BE_A_TO_Z.md",
-  import.meta.url,
-);
+export const sourceSpecUrl = new URL("../../docs/source-requirements.md", import.meta.url);
 
 // Independent baseline: never imports the route manifest, generated docs or registry.
 // Only the endpoint tables in source chapters 11 and 13 define the required set.
@@ -15,7 +12,7 @@ export function readSourceEndpoints(source = fs.readFileSync(sourceSpecUrl, "utf
     if (heading) chapter = Number(heading[1]);
     if (![11, 13].includes(chapter)) continue;
     const match = line.match(
-      /^\| (GET|POST|PUT|PATCH|DELETE) \| `([^`]+)` \| ([^|]+) \| ([^|]+) \|$/,
+      /^\|\s*(GET|POST|PUT|PATCH|DELETE)\s*\|\s*`([^`]+)`\s*\|\s*([^|]+)\|\s*([^|]+)\|\s*$/,
     );
     if (!match) continue;
     const [, method, path, permission, summary] = match;

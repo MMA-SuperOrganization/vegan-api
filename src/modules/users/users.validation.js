@@ -42,7 +42,10 @@ export const profileSchema = z
   })
   .strict();
 export const updateMeBodySchema = patch(
-  z.object({ displayName: text(100), avatarUrl: url.max(2048).nullable() }),
+  z.object({ displayName: text(100), avatarMediaId: id.nullable(), avatarUrl: z.null() }),
+).refine(
+  (body) => !(Object.hasOwn(body, "avatarMediaId") && Object.hasOwn(body, "avatarUrl")),
+  "Use avatarMediaId, or avatarUrl:null to clear a legacy avatar",
 );
 const idParams = z.object({ id }).strict();
 export const createUsersValidation = () => ({

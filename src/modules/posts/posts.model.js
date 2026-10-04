@@ -4,7 +4,7 @@ import {
   contentIndexes,
   ref,
   shortText,
-} from "../recipes/content-model.js";
+} from "../../common/persistence/content-model.js";
 export const PostsModel = registerModel(
   "Posts",
   {

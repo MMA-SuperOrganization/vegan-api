@@ -1,3 +1,4 @@
+import { createMealPlansController } from "./meal-plans.controller.js";
 import { MealPlansModel, MealPlanActiveSlotsModel } from "./meal-plans.model.js";
 import { buildRepository } from "../../common/persistence/repository.js";
 import { createMealPlansRepository } from "./meal-plans.repository.js";
@@ -10,7 +11,7 @@ export {
   createMealPlansRepository,
   createMealPlansValidation,
 };
-export function createMealPlansModule(deps = {}) {
+function buildMealPlansModule(deps = {}) {
   const repository = createMealPlansRepository({
     repositories: deps.repositories ?? {},
     MealPlansModel,
@@ -33,3 +34,11 @@ export function createMealPlansModule(deps = {}) {
     models: { MealPlansModel, MealPlanActiveSlotsModel },
   };
 }
+
+export const createMealPlansModule = (deps) => {
+  const module = buildMealPlansModule(deps);
+  return {
+    ...module,
+    controllers: createMealPlansController({ operations: module.operations, clock: deps.clock }),
+  };
+};

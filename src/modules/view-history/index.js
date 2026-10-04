@@ -1,8 +1,9 @@
+import { createViewHistoryController } from "./view-history.controller.js";
 import { buildRepository } from "../../common/persistence/repository.js";
 import { ViewHistoryModel } from "./view-history.model.js";
 import { createViewHistoryService } from "./view-history.service.js";
 import { createViewHistoryValidation } from "./view-history.validation.js";
-export const createViewHistoryModule = (deps) => {
+const buildViewHistoryModule = (deps) => {
   buildRepository({
     repositories: deps.repositories,
     key: "viewHistories",
@@ -18,3 +19,11 @@ export const createViewHistoryModule = (deps) => {
   };
 };
 export { ViewHistoryModel, createViewHistoryService, createViewHistoryValidation };
+
+export const createViewHistoryModule = (deps) => {
+  const module = buildViewHistoryModule(deps);
+  return {
+    ...module,
+    controllers: createViewHistoryController({ operations: module.operations, clock: deps.clock }),
+  };
+};

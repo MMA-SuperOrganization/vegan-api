@@ -5,7 +5,15 @@ import { dateOnly } from "../../common/validators/domain.schemas.js";
 export const id = z.string().regex(/^[a-f\d]{24}$/i, "Invalid ObjectId");
 export const text = (max, min = 1) => z.string().trim().min(min).max(max);
 export const integer = (max, fallback) => z.coerce.number().int().min(1).max(max).default(fallback);
-export const pagination = { page: integer(10000, 1), limit: integer(100, 20) };
+export const pagination = {
+  page: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(Math.floor(Number.MAX_SAFE_INTEGER / 100))
+    .default(1),
+  limit: integer(100, 20),
+};
 export const dateTime = z.iso.datetime({ offset: true }).transform((value) => new Date(value));
 export const targetTypes = ["recipe", "post", "video", "comment", "user"];
 export const contentTypes = ["recipe", "post", "video"];

@@ -49,6 +49,9 @@ const documentedOperations = (doc) =>
 describe("Independent source -> mounted API -> OpenAPI -> matrix contract", () => {
   it("reads the exact 184 required source rows and stable ID expectations", () => {
     expect(baseline).toHaveLength(184);
+    expect(
+      readSourceEndpoints("## 11. API\n| GET    | `/health`     | public   | Health |"),
+    ).toMatchObject([{ method: "GET", path: "/health", auth: "public", summary: "Health" }]);
     expect(expectedOperationIds.size).toBe(184);
     expect(sorted(expectedOperationIds.keys())).toEqual(sorted(baseline.map(key)));
     expect(new Set(apiManifest.map((route) => route.operationId)).size).toBe(184);

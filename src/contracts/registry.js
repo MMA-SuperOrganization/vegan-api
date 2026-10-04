@@ -3,12 +3,7 @@ import { createContainer } from "../container.js";
 import { loadEnv } from "../config/env.js";
 import { apiManifest } from "../routes/api-manifest.js";
 import { CREATED } from "../routes/index.js";
-import {
-  chatOutput,
-  mealPlanOutput,
-  pantryOutput,
-  summaryOutput,
-} from "../modules/ai/ai.validation.js";
+import { chatOutput, mealPlanOutput, pantryOutput, summaryOutput } from "../modules/ai/index.js";
 
 // Construction only: no queries, provider initialization, server, timers or process.env.
 export const createContractContainer = () =>
@@ -178,6 +173,7 @@ export function createContractRegistry(container = createContractContainer()) {
       "email",
       "displayName",
       "avatarUrl",
+      "avatarMediaId",
       "role",
       "status",
       "onboardingCompleted",
@@ -186,14 +182,16 @@ export function createContractRegistry(container = createContractContainer()) {
       "updatedAt",
       "deletedAt",
     ]),
-    { userId: id },
+    { userId: id, avatarUrl: nullable(string), avatarMediaId: nullable(id), avatarExpiresAt: date },
     ["userId"],
   );
   schemas.PublicUser = object(
     {
       userId: id,
       displayName: string,
-      avatarUrl: string,
+      avatarUrl: nullable(string),
+      avatarMediaId: nullable(id),
+      avatarExpiresAt: date,
       bio: string,
       dietType: string,
       preferredCuisines: array(string),

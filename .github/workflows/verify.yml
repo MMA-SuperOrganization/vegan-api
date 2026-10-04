@@ -1,0 +1,39 @@
+name: Verify backend
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run docs:check
+      - run: npm run test:run
+      - run: npm run smoke
+      - run: npm audit --omit=dev
+      - name: Start isolated MongoDB replica set
+        run: |
+          docker run -d --name vegan-test-mongo -p 127.0.0.1:27017:27017 mongo:8.0 --replSet rs0 --bind_ip_all
+          for attempt in $(seq 1 30); do
+            if docker exec vegan-test-mongo mongosh --quiet --eval 'db.adminCommand({ping:1})' > /dev/null; then break; fi
+            sleep 1
+          done
+          docker exec vegan-test-mongo mongosh --quiet --eval 'rs.initiate({_id:"rs0",members:[{_id:0,host:"localhost:27017"}]})'
+          for attempt in $(seq 1 30); do
+            if docker exec vegan-test-mongo mongosh --quiet --eval 'if (!db.hello().isWritablePrimary) quit(1)' > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          exit 1
+      - run: npm run test:database
+        env:
+          RUN_DATABASE_TESTS: "true"
+          MONGODB_URI_TEST: mongodb://localhost:27017/test_vegan_ci_${{ github.run_id }}_${{ github.run_attempt }}?replicaSet=rs0&directConnection=true
+      - run: docker build -t vegan-api:ci .
+      - if: always()
+        run: docker rm -f vegan-test-mongo || true

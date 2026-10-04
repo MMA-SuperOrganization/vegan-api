@@ -17,6 +17,7 @@ const account = (user) =>
           "email",
           "displayName",
           "avatarUrl",
+          "avatarMediaId",
           "role",
           "status",
           "onboardingCompleted",
@@ -76,6 +77,16 @@ const escaped = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 export const createUsersService = ({ deps, users, profiles, guards }) => {
   const now = () =>
     new Date(typeof deps.clock === "function" ? deps.clock() : (deps.clock?.now?.() ?? Date.now()));
+  const presentAccount = async (user) => {
+    const output = account(user);
+    if (user?.avatarMediaId) {
+      if (!deps.services?.media) throw AppError.serviceUnavailable("Media service unavailable");
+      const media = await deps.services.media.getById(user.avatarMediaId, {});
+      output.avatarUrl = media.downloadUrl;
+      output.avatarExpiresAt = media.expiresAt;
+    }
+    return output;
+  };
   let queue = Promise.resolve();
   const serialized = (work) => {
     const result = queue.then(work, work);
@@ -133,7 +144,7 @@ export const createUsersService = ({ deps, users, profiles, guards }) => {
     const displayName = identity.displayName ?? identity.name;
     const avatarUrl = identity.avatarUrl ?? identity.picture;
     if (displayName) set.displayName = text(100).parse(displayName);
-    if (avatarUrl) set.avatarUrl = url.max(2048).parse(avatarUrl);
+    if (avatarUrl && !user?.avatarMediaId) set.avatarUrl = url.max(2048).parse(avatarUrl);
     try {
       user = await users.updateOne(
         { firebaseUid, status: user ? "active" : { $ne: "deleted" } },
@@ -159,7 +170,7 @@ export const createUsersService = ({ deps, users, profiles, guards }) => {
         { new: true },
       );
     }
-    return account(active(found(user)));
+    return presentAccount(active(found(user)));
   };
   const resolveIdentity = async (identity) => {
     const firebaseUid = text(128).parse(
@@ -206,7 +217,7 @@ export const createUsersService = ({ deps, users, profiles, guards }) => {
       getProfile(user._id),
       getNutrition(user._id),
     ]);
-    return { user: account(user), profile: fullProfile, nutritionProfile };
+    return { user: await presentAccount(user), profile: fullProfile, nutritionProfile };
   };
   const editTokens = async (userId, edit, options = {}) => {
     for (let retry = 0; retry < 5; retry += 1) {
@@ -240,12 +251,37 @@ export const createUsersService = ({ deps, users, profiles, guards }) => {
   const operations = {
     getMyProfileSummary: ({ actor }) => getSummary(actor),
     async updateMyProfile(context) {
+      const avatarChange =
+        Object.hasOwn(context.body, "avatarMediaId") || Object.hasOwn(context.body, "avatarUrl");
       const work = async (session) => {
         const before = await owner(context.actor, { session });
+        const changes = { ...context.body };
+        if (avatarChange) {
+          const nextId = context.body.avatarMediaId ?? null;
+          const media = deps.services.media;
+          if (nextId) {
+            await media.assertReady([nextId], {
+              actor: context.actor,
+              ownerId: before._id,
+              kind: "image",
+              purpose: "avatar",
+              session,
+            });
+            if (String(nextId) !== String(before.avatarMediaId))
+              await media.link(nextId, "user", before._id, { actor: context.actor, session });
+          }
+          if (before.avatarMediaId && String(nextId) !== String(before.avatarMediaId))
+            await media.unlink(before.avatarMediaId, "user", before._id, {
+              actor: context.actor,
+              session,
+            });
+          changes.avatarMediaId = nextId;
+          changes.avatarUrl = null;
+        }
         const after = found(
           await users.updateOne(
             { _id: before._id, status: "active" },
-            { $set: context.body },
+            { $set: changes },
             { session, new: true },
           ),
         );
@@ -254,9 +290,11 @@ export const createUsersService = ({ deps, users, profiles, guards }) => {
             { ...context, action: "user.profile.update", targetId: before._id, before, after },
             session,
           );
-        return account(after);
+        return after;
       };
-      return context.actor?.role === "admin" ? transaction(work) : work();
+      const after =
+        avatarChange || context.actor?.role === "admin" ? await transaction(work) : await work();
+      return presentAccount(after);
     },
     async deleteMyAccount(context) {
       const user = await owner(context.actor);
@@ -268,7 +306,14 @@ export const createUsersService = ({ deps, users, profiles, guards }) => {
           deletedAt: now(),
           fcmTokens: [],
           onboardingCompleted: false,
+          avatarMediaId: null,
+          avatarUrl: null,
         };
+        if (before.avatarMediaId)
+          await deps.services.media.unlink(before.avatarMediaId, "user", before._id, {
+            actor: context.actor,
+            session,
+          });
         if (before.role === "admin") await protectLastAdmin(before, changes, session);
         const after = found(
           await users.updateOne(
@@ -290,8 +335,15 @@ export const createUsersService = ({ deps, users, profiles, guards }) => {
       const user = await users.findOne({ _id: uid(params.userId), status: "active" });
       found(user);
       const fullProfile = await getProfile(user._id);
+      const presented = await presentAccount(user);
       return {
-        ...publicAccount(user),
+        ...publicAccount(presented),
+        ...(user.avatarMediaId
+          ? {
+              avatarMediaId: String(user.avatarMediaId),
+              avatarExpiresAt: presented.avatarExpiresAt,
+            }
+          : {}),
         ...pick(fullProfile, ["bio", "dietType", "preferredCuisines"]),
       };
     },
@@ -399,7 +451,7 @@ export const createUsersService = ({ deps, users, profiles, guards }) => {
         after: user,
       });
       return {
-        user: account(user),
+        user: await presentAccount(user),
         profile: pick(await getProfile(user._id), ["bio", "dietType", "locale", "timezone"]),
       };
     },

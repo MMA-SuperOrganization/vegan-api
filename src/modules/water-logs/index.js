@@ -1,3 +1,4 @@
+import { createWaterLogsController } from "./water-logs.controller.js";
 import { WaterLogsModel } from "./water-logs.model.js";
 import { createWaterLogsRepository } from "./water-logs.repository.js";
 import { createWaterLogsService } from "./water-logs.service.js";
@@ -8,7 +9,7 @@ export {
   createWaterLogsRepository,
   createWaterLogsValidation,
 };
-export function createWaterLogsModule(deps = {}) {
+function buildWaterLogsModule(deps = {}) {
   const repository = createWaterLogsRepository({
     repositories: deps.repositories ?? {},
     WaterLogsModel,
@@ -22,3 +23,11 @@ export function createWaterLogsModule(deps = {}) {
     models: { WaterLogsModel },
   };
 }
+
+export const createWaterLogsModule = (deps) => {
+  const module = buildWaterLogsModule(deps);
+  return {
+    ...module,
+    controllers: createWaterLogsController({ operations: module.operations, clock: deps.clock }),
+  };
+};

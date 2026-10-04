@@ -6,7 +6,7 @@ import {
   auditAdmin,
   casUpdate,
   now,
-} from "../recipes/content.service.js";
+} from "../../common/content-service.js";
 export const createCommentsService = (deps) => {
   const repo = deps.repositories.comments;
   const operations = {

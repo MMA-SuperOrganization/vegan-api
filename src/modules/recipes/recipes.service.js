@@ -1,3 +1,4 @@
+import { dietFilter } from "../../common/utils/diet.js";
 import { randomUUID } from "node:crypto";
 import { AppError } from "../../common/errors/app-error.js";
 import { requireFound, publicFilter, slug, objectIdString } from "../../common/domain.js";
@@ -16,7 +17,7 @@ import {
   lifecycle,
   syncMedia,
   userState,
-} from "./content.service.js";
+} from "../../common/content-service.js";
 
 export const createRecipesService = (deps) => {
   const repo = deps.repositories.recipes;
@@ -80,13 +81,8 @@ export const createRecipesService = (deps) => {
     if (query.cuisine) filter.cuisine = query.cuisine;
     if (query.maxTotalMinutes) filter.totalMinutes = { $lte: query.maxTotalMinutes };
     if (query.excludeAllergenIds?.length) filter.allergenIds = { $nin: query.excludeAllergenIds };
-    if (query.dietType === "vegan") filter.isVegan = true;
-    else if (
-      ["vegetarian", "lacto_vegetarian", "ovo_vegetarian", "lacto_ovo_vegetarian"].includes(
-        query.dietType,
-      )
-    )
-      filter.isVegetarian = true;
+    const diet = dietFilter(query.dietType);
+    if (Object.keys(diet).length) filter.$and = [...(filter.$and ?? []), diet];
     return repo.findMany(publicFilter(filter), { ...listOptions(query), ...options });
   };
   const listMine = (userId, query = {}) =>

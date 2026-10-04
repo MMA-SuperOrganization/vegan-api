@@ -1,8 +1,9 @@
+import { createRatingsController } from "./ratings.controller.js";
 import { buildRepository } from "../../common/persistence/repository.js";
 import { RatingsModel } from "./ratings.model.js";
 import { createRatingsService } from "./ratings.service.js";
 import { createRatingsValidation } from "./ratings.validation.js";
-export const createRatingsModule = (deps) => {
+const buildRatingsModule = (deps) => {
   buildRepository({ repositories: deps.repositories, key: "ratings", model: RatingsModel });
   const { operations, service } = createRatingsService(deps);
   return {
@@ -14,3 +15,11 @@ export const createRatingsModule = (deps) => {
   };
 };
 export { RatingsModel, createRatingsService, createRatingsValidation };
+
+export const createRatingsModule = (deps) => {
+  const module = buildRatingsModule(deps);
+  return {
+    ...module,
+    controllers: createRatingsController({ operations: module.operations, clock: deps.clock }),
+  };
+};

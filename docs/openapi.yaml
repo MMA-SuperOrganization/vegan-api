@@ -3445,7 +3445,7 @@ paths:
             default: 1
             type: integer
             minimum: 1
-            maximum: 20
+            maximum: 90071992547409
         - name: limit
           in: query
           required: false
@@ -3587,7 +3587,7 @@ paths:
             default: 1
             type: integer
             minimum: 1
-            maximum: 10000
+            maximum: 90071992547409
         - name: limit
           in: query
           required: false
@@ -10959,7 +10959,7 @@ paths:
             default: 1
             type: integer
             minimum: 1
-            maximum: 10000
+            maximum: 90071992547409
         - name: limit
           in: query
           required: false
@@ -11140,7 +11140,7 @@ paths:
             default: 1
             type: integer
             minimum: 1
-            maximum: 10000
+            maximum: 90071992547409
         - name: limit
           in: query
           required: false
@@ -11339,7 +11339,7 @@ paths:
             default: 1
             type: integer
             minimum: 1
-            maximum: 10000
+            maximum: 90071992547409
         - name: limit
           in: query
           required: false
@@ -12057,7 +12057,7 @@ paths:
             default: 1
             type: integer
             minimum: 1
-            maximum: 10000
+            maximum: 90071992547409
         - name: limit
           in: query
           required: false
@@ -14063,7 +14063,7 @@ paths:
             default: 1
             type: integer
             minimum: 1
-            maximum: 20
+            maximum: 90071992547409
         - name: limit
           in: query
           required: false
@@ -14321,7 +14321,7 @@ paths:
             default: 1
             type: integer
             minimum: 1
-            maximum: 10000
+            maximum: 90071992547409
         - name: limit
           in: query
           required: false
@@ -14605,7 +14605,7 @@ paths:
             default: 1
             type: integer
             minimum: 1
-            maximum: 10000
+            maximum: 90071992547409
         - name: limit
           in: query
           required: false
@@ -14872,6 +14872,11 @@ components:
           type:
             - string
             - "null"
+        avatarMediaId:
+          type:
+            - string
+            - "null"
+          pattern: ^[A-Fa-f0-9]{24}$
         role:
           type: string
           enum:
@@ -18398,9 +18403,14 @@ components:
             - "null"
           maxLength: 100
         avatarUrl:
-          type:
-            - string
-            - "null"
+          anyOf:
+            - type: string
+            - type: "null"
+        avatarMediaId:
+          anyOf:
+            - type: string
+              pattern: ^[a-fA-F0-9]{24}$
+            - type: "null"
         role:
           type: string
           enum:
@@ -18439,6 +18449,9 @@ components:
         userId:
           type: string
           pattern: ^[a-fA-F0-9]{24}$
+        avatarExpiresAt:
+          type: string
+          format: date-time
       additionalProperties: false
     PublicUser:
       type: object
@@ -18449,7 +18462,17 @@ components:
         displayName:
           type: string
         avatarUrl:
+          anyOf:
+            - type: string
+            - type: "null"
+        avatarMediaId:
+          anyOf:
+            - type: string
+              pattern: ^[a-fA-F0-9]{24}$
+            - type: "null"
+        avatarExpiresAt:
           type: string
+          format: date-time
         bio:
           type: string
         dietType:
@@ -22956,12 +22979,13 @@ components:
           type: string
           minLength: 1
           maxLength: 100
-        avatarUrl:
+        avatarMediaId:
           anyOf:
             - type: string
-              maxLength: 2048
-              format: uri
+              pattern: ^[a-f\d]{24}$
             - type: "null"
+        avatarUrl:
+          type: "null"
       additionalProperties: false
     updateMyProfileResponse:
       type: object
@@ -24892,7 +24916,7 @@ components:
           default: 1
           type: integer
           minimum: 1
-          maximum: 20
+          maximum: 90071992547409
         limit:
           default: 20
           type: integer
@@ -24979,7 +25003,7 @@ components:
           default: 1
           type: integer
           minimum: 1
-          maximum: 10000
+          maximum: 90071992547409
         limit:
           default: 20
           type: integer
@@ -29558,7 +29582,7 @@ components:
           default: 1
           type: integer
           minimum: 1
-          maximum: 10000
+          maximum: 90071992547409
         limit:
           default: 20
           type: integer
@@ -29645,7 +29669,7 @@ components:
           default: 1
           type: integer
           minimum: 1
-          maximum: 10000
+          maximum: 90071992547409
         limit:
           default: 20
           type: integer
@@ -29752,7 +29776,7 @@ components:
           default: 1
           type: integer
           minimum: 1
-          maximum: 10000
+          maximum: 90071992547409
         limit:
           default: 20
           type: integer
@@ -30153,7 +30177,7 @@ components:
           default: 1
           type: integer
           minimum: 1
-          maximum: 10000
+          maximum: 90071992547409
         limit:
           default: 20
           type: integer
@@ -31602,7 +31626,7 @@ components:
           default: 1
           type: integer
           minimum: 1
-          maximum: 20
+          maximum: 90071992547409
         limit:
           default: 20
           type: integer
@@ -32081,7 +32105,7 @@ components:
           default: 1
           type: integer
           minimum: 1
-          maximum: 10000
+          maximum: 90071992547409
         limit:
           default: 20
           type: integer
@@ -32219,7 +32243,7 @@ components:
           default: 1
           type: integer
           minimum: 1
-          maximum: 10000
+          maximum: 90071992547409
         limit:
           default: 20
           type: integer

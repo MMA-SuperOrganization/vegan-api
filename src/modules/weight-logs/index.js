@@ -1,3 +1,4 @@
+import { createWeightLogsController } from "./weight-logs.controller.js";
 import { WeightLogsModel } from "./weight-logs.model.js";
 import { createWeightLogsRepository } from "./weight-logs.repository.js";
 import { createWeightLogsService } from "./weight-logs.service.js";
@@ -8,7 +9,7 @@ export {
   createWeightLogsRepository,
   createWeightLogsValidation,
 };
-export function createWeightLogsModule(deps = {}) {
+function buildWeightLogsModule(deps = {}) {
   const repository = createWeightLogsRepository({
     repositories: deps.repositories ?? {},
     WeightLogsModel,
@@ -22,3 +23,11 @@ export function createWeightLogsModule(deps = {}) {
     models: { WeightLogsModel },
   };
 }
+
+export const createWeightLogsModule = (deps) => {
+  const module = buildWeightLogsModule(deps);
+  return {
+    ...module,
+    controllers: createWeightLogsController({ operations: module.operations, clock: deps.clock }),
+  };
+};

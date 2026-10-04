@@ -44,7 +44,13 @@ suite(
         logger,
         overrides: {
           authProvider: null,
-          storageProvider: null,
+          storageProvider: {
+            createDownloadUrl: async () => ({
+              url: `https://mock-storage.example/avatar?t=${Date.now()}`,
+              expiresAt: new Date(Date.now() + 300000),
+            }),
+            deleteObject: async () => {},
+          },
           messagingProvider: null,
           aiProvider: {
             enabled: true,
@@ -199,7 +205,7 @@ suite(
       expect(await container.models.users.findById(markerId)).toBeNull();
       await expect(
         container.operations.changeUserRole({
-          actor: { userId: admin._id, role: "admin" },
+          actor: { userId: admin._id, role: "admin", status: "active" },
           params: { userId: String(admin._id), id: String(admin._id) },
           body: { role: "user" },
         }),
@@ -277,7 +283,7 @@ suite(
         categoryId: category._id,
         allergenIds: [],
       });
-      const actor = { userId: owner._id, role: "user" };
+      const actor = { userId: owner._id, role: "user", status: "active" };
       await container.services.pantries.getForUser(owner._id);
       const pantryModel = container.models.PantriesModel;
       await findTrack(pantryModel, { userId: owner._id });
@@ -328,6 +334,138 @@ suite(
         "pending",
       );
       expect((await pantryModel.findOne({ userId: owner._id }).lean()).items).toHaveLength(3);
+    });
+    it("aggregates real cross-domain pages, casts filters and retains old pending content", async () => {
+      const a = await create(container.models.recipes, {
+        title: "Audit newer",
+        slug: "audit-newer-" + suffix,
+        authorId: owner._id,
+        status: "published",
+        visibility: "public",
+        isVegan: true,
+        isVegetarian: true,
+        viewCount: 7,
+        createdAt: new Date("2026-10-02"),
+        publishedAt: new Date("2026-10-02"),
+      });
+      const videoMedia = await create(container.models.mediaAssets, {
+        ownerId: owner._id,
+        objectKey: "users/" + owner._id + "/video/" + suffix,
+        kind: "video",
+        purpose: "video",
+        mimeType: "video/mp4",
+        sizeBytes: 10,
+        status: "ready",
+        bucket: "test",
+      });
+      const b = await create(container.models.videos, {
+        videoMediaId: videoMedia._id,
+        durationSeconds: 30,
+        title: "Audit older",
+        slug: "audit-older-" + suffix,
+        authorId: owner._id,
+        status: "published",
+        visibility: "public",
+        viewCount: 7,
+        createdAt: new Date("2026-10-01"),
+        publishedAt: new Date("2026-10-01"),
+      });
+      const pending = await create(container.models.recipes, {
+        title: "Audit old pending",
+        slug: "audit-pending-" + suffix,
+        authorId: owner._id,
+        status: "pending_review",
+        visibility: "public",
+        createdAt: new Date("2026-01-01"),
+      });
+      for (const [page, expected] of [
+        [1, a._id],
+        [2, b._id],
+      ]) {
+        const result = await container.operations.searchContent({
+          query: { q: "Audit", type: "all", sort: "popular", page, limit: 1 },
+        });
+        expect(String(result.data[0]._id)).toBe(String(expected));
+      }
+      const queue = await container.operations.getPendingContent({
+        actor: { userId: admin._id, role: "admin", status: "active" },
+        query: { type: "all", authorId: String(owner._id) },
+      });
+      expect(queue.data.map((row) => String(row._id))).toContain(String(pending._id));
+      const excluded = await container.operations.getPendingContent({
+        actor: { userId: admin._id, role: "admin", status: "active" },
+        query: { authorId: String(new mongoose.Types.ObjectId()) },
+      });
+      expect(excluded.data).toEqual([]);
+    });
+    it("links avatars transactionally and refuses deletion until they are unlinked", async () => {
+      const asset = await create(container.models.mediaAssets, {
+        ownerId: owner._id,
+        objectKey: "users/" + owner._id + "/avatar/" + suffix,
+        kind: "image",
+        purpose: "avatar",
+        mimeType: "image/jpeg",
+        sizeBytes: 10,
+        status: "ready",
+        bucket: "test",
+      });
+      const actor = { userId: String(owner._id), role: "user", status: "active" };
+      const updated = await container.operations.updateMyProfile({
+        actor,
+        body: { avatarMediaId: String(asset._id) },
+      });
+      expect(String(updated.avatarMediaId)).toBe(String(asset._id));
+      expect(updated.avatarUrl).toMatch(/^https:\/\/mock-storage/);
+      await expect(
+        container.operations.deleteMediaAsset({ actor, params: { id: String(asset._id) } }),
+      ).rejects.toMatchObject({ code: "MEDIA_IN_USE" });
+      await container.operations.updateMyProfile({ actor, body: { avatarMediaId: null } });
+      expect((await container.models.mediaAssets.findById(asset._id).lean()).references).toEqual(
+        [],
+      );
+      expect(
+        (await container.operations.deleteMediaAsset({ actor, params: { id: String(asset._id) } }))
+          .status,
+      ).toBe("deleted");
+    });
+    it("backfills missing stable slots and retires only the explicitly selected legacy index", async () => {
+      const { provisionIndexes } = await import("../../scripts/provision-indexes.js");
+      const model = container.models.MealPlansModel;
+      const plan = await create(model, {
+        userId: owner._id,
+        weekStartDate: new Date("2035-01-01"),
+        title: "Legacy active plan",
+        nutritionSummary: { days: [], total: {} },
+        status: "active",
+      });
+      await model.collection.createIndex(
+        { userId: 1, weekStartDate: 1 },
+        {
+          name: "one_active_plan_per_owner_week",
+          unique: true,
+          partialFilterExpression: { status: "active" },
+        },
+      );
+      try {
+        const preview = await provisionIndexes(container);
+        expect(preview.oldIndexPresent).toBe(true);
+        expect(preview.missingSlots).toBe(1);
+        expect(
+          await container.models.MealPlanActiveSlotsModel.findOne({ activePlanId: plan._id }),
+        ).toBeNull();
+        const result = await provisionIndexes(container, {
+          apply: true,
+          maintenance: true,
+          retireOldActiveIndex: true,
+        });
+        expect(result.backfilledSlots).toBe(1);
+        expect(result.retiredOldIndex).toBe(true);
+        expect(
+          (await provisionIndexes(container, { apply: true, maintenance: true })).backfilledSlots,
+        ).toBe(0);
+      } finally {
+        await findTrack(container.models.MealPlanActiveSlotsModel, { userId: owner._id });
+      }
     });
   },
 );

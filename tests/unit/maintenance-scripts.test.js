@@ -208,55 +208,31 @@ describe("offline maintenance scripts", () => {
     await expect(runMigration(container, { apply: true })).rejects.toThrow("Apply refused");
     expect(updateOne).not.toHaveBeenCalled();
   });
-  it("cleanup defaults dry-run, has bounded age and scopes to expired admin-owned pending", async () => {
+  it("cleanup CLI delegates explicit owner scope to the canonical service", async () => {
     expect(parseCleanupArgs([])).toMatchObject({ apply: false, limit: 50, olderThanHours: 24 });
     expect(() => parseCleanupArgs(["--older-than-hours", "1"])).toThrow();
     expect(() => parseCleanupArgs(["--apply", "--dry-run"])).toThrow();
-    const owner = id(),
-      assetId = id(),
-      now = new Date("2026-10-03T10:00:00Z");
-    const repo = {
-      findMany: vi.fn(async () => ({
-        data: [
-          {
-            _id: assetId,
-            ownerId: owner,
-            objectKey: `users/${owner}/recipe/demo.jpg`,
-            status: "pending",
-            bucket: "private",
-          },
-        ],
-      })),
-      updateOne: vi.fn(async () => ({ _id: assetId, status: "deleting" })),
-    };
-    const deleteMediaAsset = vi.fn(async () => ({ _id: assetId, status: "deleted" }));
+    expect(() => parseCleanupArgs(["--owner-id", "invalid"])).toThrow();
+    expect(() => parseCleanupArgs(["--owner-id", String(id()), "--all-owners"])).toThrow();
+    const administrator = id(),
+      owner = id();
+    const cleanupPending = vi.fn(async () => ({ mode: "dry-run", deleted: 0 }));
     const container = {
-      env: { seed: { adminFirebaseUid: "real-uid" }, r2: { bucketName: "private" } },
+      env: { seed: { adminFirebaseUid: "real-uid" } },
       logger: log(),
-      repositories: {
-        users: { findOne: vi.fn(async () => ({ _id: owner, firebaseUid: "real-uid" })) },
-        mediaAssets: repo,
-      },
-      operations: { deleteMediaAsset },
-      providers: { storage: {} },
+      repositories: { users: { findOne: vi.fn(async () => ({ _id: administrator })) } },
+      services: { media: { cleanupPending } },
     };
-    const report = await runCleanup(container, { now });
-    expect(report.mode).toBe("dry-run");
-    expect(deleteMediaAsset).not.toHaveBeenCalled();
-    expect(repo.updateOne).not.toHaveBeenCalled();
-    expect(repo.findMany.mock.calls[0][0]).toEqual(pendingCleanupFilter({ ownerId: owner, now }));
-    const applied = await runCleanup(container, { apply: true, now });
-    expect(applied.deleted).toBe(1);
-    expect(deleteMediaAsset).toHaveBeenCalledOnce();
-    expect(repo.updateOne.mock.calls[0][0]).toMatchObject({
-      ownerId: owner,
-      status: "pending",
-      _id: assetId,
+    await runCleanup(container, { ownerId: String(owner), apply: false });
+    expect(cleanupPending).toHaveBeenCalledWith({
+      ownerId: String(owner),
+      apply: false,
+      actor: { userId: administrator, role: "admin", status: "active" },
     });
-    repo.updateOne.mockResolvedValue(null);
-    deleteMediaAsset.mockClear();
-    expect((await runCleanup(container, { apply: true, now })).skipped).toBe(1);
-    expect(deleteMediaAsset).not.toHaveBeenCalled();
+    const filter = pendingCleanupFilter({ ownerId: owner });
+    expect(filter.ownerId).toBe(owner);
+    expect(filter.status.$in).toEqual(["pending", "rejected", "deleting"]);
+    expect(filter["references.0"]).toEqual({ $exists: false });
   });
   it("migration refuses legacy active-plan indexes and missing stable slots without writes", async () => {
     const plan = {

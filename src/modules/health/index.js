@@ -1,3 +1,4 @@
+import { createHealthController } from "./health.controller.js";
 import { readFileSync } from "node:fs";
 import { z } from "zod";
 import { AppError } from "../../common/errors/app-error.js";
@@ -6,13 +7,7 @@ const { version } = JSON.parse(
   readFileSync(new URL("../../../package.json", import.meta.url), "utf8"),
 );
 
-export const createHealthModule = ({
-  env,
-  clock,
-  getDatabaseStatus,
-  authProvider,
-  storageProvider,
-}) => ({
+const buildHealthModule = ({ env, clock, getDatabaseStatus, authProvider, storageProvider }) => ({
   operations: {
     checkLiveness: async () => ({
       app: env.appName,
@@ -39,3 +34,11 @@ export const createHealthModule = ({
   services: {},
   models: {},
 });
+
+export const createHealthModule = (deps) => {
+  const module = buildHealthModule(deps);
+  return {
+    ...module,
+    controllers: createHealthController({ operations: module.operations, clock: deps.clock }),
+  };
+};

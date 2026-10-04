@@ -6,7 +6,7 @@ import {
   ref,
   shortText,
   nutritionFields,
-} from "./content-model.js";
+} from "../../common/persistence/content-model.js";
 const ingredient = new mongoose.Schema(
   {
     foodItemId: ref("FoodItems", true),

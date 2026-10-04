@@ -1,3 +1,5 @@
+import { dietFilter, fitsDiet } from "../../common/utils/diet.js";
+import { contentCardProjection } from "../../common/utils/content-card.js";
 import { z } from "zod";
 import {
   user,
@@ -18,13 +20,6 @@ export const recommendationValidation = Object.fromEntries(
   ]),
 );
 const stringId = (value) => String(value?._id ?? value ?? "");
-const fitsDiet = (item, diet) =>
-  !diet ||
-  (diet === "vegan"
-    ? item.isVegan === true
-    : ["vegetarian", "lacto_vegetarian", "ovo_vegetarian", "lacto_ovo_vegetarian"].includes(diet)
-      ? item.isVegetarian === true || item.isVegan === true
-      : item.dietTypes?.includes(diet) || ["flexitarian", "other"].includes(diet));
 const hasAllergen = (item, allergies) =>
   [
     ...(item.allergenIds ?? []),
@@ -76,17 +71,18 @@ export const createRecommendationsService = (deps) => {
     const key = { recipe: "recipes", post: "posts", video: "videos" }[type];
     const filter = { ...publicFilter };
     if (ctx.allergies.size) filter.allergenIds = { $nin: [...ctx.allergies] };
-    if (type === "recipe" && ctx.dietType === "vegan") filter.isVegan = true;
-    else if (
-      type === "recipe" &&
-      ["vegetarian", "lacto_vegetarian", "ovo_vegetarian", "lacto_ovo_vegetarian"].includes(
-        ctx.dietType,
-      )
-    )
-      filter.isVegetarian = true;
+    if (type === "recipe") Object.assign(filter, dietFilter(ctx.dietType));
     const { data } = await repository(deps, key).findMany(filter, {
       page: 1,
       limit: 200,
+      projection: {
+        ...contentCardProjection,
+        isVegan: 1,
+        isVegetarian: 1,
+        dietTypes: 1,
+        "ingredients.foodItemId": 1,
+        "ingredients.allergenIds": 1,
+      },
       sort: { publishedAt: -1, _id: -1 },
     });
     const foodIds = [

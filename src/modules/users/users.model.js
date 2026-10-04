@@ -17,6 +17,7 @@ const schema = new Schema(
     email: { type: String, lowercase: true, trim: true, index: { sparse: true } },
     displayName: { type: String, trim: true, maxlength: 100 },
     avatarUrl: String,
+    avatarMediaId: { type: Schema.Types.ObjectId, ref: "Media", default: null, index: true },
     role: { type: String, enum: ["user", "admin"], default: "user", required: true },
     status: {
       type: String,

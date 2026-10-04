@@ -1,8 +1,9 @@
+import { createCategoriesController } from "./categories.controller.js";
 import { buildRepository } from "../../common/persistence/repository.js";
 import { CategoriesModel } from "./categories.model.js";
 import { createCategoriesService } from "./categories.service.js";
 import { createCategoriesValidation } from "./categories.validation.js";
-export const createCategoriesModule = (deps) => {
+const buildCategoriesModule = (deps) => {
   deps.repositories ??= {};
   const repository = buildRepository({
     repositories: deps.repositories,
@@ -19,3 +20,11 @@ export const createCategoriesModule = (deps) => {
   };
 };
 export { CategoriesModel };
+
+export const createCategoriesModule = (deps) => {
+  const module = buildCategoriesModule(deps);
+  return {
+    ...module,
+    controllers: createCategoriesController({ operations: module.operations, clock: deps.clock }),
+  };
+};

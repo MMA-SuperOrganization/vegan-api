@@ -17,7 +17,9 @@ const at = (value, path) =>
     .split(".")
     .reduce(
       (current, key) =>
-        Array.isArray(current) ? current.flatMap((item) => item?.[key]) : current?.[key],
+        Array.isArray(current) && !/^\d+$/.test(key)
+          ? current.flatMap((item) => item?.[key])
+          : current?.[key],
       value,
     );
 export const matches = (record, filter = {}) =>
@@ -75,8 +77,15 @@ const project = (record, projection) => {
       : projection;
   const positive = Object.entries(fields).filter(([, flag]) => flag === 1);
   const result = positive.length ? { _id: record._id } : clone(record);
-  for (const [key] of positive)
-    if (at(record, key) !== undefined) set(result, key, at(record, key));
+  for (const [key] of positive) {
+    const [root, ...children] = key.split(".");
+    if (children.length && Array.isArray(record[root])) {
+      result[root] = record[root].map((item, index) => ({
+        ...(result[root]?.[index] ?? {}),
+        ...project(item, { [children.join(".")]: 1 }),
+      }));
+    } else if (at(record, key) !== undefined) set(result, key, at(record, key));
+  }
   for (const [key, flag] of Object.entries(fields)) if (flag === 0) delete result[key];
   return result;
 };
@@ -175,6 +184,8 @@ export const createMemoryRepository = (key, seed = []) => {
     );
   const repository = {
     records,
+    collectionName: key,
+    castFilter: (filter) => filter,
     async findOne(filter, options = {}) {
       return project(find(filter, options)[0] ?? null, options.projection);
     },
@@ -273,10 +284,47 @@ export const createMemoryRepository = (key, seed = []) => {
     async count(filter = {}) {
       return find(filter).length;
     },
-    async aggregate(pipeline) {
-      let rows = clone([...records.values()]);
+    async aggregate(pipeline, internal = {}) {
+      let rows = clone(internal.rows ?? [...records.values()]);
       for (const stage of pipeline) {
         if (stage.$match) rows = rows.filter((row) => matches(row, stage.$match));
+        else if (stage.$project) rows = rows.map((row) => project(row, stage.$project));
+        else if (stage.$set)
+          rows = rows.map((row) => ({
+            ...row,
+            ...Object.fromEntries(
+              Object.entries(stage.$set).map(([key, value]) => [
+                key,
+                value.$literal ??
+                  value.$ifNull
+                    ?.map((v) =>
+                      typeof v === "string" && v.startsWith("$") ? at(row, v.slice(1)) : v,
+                    )
+                    .find((v) => v != null),
+              ]),
+            ),
+          }));
+        else if (stage.$unset)
+          rows = rows.map((row) => {
+            for (const key of stage.$unset) delete row[key];
+            return row;
+          });
+        else if (stage.$skip != null) rows = rows.slice(stage.$skip);
+        else if (stage.$unionWith)
+          rows.push(
+            ...(await repository.peers[stage.$unionWith.coll].aggregate(stage.$unionWith.pipeline)),
+          );
+        else if (stage.$facet)
+          rows = [
+            Object.fromEntries(
+              await Promise.all(
+                Object.entries(stage.$facet).map(async ([key, stages]) => [
+                  key,
+                  await repository.aggregate(stages, { rows }),
+                ]),
+              ),
+            ),
+          ];
         else if (stage.$sort) rows = sortRecords(rows, stage.$sort);
         else if (stage.$limit) rows = rows.slice(0, stage.$limit);
         else if (stage.$count) rows = rows.length ? [{ [stage.$count]: rows.length }] : [];
@@ -367,8 +415,13 @@ export const REPOSITORY_KEYS = [
   "moderation",
   "auditLogs",
 ];
-export const createMemoryRepositories = (seed = {}) =>
-  Object.fromEntries(REPOSITORY_KEYS.map((key) => [key, createMemoryRepository(key, seed[key])]));
+export const createMemoryRepositories = (seed = {}) => {
+  const repositories = Object.fromEntries(
+    REPOSITORY_KEYS.map((key) => [key, createMemoryRepository(key, seed[key])]),
+  );
+  for (const repo of Object.values(repositories)) repo.peers = repositories;
+  return repositories;
+};
 export const memoryTransaction = (repositories) => {
   let queue = Promise.resolve();
   return (work) => {

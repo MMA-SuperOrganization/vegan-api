@@ -14,7 +14,7 @@ services:
       API_PREFIX: /api/v1
       APP_NAME: vegan-support-api
       APP_BASE_URL: ${APP_BASE_URL:?Set the HTTPS application URL for production}
-      TRUST_PROXY: ${TRUST_PROXY:-1}
+      TRUST_PROXY: ${TRUST_PROXY:-0}
       SHUTDOWN_TIMEOUT_MS: ${SHUTDOWN_TIMEOUT_MS:-10000}
       JSON_BODY_LIMIT: ${JSON_BODY_LIMIT:-1mb}
       CORS_ORIGINS: ${CORS_ORIGINS:-}

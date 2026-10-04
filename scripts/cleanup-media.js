@@ -1,3 +1,5 @@
+import { pendingCleanupFilter } from "../src/modules/media/index.js";
+export { pendingCleanupFilter };
 import { pathToFileURL } from "node:url";
 import { loadEnv } from "../src/config/env.js";
 import { createLogger } from "../src/config/logger.js";
@@ -11,7 +13,13 @@ export function parseCleanupArgs(args = []) {
     if (arg === "--apply") options.apply = true;
     else if (arg === "--dry-run") dryRun = true;
     else if (arg === "--help") options.help = true;
-    else if (arg === "--limit" || arg === "--older-than-hours") {
+    else if (arg === "--all-owners") options.allOwners = true;
+    else if (arg === "--owner-id") {
+      const id = args[++index];
+      if (!/^[a-f\d]{24}$/i.test(id ?? ""))
+        throw new Error("--owner-id requires a MongoDB ObjectId");
+      options.ownerId = id;
+    } else if (arg === "--limit" || arg === "--older-than-hours") {
       const value = Number(args[++index]);
       const min = arg === "--limit" ? 1 : 24,
         max = arg === "--limit" ? 100 : 8760;
@@ -21,112 +29,32 @@ export function parseCleanupArgs(args = []) {
     } else throw new Error(`Unknown cleanup option: ${arg}`);
   }
   if (dryRun && options.apply) throw new Error("Choose --apply OR --dry-run");
+  if (options.allOwners && options.ownerId) throw new Error("Choose --owner-id or --all-owners");
   return options;
 }
-export function pendingCleanupFilter({ ownerId, now = new Date(), olderThanHours = 24 }) {
-  return {
-    ownerId,
-    status: "pending",
-    deletedAt: null,
-    createdAt: { $lt: new Date(now.getTime() - olderThanHours * 3600000) },
-    uploadExpiresAt: { $lt: now },
-    "references.0": { $exists: false },
-    linkedEntityId: null,
-  };
-}
-export async function runCleanup(
-  container,
-  { apply = false, limit = 50, olderThanHours = 24, now = new Date() } = {},
-) {
-  if (
-    !Number.isInteger(limit) ||
-    limit < 1 ||
-    limit > 100 ||
-    !Number.isInteger(olderThanHours) ||
-    olderThanHours < 24 ||
-    olderThanHours > 8760
-  )
-    throw new Error("Invalid cleanup bounds");
-  const { repositories, env, logger, operations } = container;
-  const uid = env.seed?.adminFirebaseUid;
+export async function runCleanup(container, options = {}) {
+  const uid = container.env.seed?.adminFirebaseUid;
   if (!uid || /change_me|placeholder/i.test(uid) || uid.startsWith("internal:"))
-    throw new Error(
-      "Set a real SEED_ADMIN_FIREBASE_UID; cleanup is scoped to that active admin's own uploads",
-    );
-  const user = await repositories.users.findOne({
+    throw new Error("Set a real SEED_ADMIN_FIREBASE_UID for the cleanup administrator");
+  const user = await container.repositories.users.findOne({
     firebaseUid: uid,
     role: "admin",
     status: "active",
     deletedAt: null,
   });
   if (!user) throw new Error("Configured cleanup admin does not exist or is not active");
-  const actor = { userId: user._id, firebaseUid: user.firebaseUid, role: "admin" };
-  const repo = repositories.mediaAssets;
-  if (!repo) throw new Error("Missing canonical mediaAssets repository");
-  const filter = pendingCleanupFilter({ ownerId: user._id, now, olderThanHours });
-  const result = await repo.findMany(filter, { limit, sort: { createdAt: 1, _id: 1 } });
-  const report = {
-    mode: apply ? "apply" : "dry-run",
-    ownerId: String(user._id),
-    candidates: result.data.length,
-    deleted: 0,
-    skipped: 0,
-    failed: 0,
-    assets: [],
-  };
-  if (apply && (!container.providers?.storage || !operations.deleteMediaAsset))
-    throw new Error(
-      "Apply requires the configured storage provider and canonical deleteMediaAsset operation",
-    );
-  for (const asset of result.data) {
-    const id = String(asset._id);
-    if (
-      !asset.objectKey?.startsWith(`users/${user._id}/`) ||
-      (asset.bucket && asset.bucket !== env.r2.bucketName)
-    ) {
-      report.skipped++;
-      report.assets.push({ id, status: "unsafe_namespace_or_bucket" });
-      continue;
-    }
-    if (!apply) {
-      report.assets.push({ id, status: "would_delete_expired_owned_pending" });
-      continue;
-    }
-    // Atomic pending -> deleting claim prevents confirmation from racing this cleanup.
-    // Never delete a newly ready upload, any other owner's upload, or referenced content.
-    const claimed = await repo.updateOne(
-      {
-        ...filter,
-        _id: asset._id,
-        ...(asset.version === undefined
-          ? { version: { $exists: false } }
-          : { version: asset.version }),
-      },
-      { $set: { status: "deleting", deletionError: false }, $inc: { version: 1 } },
-    );
-    if (!claimed) {
-      report.skipped++;
-      report.assets.push({ id, status: "changed_since_inventory" });
-      continue;
-    }
-    try {
-      const deleted = await operations.deleteMediaAsset({ actor, params: { id: asset._id } });
-      if (deleted.status !== "deleted") throw new Error("Deletion did not complete");
-      report.deleted++;
-      report.assets.push({ id, status: "deleted" });
-    } catch (error) {
-      report.failed++;
-      report.assets.push({ id, status: "failed", code: error.code ?? "DELETE_FAILED" });
-    }
-  }
-  logger.info({ report }, "Media cleanup: no public URLs, object keys or credentials logged");
+  const report = await container.services.media.cleanupPending({
+    ...options,
+    actor: { userId: user._id, role: "admin", status: "active" },
+  });
+  container.logger.info({ report }, "Media cleanup completed");
   return report;
 }
 export async function main(args = process.argv.slice(2)) {
   const options = parseCleanupArgs(args);
   if (options.help) {
     console.log(
-      "cleanup-media [--dry-run | --apply] [--limit 1..100] [--older-than-hours 24..8760]\nDefault read-only inventory. Only expired pending uploads owned by the explicitly configured active seed admin are eligible. Ready/referenced/other-owner uploads are never selected.",
+      "cleanup-media [--dry-run | --apply] [--limit 1..100] [--older-than-hours 24..8760] [--owner-id <ObjectId> | --all-owners]\nDefault read-only inventory. Expired unreferenced pending/rejected/deleting uploads only. Default owner is the seed admin; use --owner-id <ObjectId> or --all-owners for an explicit broader scope.",
     );
     return;
   }

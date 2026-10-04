@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { pagination, targetParams } from "../../common/validators/domain.schemas.js";
-import { empty } from "../recipes/content.validation.js";
+import { empty } from "../../common/validators/content.schemas.js";
 const params = targetParams(["recipe", "post", "video"]);
 export const createViewHistoryValidation = () => ({
   getViewHistory: {

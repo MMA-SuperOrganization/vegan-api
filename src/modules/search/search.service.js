@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { dietFilter } from "../../common/utils/diet.js";
+import { unionPage } from "../../common/persistence/union-page.js";
+import { contentCardProjection, foodCardProjection } from "../../common/utils/content-card.js";
 import { dietTypes } from "../../common/validators/domain.schemas.js";
 import {
   id,
@@ -35,7 +38,7 @@ const filters = {
 };
 export const searchValidation = {
   searchContent: {
-    query: z.object({ ...filters, page: integer(20, 1), limit: integer(50, 20) }).strict(),
+    query: z.object({ ...filters, page: pagination.page, limit: integer(50, 20) }).strict(),
   },
   getSearchSuggestions: {
     query: z
@@ -49,12 +52,12 @@ export const searchValidation = {
 const domains = { recipe: "recipes", post: "posts", video: "videos", "food-item": "foodItems" };
 const sorting = (sort) =>
   sort === "oldest"
-    ? { createdAt: 1, _id: 1 }
+    ? { createdAt: 1, _id: 1, type: 1 }
     : sort === "title"
-      ? { title: 1, name: 1, _id: 1 }
+      ? { _sortTitle: 1, _id: 1, type: 1 }
       : sort === "popular"
-        ? { viewCount: -1, createdAt: -1, _id: -1 }
-        : { createdAt: -1, _id: -1 };
+        ? { _sortViews: -1, createdAt: -1, _id: -1, type: 1 }
+        : { createdAt: -1, _id: -1, type: 1 };
 const makeFilter = (type, query) => {
   const filter = type === "food-item" ? { status: "active" } : { ...publicFilter };
   if (query.q) {
@@ -69,23 +72,11 @@ const makeFilter = (type, query) => {
     if (query.cuisine) filter.cuisine = query.cuisine;
     if (query.difficulty) filter.difficulty = query.difficulty;
     if (query.maxTotalMinutes) filter.totalMinutes = { $lte: query.maxTotalMinutes };
-    if (query.dietType === "vegan") filter.isVegan = true;
-    else if (
-      ["vegetarian", "lacto_vegetarian", "ovo_vegetarian", "lacto_ovo_vegetarian"].includes(
-        query.dietType,
-      )
-    )
-      filter.isVegetarian = true;
-    else if (query.dietType) filter.dietTypes = query.dietType;
   }
-  if (type === "food-item" && query.dietType === "vegan") filter.isVegan = true;
-  if (
-    type === "food-item" &&
-    ["vegetarian", "lacto_vegetarian", "ovo_vegetarian", "lacto_ovo_vegetarian"].includes(
-      query.dietType,
-    )
-  )
-    filter.isVegetarian = true;
+  if (type === "recipe" || type === "food-item") {
+    const diet = dietFilter(query.dietType);
+    if (Object.keys(diet).length) filter.$and = [...(filter.$and ?? []), diet];
+  }
   return filter;
 };
 const summary = (item, type) =>
@@ -107,34 +98,16 @@ export const createSearchService = (deps, history) => {
   const search = async (query) => {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
-    const results = await Promise.all(
-      selected(query.type).map(async (type) => {
-        const result = await repository(deps, domains[type]).findMany(makeFilter(type, query), {
-          page: 1,
-          limit: page * limit,
-          sort: sorting(query.sort),
-        });
-        return { items: result.data.map((item) => summary(item, type)), total: result.meta.total };
-      }),
+    const result = await unionPage(
+      selected(query.type).map((type) => ({
+        repository: repository(deps, domains[type]),
+        filter: makeFilter(type, query),
+        type,
+        projection: type === "food-item" ? foodCardProjection : contentCardProjection,
+      })),
+      { page, limit, sort: sorting(query.sort) },
     );
-    const items = results.flatMap((result) => result.items);
-    items.sort((a, b) =>
-      query.sort === "title"
-        ? String(a.title ?? a.name).localeCompare(String(b.title ?? b.name)) ||
-          String(a._id).localeCompare(String(b._id))
-        : query.sort === "popular"
-          ? (b.viewCount ?? 0) - (a.viewCount ?? 0) || String(b._id).localeCompare(String(a._id))
-          : (new Date(a.createdAt ?? 0) - new Date(b.createdAt ?? 0)) *
-              (query.sort === "oldest" ? 1 : -1) ||
-            (query.sort === "oldest"
-              ? String(a._id).localeCompare(String(b._id))
-              : String(b._id).localeCompare(String(a._id))),
-    );
-    const total = results.reduce((sum, result) => sum + result.total, 0);
-    return {
-      data: items.slice((page - 1) * limit, page * limit),
-      meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
-    };
+    return { ...result, data: result.data.map((item) => summary(item, item.type)) };
   };
   return {
     async searchContent({ actor, query = {} }) {

@@ -81,8 +81,11 @@ describe("updateMeBodySchema", () => {
   it("rejects empty patches and unsafe avatar schemes", () => {
     expect(updateMeBodySchema.safeParse({}).success).toBe(false);
     expect(updateMeBodySchema.safeParse({ avatarUrl: "javascript:alert(1)" }).success).toBe(false);
-    expect(updateMeBodySchema.parse({ avatarUrl: "https://cdn.example.com/avatar.png" })).toEqual({
-      avatarUrl: "https://cdn.example.com/avatar.png",
+    expect(
+      updateMeBodySchema.safeParse({ avatarUrl: "https://cdn.example.com/avatar.png" }).success,
+    ).toBe(false);
+    expect(updateMeBodySchema.parse({ avatarMediaId: "200000000000000000000001" })).toEqual({
+      avatarMediaId: "200000000000000000000001",
     });
   });
 });

@@ -1,4 +1,4 @@
-import { requireActor, transaction, safeContent } from "../recipes/content.service.js";
+import { requireActor, transaction, safeContent } from "../../common/content-service.js";
 export const createSavedItemsService = (deps) => {
   const repo = deps.repositories.savedItems;
   const operations = {

@@ -1,9 +1,12 @@
 import { z } from "zod";
+import { unionPage } from "../../common/persistence/union-page.js";
+import { contentCardProjection } from "../../common/utils/content-card.js";
 import {
   admin,
   id,
   text,
   integer,
+  pagination,
   rangeSchema,
   range,
   repository,
@@ -18,7 +21,7 @@ export const dashboardValidation = {
   getUserTrends: { query: trendsQuery },
   getPendingContent: {
     query: rangeSchema({
-      page: integer(20, 1),
+      page: pagination.page,
       limit: integer(50, 20),
       type: type.default("all"),
       q: text(120).optional(),
@@ -164,44 +167,36 @@ export const createAdminDashboardService = (deps) => ({
     admin(actor);
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
-    const selectedRange = range(deps, query);
     const types = query.type && query.type !== "all" ? [query.type] : Object.keys(keys);
-    const results = await Promise.all(
-      types.map(async (type) => {
-        const filter = {
-          status: "pending_review",
-          deletedAt: null,
-          createdAt: selectedRange.filter,
-        };
+    const result = await unionPage(
+      types.map((type) => {
+        const filter = { status: "pending_review", deletedAt: null };
+        if (query.from || query.to) {
+          const bounds = {};
+          if (query.from) bounds.$gte = new Date(query.from);
+          if (query.to)
+            bounds.$lte = new Date(query.to.length === 10 ? query.to + "T23:59:59.999Z" : query.to);
+          filter.createdAt = bounds;
+        }
         if (query.authorId) filter.authorId = query.authorId;
         if (query.q)
           filter.title = { $regex: query.q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), $options: "i" };
-        const result = await repository(deps, keys[type]).findMany(filter, {
-          page: 1,
-          limit: page * limit,
-          sort: { createdAt: 1, _id: 1 },
-        });
         return {
-          data: result.data.map((item) => ({
-            ...summarizeContent(item),
-            type,
-            status: item.status,
-          })),
-          total: result.meta.total,
+          repository: repository(deps, keys[type]),
+          filter,
+          type,
+          projection: contentCardProjection,
         };
       }),
+      { page, limit, sort: { createdAt: 1, _id: 1, type: 1 } },
     );
-    const items = results
-      .flatMap((result) => result.data)
-      .sort(
-        (a, b) =>
-          new Date(a.createdAt) - new Date(b.createdAt) ||
-          String(a._id).localeCompare(String(b._id)),
-      );
-    const total = results.reduce((sum, result) => sum + result.total, 0);
     return {
-      data: items.slice((page - 1) * limit, page * limit),
-      meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      ...result,
+      data: result.data.map((item) => ({
+        ...summarizeContent(item),
+        type: item.type,
+        status: item.status,
+      })),
     };
   },
 });

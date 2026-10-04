@@ -1,3 +1,4 @@
+import { fitsDiet } from "../../common/utils/diet.js";
 import { AppError } from "../../common/errors/app-error.js";
 import { AI_DISCLAIMER } from "../../providers/ai/ai.provider.js";
 import { chatOutput, mealPlanOutput, pantryOutput, summaryOutput } from "./ai.validation.js";
@@ -125,6 +126,7 @@ export function createAiService({
     const profile = await services.users?.getProfile?.(userId, { session });
     const nutrition = await services.users?.getNutrition?.(userId, { session });
     return {
+      dietType: profile?.dietType ?? "vegan",
       allergenIds: new Set(
         [...(profile?.allergenIds || []), ...(nutrition?.allergenIds || [])].map(String),
       ),
@@ -137,7 +139,7 @@ export function createAiService({
     if (
       !food ||
       food.status !== "active" ||
-      food.isVegan !== true ||
+      !fitsDiet(food, safety.dietType) ||
       food.deletedAt ||
       (food.allergenIds || []).some((id) => safety.allergenIds.has(String(id)))
     )

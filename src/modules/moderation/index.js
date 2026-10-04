@@ -1,7 +1,8 @@
+import { createModerationController } from "./moderation.controller.js";
 import { buildRepository } from "../../common/persistence/repository.js";
 import { ModerationModel } from "./moderation.model.js";
 import { createModerationService, moderationValidation } from "./moderation.service.js";
-export const createModerationModule = (deps) => {
+const buildModerationModule = (deps) => {
   const repository = buildRepository({
     repositories: deps.repositories,
     key: "moderation",
@@ -13,5 +14,13 @@ export const createModerationModule = (deps) => {
     services: {},
     repositories: { moderation: repository },
     models: { moderation: ModerationModel },
+  };
+};
+
+export const createModerationModule = (deps) => {
+  const module = buildModerationModule(deps);
+  return {
+    ...module,
+    controllers: createModerationController({ operations: module.operations, clock: deps.clock }),
   };
 };

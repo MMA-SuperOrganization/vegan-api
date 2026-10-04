@@ -72,11 +72,11 @@ describe("PATCH /api/v1/users/me", () => {
     const res = await request(app)
       .patch("/api/v1/users/me")
       .set(bearer(TEST_TOKENS.user))
-      .send({ displayName: "  Plant Lover  ", avatarUrl: "https://cdn.example.com/avatar.png" });
+      .send({ displayName: "  Plant Lover  ", avatarUrl: null });
     expect(res.status).toBe(200);
     expect(res.body.data).toMatchObject({
       displayName: "Plant Lover",
-      avatarUrl: "https://cdn.example.com/avatar.png",
+      avatarUrl: null,
     });
   });
   it.each([

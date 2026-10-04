@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { registerModel, ref } from "../recipes/content-model.js";
+import { registerModel, ref } from "../../common/persistence/content-model.js";
 export const SavedItemsModel = registerModel(
   "SavedItems",
   {

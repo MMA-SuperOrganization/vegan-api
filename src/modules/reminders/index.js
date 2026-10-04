@@ -1,8 +1,9 @@
+import { createRemindersController } from "./reminders.controller.js";
 import { createRemindersRepository } from "./reminders.repository.js";
 import { createRemindersService } from "./reminders.service.js";
 import { createRemindersValidation } from "./reminders.validation.js";
 import { reminderModels } from "./reminders.model.js";
-export function createRemindersModule(deps = {}) {
+function buildRemindersModule(deps = {}) {
   const repository = createRemindersRepository(deps);
   const service = createRemindersService({ ...deps, remindersRepository: repository });
   const validation = createRemindersValidation();
@@ -30,3 +31,11 @@ export function createRemindersModule(deps = {}) {
 export { createRemindersService, createRemindersValidation, createRemindersRepository };
 export * from "./reminders.model.js";
 export { nextReminderRun } from "./reminder-schedule.js";
+
+export const createRemindersModule = (deps) => {
+  const module = buildRemindersModule(deps);
+  return {
+    ...module,
+    controllers: createRemindersController({ operations: module.operations, clock: deps.clock }),
+  };
+};

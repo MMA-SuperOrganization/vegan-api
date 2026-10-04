@@ -13,7 +13,7 @@ import {
   lifecycle,
   syncMedia,
   userState,
-} from "../recipes/content.service.js";
+} from "../../common/content-service.js";
 export const createPostsService = (deps) => {
   const repo = deps.repositories.posts;
   const validatePublication = async (post, actor, session) => {

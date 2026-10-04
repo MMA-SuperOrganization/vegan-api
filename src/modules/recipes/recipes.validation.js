@@ -11,7 +11,7 @@ import {
   mineQuery,
   contentPatch,
   excludedAllergens,
-} from "./content.validation.js";
+} from "../../common/validators/content.schemas.js";
 export const ingredientInput = z
   .object({
     foodItemId: id,

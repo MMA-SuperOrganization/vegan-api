@@ -1,8 +1,9 @@
+import { createAllergensController } from "./allergens.controller.js";
 import { buildRepository } from "../../common/persistence/repository.js";
 import { AllergensModel } from "./allergens.model.js";
 import { createAllergensService } from "./allergens.service.js";
 import { createAllergensValidation } from "./allergens.validation.js";
-export const createAllergensModule = (deps) => {
+const buildAllergensModule = (deps) => {
   deps.repositories ??= {};
   const repository = buildRepository({
     repositories: deps.repositories,
@@ -19,3 +20,11 @@ export const createAllergensModule = (deps) => {
   };
 };
 export { AllergensModel };
+
+export const createAllergensModule = (deps) => {
+  const module = buildAllergensModule(deps);
+  return {
+    ...module,
+    controllers: createAllergensController({ operations: module.operations, clock: deps.clock }),
+  };
+};

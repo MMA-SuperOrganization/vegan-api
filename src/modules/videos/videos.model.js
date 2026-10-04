@@ -5,7 +5,7 @@ import {
   contentIndexes,
   ref,
   shortText,
-} from "../recipes/content-model.js";
+} from "../../common/persistence/content-model.js";
 export const VideosModel = registerModel(
   "Videos",
   {

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { id, text, pagination } from "../../common/validators/domain.schemas.js";
-import { idParams } from "../recipes/content.validation.js";
+import { idParams } from "../../common/validators/content.schemas.js";
 export const createCommentsValidation = () => ({
   getComments: {
     query: pagination

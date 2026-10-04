@@ -6,7 +6,7 @@ import {
   casUpdate,
   now,
   safeContent,
-} from "../recipes/content.service.js";
+} from "../../common/content-service.js";
 export const createViewHistoryService = (deps) => {
   const repo = deps.repositories.viewHistories;
   const record = async (actor, targetType, targetId, progress) =>

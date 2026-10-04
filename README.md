@@ -141,11 +141,11 @@ The default tests inject fake auth/storage/AI/messaging/repositories and do not 
 `tests/database/persistence.test.js` is skipped unless **both** `RUN_DATABASE_TESTS=true` and `MONGODB_URI_TEST` are supplied. This is an operational opt-in, not a routine offline test. Use a new empty replica-set/Atlas DB named exactly `test_vegan_<unique lowercase suffix of 8–64 letters/digits/underscores>`. The guard rejects the application URI/database, unnamed/default/production DB names and standalone URIs; startup verifies replica-set/Atlas capability, empty DB and an exclusive test lock. Providers remain disabled/injected.
 
 ```bash
-# Example syntax only; run AFTER explicit authorization for this disposable DB.
+# Use a dedicated disposable empty test database.
 RUN_DATABASE_TESTS=true MONGODB_URI_TEST='mongodb://localhost:27017/test_vegan_unique_run_01?replicaSet=rs0' npm run test:database
 ```
 
-The suite builds canonical indexes with `createIndexes` (never `syncIndexes`), checks actual UID/engagement/delivery/stable owner-week slot constraints and sequential activation of distinct plans, transaction rollback and last-admin guard, seed-twice ID/count stability, pantry compare-and-set concurrency and AI pantry confirmation idempotency/rollback. Cleanup removes only tracked fixture IDs under the run's own lock; it never drops the database, deletes all records or touches the application DB. Empty collections/indexes may remain. A failed/killed run can leave test fixtures/lock; choose a new isolated suffix rather than remove arbitrary records. This suite was **not connected or run against MongoDB during remediation**; only its skipped path and pure URI safety tests were executed.
+The suite builds canonical indexes with `createIndexes` (never `syncIndexes`), checks actual UID/engagement/delivery/stable owner-week slot constraints and sequential activation of distinct plans, transaction rollback and last-admin guard, seed-twice ID/count stability, pantry compare-and-set concurrency and AI pantry confirmation idempotency/rollback. Cleanup removes only tracked fixture IDs under the run's own lock; it never drops the database, deletes all records or touches the application DB. Empty collections/indexes may remain. A failed/killed run can leave test fixtures/lock; choose a new isolated suffix rather than remove arbitrary records. The remediation ran all 8 persistence tests against an isolated MongoDB 8.0 replica set on Node 24.21.0, including cross-domain pagination, avatar transactions and index/slot provisioning. No application or production database was used.
 
 ### Seed (writes; run only with explicit database authorization)
 
@@ -172,9 +172,9 @@ node scripts/cleanup-media.js --help
 
 Dry-run still connects/reads the configured DB; it is not an offline test. Migration inventories actual canonical/legacy collection casing, preserves IDs/references/snapshots, and refuses conflicts/legacy aliases/string refs/truncation on apply. Only recognized role/status and absent server versions are automatically normalized. Backup, stop writers, review the report and stage first; see [persistence mapping](docs/persistence-mapping.md) for details.
 
-Cleanup requires an explicitly configured active admin UID and selects **only that admin's own** pending uploads older than at least 24 hours with expired signed-upload windows, no references, and the expected owner namespace/bucket. Ready/other-owner uploads are excluded. Apply atomically claims each still-pending candidate then calls the guarded canonical delete operation; it reports skipped/failed results and never performs blind bucket-wide deletion. It is intentionally not a global garbage collector or an automatic retry job for already-deleting assets.
+Cleanup requires a configured active admin UID. Default scope is that admin’s uploads; `--owner-id <ObjectId>` selects one owner and `--all-owners` explicitly selects all owners. These flags are mutually exclusive. Candidates are stale pending/rejected/deleting uploads with an expired or absent upload window, no references or linked entity, and a matching owner namespace/bucket. Ready assets are excluded. Apply atomically claims each candidate, audits the claim and calls guarded deletion; interrupted deleting assets can be retried. Dry-run does not write or delete objects.
 
-Retired `build-phase5-9`, `generate-modules`, `generate-phase5-9`, `scaffold-all`, `relink-all`, `restore-users`, `fix-auth`, `fix-tests`, and `fix-validation` scripts now throw before running their historical writes. Maintained docs generators are not retired.
+Retired `build-phase5-9`, `generate-modules`, `generate-phase5-9`, `scaffold-all`, `relink-all`, `restore-users`, `fix-auth`, `fix-tests`, and `fix-validation` scripts and unreachable historical generated source files have been removed. Maintained docs generators are not retired.
 
 ## Modules and API docs
 
@@ -216,3 +216,15 @@ docker compose up -d
 - [ ] Monitor redacted request/error logs, notification failures, pending-media backlog and operational limits.
 
 Known limitations: no video transcoding/adaptive streaming; no native raw-video AI in the default adapter; demo food values are not a researched clinical dataset; nutrition does not model cooking loss; no distributed scheduler/rate limiter; MongoDB and object storage do not share transactions; conservative migration does not automatically repair legacy records; external credentials and supported Node runtime remain deployment prerequisites. Offline tests cannot replace a real staging smoke test.
+
+## Remediation contracts and acceptance
+
+The original 184-endpoint specification is frozen in `docs/source-requirements.md`; contract tests read this versioned snapshot so clean checkouts and CI do not depend on a file outside the repository. Update it deliberately when requirements change. Domain controllers now execute the mounted Express adapters; shared content/validation code lives under `src/common`.
+
+Profile updates use `avatarMediaId` pointing to a ready image uploaded for purpose `avatar` by the same user, or null to clear. Arbitrary `avatarUrl` values are rejected; legacy `avatarUrl: null` clears the avatar. Account/public responses include freshly signed `avatarUrl`, `avatarMediaId` and (when signed) `avatarExpiresAt`. Upload and complete media before updating the profile. Replacing/clearing an avatar releases its reference; linked avatars cannot be deleted.
+
+Search and moderation pending queues paginate/sort in MongoDB with stable tie-breakers and card projections. Pending queues have no implicit 30-day cutoff; explicit from/to filters remain available. Vegan requires isVegan; vegetarian variants and pescatarian conservatively use vegetarian/vegan foods because egg/dairy/fish classifications are absent. Flexitarian/other apply no diet exclusion. Allergy filters remain separate. Recommendations retain the existing bounded 200-candidate pool.
+
+Compose defaults TRUST_PROXY to 0 for direct exposure. Configure trust explicitly for the actual reverse proxy; process-local rate limiting and the single-scheduler constraint still apply.
+
+See [staging acceptance](docs/staging-acceptance.md) for index maintenance and provider verification. CI uses Node 24, a clean install, contract/offline checks, isolated replica-set persistence tests and production Docker build.

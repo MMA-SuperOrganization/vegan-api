@@ -11,7 +11,7 @@ import {
   mineQuery,
   contentPatch,
   empty,
-} from "../recipes/content.validation.js";
+} from "../../common/validators/content.schemas.js";
 export const chapterInput = z
   .object({
     title: text(200),

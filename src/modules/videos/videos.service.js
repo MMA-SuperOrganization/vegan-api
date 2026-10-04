@@ -14,7 +14,7 @@ import {
   lifecycle,
   syncMedia,
   userState,
-} from "../recipes/content.service.js";
+} from "../../common/content-service.js";
 export const createVideosService = (deps) => {
   const repo = deps.repositories.videos;
   const validateMetadata = (video) => {

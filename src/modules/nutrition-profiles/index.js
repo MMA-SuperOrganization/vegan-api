@@ -1,8 +1,9 @@
+import { createNutritionProfilesController } from "./nutrition-profiles.controller.js";
 import { buildRepository } from "../../common/persistence/repository.js";
 import { NutritionProfilesModel } from "./nutrition-profiles.model.js";
 import { createNutritionProfilesService } from "./nutrition-profiles.service.js";
 import { createNutritionProfilesValidation } from "./nutrition-profiles.validation.js";
-export const createNutritionProfilesModule = (deps) => {
+const buildNutritionProfilesModule = (deps) => {
   deps.repositories ??= {};
   const repository = buildRepository({
     repositories: deps.repositories,
@@ -19,3 +20,14 @@ export const createNutritionProfilesModule = (deps) => {
   };
 };
 export { NutritionProfilesModel };
+
+export const createNutritionProfilesModule = (deps) => {
+  const module = buildNutritionProfilesModule(deps);
+  return {
+    ...module,
+    controllers: createNutritionProfilesController({
+      operations: module.operations,
+      clock: deps.clock,
+    }),
+  };
+};

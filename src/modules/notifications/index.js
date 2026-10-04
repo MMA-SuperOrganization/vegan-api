@@ -1,9 +1,10 @@
+import { createNotificationsController } from "./notifications.controller.js";
 import { createNotificationsRepository } from "./notifications.repository.js";
 import { createNotificationsService } from "./notifications.service.js";
 import { createNotificationsValidation } from "./notifications.validation.js";
 import { notificationModels } from "./notifications.model.js";
 import { createFirebaseMessagingProvider } from "../../providers/firebase/firebase-messaging.provider.js";
-export function createNotificationsModule(deps = {}) {
+function buildNotificationsModule(deps = {}) {
   const repositories = createNotificationsRepository(deps);
   const service = createNotificationsService({
     ...deps,
@@ -36,3 +37,16 @@ export function createNotificationsModule(deps = {}) {
 }
 export { createNotificationsService, createNotificationsValidation, createNotificationsRepository };
 export * from "./notifications.model.js";
+
+export const createNotificationsModule = (deps) => {
+  const module = buildNotificationsModule(deps);
+  return {
+    ...module,
+    controllers: createNotificationsController({
+      operations: module.operations,
+      clock: deps.clock,
+    }),
+  };
+};
+
+export { timezoneSchema } from "./notifications.validation.js";

@@ -1,8 +1,9 @@
+import { createReportsController } from "./reports.controller.js";
 import { buildRepository } from "../../common/persistence/repository.js";
 import { ReportsModel } from "./reports.model.js";
 import { createReportsService, reportsValidation } from "./reports.service.js";
 export { reportStatuses, validateAssignee, validateTransition } from "./reports.service.js";
-export const createReportsModule = (deps) => {
+const buildReportsModule = (deps) => {
   const repository = buildRepository({
     repositories: deps.repositories,
     key: "reports",
@@ -14,5 +15,13 @@ export const createReportsModule = (deps) => {
     services: {},
     repositories: { reports: repository },
     models: { reports: ReportsModel },
+  };
+};
+
+export const createReportsModule = (deps) => {
+  const module = buildReportsModule(deps);
+  return {
+    ...module,
+    controllers: createReportsController({ operations: module.operations, clock: deps.clock }),
   };
 };

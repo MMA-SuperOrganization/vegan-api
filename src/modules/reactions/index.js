@@ -1,8 +1,9 @@
+import { createReactionsController } from "./reactions.controller.js";
 import { buildRepository } from "../../common/persistence/repository.js";
 import { ReactionsModel } from "./reactions.model.js";
 import { createReactionsService } from "./reactions.service.js";
 import { createReactionsValidation } from "./reactions.validation.js";
-export const createReactionsModule = (deps) => {
+const buildReactionsModule = (deps) => {
   buildRepository({ repositories: deps.repositories, key: "reactions", model: ReactionsModel });
   const { operations, service } = createReactionsService(deps);
   return {
@@ -14,3 +15,11 @@ export const createReactionsModule = (deps) => {
   };
 };
 export { ReactionsModel, createReactionsService, createReactionsValidation };
+
+export const createReactionsModule = (deps) => {
+  const module = buildReactionsModule(deps);
+  return {
+    ...module,
+    controllers: createReactionsController({ operations: module.operations, clock: deps.clock }),
+  };
+};

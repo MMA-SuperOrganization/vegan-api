@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { registerModel, ref, shortText } from "../recipes/content-model.js";
+import { registerModel, ref, shortText } from "../../common/persistence/content-model.js";
 const reference = new mongoose.Schema(
   {
     entityType: { type: String, enum: ["recipe", "post", "video", "user"], required: true },
@@ -10,7 +10,7 @@ const reference = new mongoose.Schema(
 export const MediaModel = registerModel(
   "Media",
   {
-    ownerId: { ...ref("User", true), index: true },
+    ownerId: { ...ref("Users", true), index: true },
     objectKey: { ...shortText(1024), required: true, unique: true },
     bucket: shortText(),
     kind: { type: String, enum: ["image", "video"], required: true },
