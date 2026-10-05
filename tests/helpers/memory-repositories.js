@@ -63,6 +63,52 @@ const set = (record, path, value) => {
   for (const key of keys) cursor = cursor[key] ??= {};
   cursor[leaf] = clone(value);
 };
+const expression = (record, value) => {
+  if (typeof value === "string" && value.startsWith("$")) return at(record, value.slice(1));
+  if (value instanceof Date || value == null || typeof value !== "object") return value;
+  if (Array.isArray(value)) return value.map((item) => expression(record, item));
+  if (value.$literal !== undefined) return value.$literal;
+  if (value.$ifNull)
+    return value.$ifNull.map((v) => expression(record, v)).find((v) => v != null) ?? null;
+  if (value.$eq) return equal(...value.$eq.map((v) => expression(record, v)));
+  if (value.$and) return value.$and.every((v) => expression(record, v));
+  if (value.$in) {
+    const [needle, haystack] = value.$in.map((v) => expression(record, v));
+    return haystack.some((v) => equal(needle, v));
+  }
+  if (value.$cond) {
+    const [condition, yes, no] = value.$cond;
+    return expression(record, expression(record, condition) ? yes : no);
+  }
+  if (value.$size) return expression(record, value.$size).length;
+  if (value.$dateTrunc) {
+    const { date, unit, timezone = "UTC" } = value.$dateTrunc;
+    if (timezone !== "UTC") throw new Error("Memory dateTrunc supports UTC only");
+    const result = new Date(expression(record, date));
+    result.setUTCHours(0, 0, 0, 0);
+    if (unit === "week") result.setUTCDate(result.getUTCDate() - result.getUTCDay());
+    else if (unit === "month") result.setUTCDate(1);
+    else if (unit !== "day") throw new Error(`Unsupported dateTrunc unit ${unit}`);
+    return result;
+  }
+  if (value.$dateToString) {
+    const { date, timezone = "UTC", format } = value.$dateToString;
+    if (format !== "%Y-%m-%d") throw new Error(`Unsupported date format ${format}`);
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(new Date(expression(record, date)));
+    const field = (name) => parts.find((part) => part.type === name).value;
+    return `${field("year")}-${field("month")}-${field("day")}`;
+  }
+  if (Object.keys(value).some((key) => key.startsWith("$")))
+    throw new Error(`Unsupported memory expression ${Object.keys(value)[0]}`);
+  return Object.fromEntries(
+    Object.entries(value).map(([key, item]) => [key, expression(record, item)]),
+  );
+};
 const project = (record, projection) => {
   if (!record || !projection) return clone(record);
   // Mongoose +field restores a select:false field without making an inclusive projection.
@@ -75,9 +121,13 @@ const project = (record, projection) => {
             .map((key) => [key.replace(/^-/, ""), key.startsWith("-") ? 0 : 1]),
         )
       : projection;
-  const positive = Object.entries(fields).filter(([, flag]) => flag === 1);
+  const positive = Object.entries(fields).filter(([, flag]) => flag !== 0);
   const result = positive.length ? { _id: record._id } : clone(record);
-  for (const [key] of positive) {
+  for (const [key, flag] of positive) {
+    if (flag !== 1) {
+      set(result, key, expression(record, flag));
+      continue;
+    }
     const [root, ...children] = key.split(".");
     if (children.length && Array.isArray(record[root])) {
       result[root] = record[root].map((item, index) => ({
@@ -288,7 +338,30 @@ export const createMemoryRepository = (key, seed = []) => {
       let rows = clone(internal.rows ?? [...records.values()]);
       for (const stage of pipeline) {
         if (stage.$match) rows = rows.filter((row) => matches(row, stage.$match));
-        else if (stage.$project) rows = rows.map((row) => project(row, stage.$project));
+        else if (stage.$lookup) {
+          const { from, localField, foreignField, as } = stage.$lookup;
+          const peer = repository.peers[from];
+          if (!peer) throw new Error(`Unknown memory lookup collection ${from}`);
+          rows = rows.map((row) => ({
+            ...row,
+            [as]: clone(
+              [...peer.records.values()].filter((other) =>
+                equal(at(row, localField), at(other, foreignField)),
+              ),
+            ),
+          }));
+        } else if (stage.$unwind) {
+          const key = (
+            typeof stage.$unwind === "string" ? stage.$unwind : stage.$unwind.path
+          ).replace(/^\$/, "");
+          rows = rows.flatMap((row) =>
+            (at(row, key) ?? []).map((item) => {
+              const expanded = clone(row);
+              set(expanded, key, item);
+              return expanded;
+            }),
+          );
+        } else if (stage.$project) rows = rows.map((row) => project(row, stage.$project));
         else if (stage.$set)
           rows = rows.map((row) => ({
             ...row,
@@ -330,22 +403,7 @@ export const createMemoryRepository = (key, seed = []) => {
         else if (stage.$count) rows = rows.length ? [{ [stage.$count]: rows.length }] : [];
         else if (stage.$group) {
           const groups = new Map();
-          const expr = (row, value) => {
-            if (typeof value === "string" && value.startsWith("$")) return at(row, value.slice(1));
-            if (value?.$dateToString) {
-              const { date, timezone = "UTC", format } = value.$dateToString;
-              if (format !== "%Y-%m-%d") throw new Error(`Unsupported date format ${format}`);
-              const parts = new Intl.DateTimeFormat("en-US", {
-                timeZone: timezone,
-                year: "numeric",
-                month: "2-digit",
-                day: "2-digit",
-              }).formatToParts(new Date(expr(row, date)));
-              const field = (name) => parts.find((part) => part.type === name).value;
-              return `${field("year")}-${field("month")}-${field("day")}`;
-            }
-            return value;
-          };
+          const expr = expression;
           for (const row of rows) {
             const groupId = expr(row, stage.$group._id);
             const k = JSON.stringify(groupId);
@@ -367,6 +425,11 @@ export const createMemoryRepository = (key, seed = []) => {
                 result[field] = values.reduce((a, b) => (scalar(a) < scalar(b) ? a : b));
               else if (op === "$first") result[field] = values[0];
               else if (op === "$last") result[field] = values.at(-1);
+              else if (op === "$addToSet")
+                result[field] = values.filter(
+                  (value, index) =>
+                    values.findIndex((candidate) => equal(candidate, value)) === index,
+                );
               else throw new Error(`Unsupported accumulator ${op}`);
             }
             return result;

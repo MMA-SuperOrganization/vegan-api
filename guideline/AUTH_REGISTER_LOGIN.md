@@ -391,6 +391,7 @@ Khi báo lỗi, ghi lại bước lỗi, HTTP status, mã lỗi và requestId n�
 
 ## 10. Công cụ và tài liệu tham khảo
 
+- [Danh mục đầy đủ 841 test case backend dành cho FE](BACKEND_TEST_CASES.md) — tra cứu module/endpoint, dữ liệu test, kết quả mong đợi và trạng thái Playwright.
 - [Script đăng ký/đăng nhập email-password](../test-register-account.sh).
 - [Trang test Google Login](../test-google-login.html) — phải chạy qua HTTP server.
 - [Server trang test Google](../test-google-login-server.mjs).

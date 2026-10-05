@@ -1,5 +1,9 @@
 # Vegan Support API — MMA302
 
+Playwright tests mapped to all 841 Excel case IDs: see [running tests, staging prerequisites and contract differences](docs/playwright-testing.md). Run `npm run test:playwright:coverage` and `npm run test:playwright` with Node 24+.
+
+Frontend developers can browse the [complete backend test case guideline](guideline/BACKEND_TEST_CASES.md) for all 841 case IDs, test data, steps, expected outcomes and recorded Playwright results. See the [FE guideline index](guideline/README.md) for authentication guidance.
+
 Modular-monolith backend for a vegan-support mobile app: Firebase identity, master food/allergen data, recipes and community content, pantry/meal/grocery planning, nutrition and health diaries, private media, optional AI assistance, notifications/reminders, moderation and administration. Mobile UI, Firebase password provisioning, adaptive video transcoding and medical advice are outside this repository's scope.
 
 **Verification boundary:** Node.js **24+ is required** (`package.json`). The remediation host currently provides **Node 22.19.0**, not the supported runtime. Local credentials are placeholders. Offline tests are not evidence that MongoDB/Atlas, Firebase, R2, FCM, AI or production deployment works. No real database seed/migration/cleanup or external-provider operation was performed during remediation; provision real configuration and validate on staging before deploying.

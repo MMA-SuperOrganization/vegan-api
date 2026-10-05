@@ -3,6 +3,10 @@ node_modules/
 .env.*
 !.env.example
 coverage/
+playwright-report/
+test-results/
+playwright-*.json
+playwright-*.log
 logs/
 *.log
 firebase-service-account*.json
