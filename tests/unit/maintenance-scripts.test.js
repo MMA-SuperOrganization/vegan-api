@@ -5,6 +5,7 @@ import {
   ALLERGEN_FIXTURES,
   FOOD_FIXTURES,
   buildRecipeFixtures,
+  hasSeedChanges,
   parseSeedArgs,
   validateAdminConfig,
   runSeed,
@@ -112,6 +113,25 @@ describe("offline maintenance scripts", () => {
       withDemoContent: true,
     });
   });
+  it("compares only canonical seed fields and normalizes Mongo values", () => {
+    const objectId = id();
+    const publishedAt = new Date("2025-01-01T00:00:00.000Z");
+    const existing = {
+      _id: id(),
+      categoryId: objectId,
+      publishedAt,
+      title: "Demo",
+      updatedAt: new Date(),
+    };
+    expect(
+      hasSeedChanges(existing, {
+        categoryId: objectId.toHexString(),
+        publishedAt: publishedAt.toISOString(),
+        title: "Demo",
+      }),
+    ).toBe(false);
+    expect(hasSeedChanges(existing, { title: "Updated demo" })).toBe(true);
+  });
   it("seeds canonical fake models idempotently and skips admin/recipes in master-only mode", async () => {
     const models = Object.fromEntries(
       Object.entries({
@@ -129,6 +149,8 @@ describe("offline maintenance scripts", () => {
     expect(models.recipes.records.size).toBe(0);
     const second = await runSeed(container, { masterOnly: true });
     expect(second.foodItems.inserted).toBe(0);
+    expect(second.foodItems.updated).toBe(0);
+    expect(second.foodItems.unchanged).toBe(20);
     expect(models.foodItems.records.size).toBe(20);
     await runSeed(container, { masterOnly: true, withDemoContent: true });
     await runSeed(container, { masterOnly: true, withDemoContent: true });

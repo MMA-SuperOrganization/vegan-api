@@ -1,4 +1,5 @@
 import { pathToFileURL } from "node:url";
+import { isDeepStrictEqual } from "node:util";
 import { loadEnv } from "../src/config/env.js";
 import { createLogger } from "../src/config/logger.js";
 import { connectDatabase as connectDB, disconnectDatabase } from "../src/config/database.js";
@@ -258,6 +259,29 @@ export function validateAdminConfig(seed = {}) {
     );
   return { firebaseUid: uid, email };
 }
+
+const normalizeComparableValue = (value) => {
+  if (value instanceof Date) return value.toISOString();
+  if (value && typeof value.toHexString === "function") return value.toHexString();
+  if (Array.isArray(value)) return value.map(normalizeComparableValue);
+  if (value && typeof value === "object")
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([, nestedValue]) => nestedValue !== undefined)
+        .map(([key, nestedValue]) => [key, normalizeComparableValue(nestedValue)]),
+    );
+  return value;
+};
+
+export const hasSeedChanges = (existing, next) =>
+  Object.keys(next).some(
+    (key) =>
+      !isDeepStrictEqual(
+        normalizeComparableValue(existing?.[key]),
+        normalizeComparableValue(next[key]),
+      ),
+  );
+
 export async function runSeed(container, options = {}) {
   const { models, env, logger } = container;
   for (const key of ["users", "categories", "allergens", "foodItems", "recipes"])
@@ -270,17 +294,23 @@ export async function runSeed(container, options = {}) {
       throw new Error(
         `Seed conflict in ${model.collection.name}; existing record is not the expected fixture`,
       );
-    await new model({ ...existing, ...data }).validate();
+    const candidate = new model({ ...existing, ...data });
+    await candidate.validate();
+    const normalizedData = Object.fromEntries(
+      Object.keys(data).map((field) => [field, candidate.toObject()[field]]),
+    );
+    counts[key] ??= { inserted: 0, updated: 0, unchanged: 0 };
+    if (existing && !hasSeedChanges(existing, normalizedData)) {
+      counts[key].unchanged++;
+      return existing;
+    }
     // No counters are supplied/reset. Existing application records with colliding slugs fail closed.
     const result = await model.updateOne(
       filter,
-      { $set: data },
+      { $set: normalizedData },
       { upsert: true, runValidators: true, setDefaultsOnInsert: true },
     );
-    counts[key] ??= { inserted: 0, updated: 0, unchanged: 0 };
-    counts[key][
-      result.upsertedCount ? "inserted" : result.modifiedCount ? "updated" : "unchanged"
-    ]++;
+    counts[key][result.upsertedCount ? "inserted" : "updated"]++;
     return model.findOne(filter).lean();
   };
   let author;

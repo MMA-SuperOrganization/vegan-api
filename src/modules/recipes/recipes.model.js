@@ -46,6 +46,7 @@ export const RecipesModel = registerModel(
     slug: { ...shortText(240), required: true, unique: true },
     summary: shortText(1000),
     description: shortText(10000),
+    coverImageUrl: shortText(2048),
     coverMediaId: ref("Media"),
     mediaIds: [ref("Media")],
     cuisine: shortText(100),

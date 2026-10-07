@@ -1,5 +1,12 @@
 import { z } from "zod";
-import { id, text, positive, units, dietTypes } from "../../common/validators/domain.schemas.js";
+import {
+  id,
+  text,
+  positive,
+  units,
+  dietTypes,
+  url,
+} from "../../common/validators/domain.schemas.js";
 import {
   idParams,
   slugParams,
@@ -36,6 +43,7 @@ export const recipeInput = z
     title: text(200),
     summary: text(1000, 0).optional(),
     description: text(10000, 0).optional(),
+    coverImageUrl: url.max(2048).nullable().optional(),
     coverMediaId: id.optional().nullable(),
     mediaIds: ids.optional(),
     categoryIds: ids.optional(),

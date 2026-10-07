@@ -63,6 +63,7 @@ export const summarizeContent = (value) => {
     "title",
     "description",
     "excerpt",
+    "coverImageUrl",
     "coverMediaId",
     "thumbnailMediaId",
     "categoryIds",
