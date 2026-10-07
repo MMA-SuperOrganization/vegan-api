@@ -37,6 +37,18 @@ export const createOnboardingService = (deps) => {
       throw AppError.serviceUnavailable("Transaction support is required", "TRANSACTIONS_REQUIRED");
     return deps.transaction(work);
   };
+  const persistWithStandaloneFallback = async (work) => {
+    try {
+      return await transactional(work);
+    } catch (error) {
+      if (error?.code !== "TRANSACTIONS_REQUIRED") throw error;
+      // A standalone MongoDB cannot open a multi-document transaction. Onboarding
+      // writes are idempotent upserts and completion is verified from persisted
+      // fields, so retry the workflow without a session. A failed partial write
+      // remains incomplete and can safely be retried by the client.
+      return work({});
+    }
+  };
   const auditMutation = async (actor, action, requestId, ipHash, before, after, session) => {
     if (actor.role === "admin") {
       if (!deps.audit?.record) throw AppError.serviceUnavailable("Audit service unavailable");
@@ -60,7 +72,12 @@ export const createOnboardingService = (deps) => {
     },
     async updateOnboarding({ actor, body, requestId, ipHash }) {
       await owner(actor);
-      return transactional(async (session) => {
+      if (body.allergenIds?.length) {
+        if (!services().allergens?.getMany)
+          throw AppError.serviceUnavailable("Allergen service unavailable");
+        await services().allergens.getMany(body.allergenIds);
+      }
+      return persistWithStandaloneFallback(async (session) => {
         await owner(actor, { session });
         const { users, nutritionProfiles } = services();
         const before = await status(actor.userId, { session });
@@ -83,7 +100,7 @@ export const createOnboardingService = (deps) => {
     },
     async completeOnboarding({ actor, requestId, ipHash }) {
       await owner(actor);
-      return transactional(async (session) => {
+      return persistWithStandaloneFallback(async (session) => {
         await owner(actor, { session });
         const before = await status(actor.userId, { session });
         if (!before.readyToComplete)

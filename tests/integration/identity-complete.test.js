@@ -120,7 +120,7 @@ const memory = (seed = [], unique = []) => {
     },
   };
 };
-const fixture = () => {
+const fixture = ({ transaction } = {}) => {
   const repositories = {
     users: memory(
       [
@@ -176,18 +176,20 @@ const fixture = () => {
     services: {},
     clock: () => new Date("2026-10-03T12:00:00Z"),
     audit,
-    transaction: async (work) => {
-      const snapshot = Object.fromEntries(
-        Object.entries(repositories).map(([key, repo]) => [key, clone(repo.rows)]),
-      );
-      try {
-        return await work({ test: true });
-      } catch (error) {
-        for (const [key, rows] of Object.entries(snapshot))
-          repositories[key].rows.splice(0, Infinity, ...rows);
-        throw error;
-      }
-    },
+    transaction:
+      transaction ??
+      (async (work) => {
+        const snapshot = Object.fromEntries(
+          Object.entries(repositories).map(([key, repo]) => [key, clone(repo.rows)]),
+        );
+        try {
+          return await work({ test: true });
+        } catch (error) {
+          for (const [key, rows] of Object.entries(snapshot))
+            repositories[key].rows.splice(0, Infinity, ...rows);
+          throw error;
+        }
+      }),
   };
   const modules = Object.fromEntries(
     [
@@ -427,6 +429,23 @@ describe("complete identity, nutrition, onboarding and master domain contracts",
     ]);
     await call("onboarding", "updateOnboarding", { body: { allergenIds: [] } });
     expect((await call("onboarding", "completeOnboarding")).completed).toBe(true);
+    expect((await call("onboarding", "completeOnboarding")).completed).toBe(true);
+  });
+  it("persists onboarding idempotently when MongoDB transactions are unavailable", async () => {
+    const transactionUnavailable = async () => {
+      const error = new Error("This operation requires a MongoDB replica set");
+      error.code = "TRANSACTIONS_REQUIRED";
+      throw error;
+    };
+    const { call } = fixture({ transaction: transactionUnavailable });
+    await call("onboarding", "updateOnboarding", {
+      body: {
+        dietType: "vegan",
+        goal: "maintain",
+        activityLevel: "light",
+        allergenIds: [],
+      },
+    });
     expect((await call("onboarding", "completeOnboarding")).completed).toBe(true);
   });
   it("rolls back onboarding step if a nutrition reference is invalid", async () => {
