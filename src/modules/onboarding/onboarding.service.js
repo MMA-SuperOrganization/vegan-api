@@ -46,7 +46,7 @@ export const createOnboardingService = (deps) => {
       // writes are idempotent upserts and completion is verified from persisted
       // fields, so retry the workflow without a session. A failed partial write
       // remains incomplete and can safely be retried by the client.
-      return work({});
+      return work(undefined);
     }
   };
   const auditMutation = async (actor, action, requestId, ipHash, before, after, session) => {
