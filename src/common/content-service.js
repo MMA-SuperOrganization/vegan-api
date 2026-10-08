@@ -249,6 +249,13 @@ export const createContentFacade = (deps) => {
       const arg = type;
       return getTarget(arg.targetType, arg.targetId, arg);
     }
+    if (type === "food-item") {
+      if (!deps.services?.foodItems?.getById)
+        throw AppError.serviceUnavailable("Food item service is unavailable");
+      const foodItem = await deps.services.foodItems.getById(id, { session: options.session });
+      if (foodItem.status !== "active") throw AppError.notFound();
+      return foodItem;
+    }
     const repo = repoFor(type);
     if (!repo) throw AppError.badRequest("Unsupported content target");
     if (type !== "comment") return getReadable(repo, id, { publicOnly: true, ...options });

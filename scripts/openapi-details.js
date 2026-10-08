@@ -45,7 +45,7 @@ export const moduleNotes = {
   reactions:
     "Reaction theo người dùng và target. PUT tạo hoặc cập nhật reaction hiện tại; DELETE bỏ reaction của chính người gọi.",
   "saved-items":
-    "Lưu/bỏ lưu nội dung của chính người dùng. Target phải hợp lệ và có thể truy cập; danh sách không tiết lộ nội dung đã bị ẩn hoặc không còn khả dụng.",
+    "Lưu/bỏ lưu công thức, thực phẩm, bài viết hoặc video của chính người dùng. Target phải hợp lệ và có thể truy cập; danh sách không tiết lộ nội dung đã bị ẩn hoặc không còn khả dụng.",
   ai: "Kết quả AI phải qua kiểm tra cấu trúc và tham chiếu. Tạo proposal chưa ghi kế hoạch/kho thực phẩm; chỉ confirm mới ghi. Proposal có hạn 1 giờ, xác nhận lại proposal đã consumed trả kết quả trước đó. Các thao tác gọi provider có thể trả 503 khi AI tắt/chưa cấu hình.",
   notifications:
     "Inbox và tùy chọn push của chính người dùng. Đánh dấu đã đọc/bỏ thông báo không gửi push mới; quietHours được diễn giải theo IANA timezone.",

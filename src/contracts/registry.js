@@ -686,7 +686,7 @@ export function createContractRegistry(container = createContractContainer()) {
     "getSavedItems",
     extend(model("savedItems"), {
       target: nullable({
-        anyOf: [ref("RecipesContent"), ref("PostsContent"), ref("VideosContent")],
+        anyOf: [ref("RecipesContent"), ref("FoodItems"), ref("PostsContent"), ref("VideosContent")],
       }),
       unavailable: boolean,
     }),

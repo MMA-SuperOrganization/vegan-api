@@ -1,10 +1,11 @@
 import mongoose from "mongoose";
 import { registerModel, ref } from "../../common/persistence/content-model.js";
+import { SAVED_TARGET_TYPES } from "./saved-items.constants.js";
 export const SavedItemsModel = registerModel(
   "SavedItems",
   {
     userId: ref("User", true),
-    targetType: { type: String, enum: ["recipe", "post", "video"], required: true },
+    targetType: { type: String, enum: SAVED_TARGET_TYPES, required: true },
     targetId: { type: mongoose.Schema.Types.ObjectId, required: true },
   },
   "saveditems",

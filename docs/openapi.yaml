@@ -80,7 +80,7 @@ tags:
   - name: reports
     description: Người dùng tạo và đọc báo cáo của mình; admin xem và xử lý báo cáo. Nội dung xử lý được ghi nhận cùng trạng thái và audit.
   - name: saved-items
-    description: Lưu/bỏ lưu nội dung của chính người dùng. Target phải hợp lệ và có thể truy cập; danh sách không tiết lộ nội dung đã bị ẩn hoặc không còn khả dụng.
+    description: Lưu/bỏ lưu công thức, thực phẩm, bài viết hoặc video của chính người dùng. Target phải hợp lệ và có thể truy cập; danh sách không tiết lộ nội dung đã bị ẩn hoặc không còn khả dụng.
   - name: search
     description: Tìm kiếm nội dung có quyền truy cập; lịch sử tìm kiếm thuộc từng người dùng. Guest không có lịch sử cá nhân.
   - name: users
@@ -33944,7 +33944,7 @@ paths:
 
         **Quyền truy cập:** Bắt buộc Firebase ID token, tài khoản active và quyền sở hữu resource. Backend lấy danh tính từ token; ID của người khác không cấp quyền truy cập.
 
-        **Nghiệp vụ:** Lưu/bỏ lưu nội dung của chính người dùng. Target phải hợp lệ và có thể truy cập; danh sách không tiết lộ nội dung đã bị ẩn hoặc không còn khả dụng.
+        **Nghiệp vụ:** Lưu/bỏ lưu công thức, thực phẩm, bài viết hoặc video của chính người dùng. Target phải hợp lệ và có thể truy cập; danh sách không tiết lộ nội dung đã bị ẩn hoặc không còn khả dụng.
 
         Danh sách nội dung đã lưu của owner theo type/phân trang; resource không còn truy cập được được xử lý theo service.
 
@@ -33984,11 +33984,12 @@ paths:
         - name: targetType
           in: query
           required: false
-          description: "Loại resource đa hình; enum giới hạn theo endpoint. Giá trị cho phép: recipe, post, video."
+          description: "Loại resource đa hình; enum giới hạn theo endpoint. Giá trị cho phép: recipe, food-item, post, video."
           schema:
             type: string
             enum:
               - recipe
+              - food-item
               - post
               - video
           example: recipe
@@ -34224,7 +34225,7 @@ paths:
 
         **Quyền truy cập:** Bắt buộc Firebase ID token, tài khoản active và quyền sở hữu resource. Backend lấy danh tính từ token; ID của người khác không cấp quyền truy cập.
 
-        **Nghiệp vụ:** Lưu/bỏ lưu nội dung của chính người dùng. Target phải hợp lệ và có thể truy cập; danh sách không tiết lộ nội dung đã bị ẩn hoặc không còn khả dụng.
+        **Nghiệp vụ:** Lưu/bỏ lưu công thức, thực phẩm, bài viết hoặc video của chính người dùng. Target phải hợp lệ và có thể truy cập; danh sách không tiết lộ nội dung đã bị ẩn hoặc không còn khả dụng.
 
         Lưu target vào danh sách riêng người gọi; service bảo vệ tính duy nhất của user+target.
 
@@ -34244,11 +34245,12 @@ paths:
         - name: targetType
           in: path
           required: true
-          description: "Loại resource đa hình; enum giới hạn theo endpoint. Giá trị cho phép: recipe, post, video."
+          description: "Loại resource đa hình; enum giới hạn theo endpoint. Giá trị cho phép: recipe, food-item, post, video."
           schema:
             type: string
             enum:
               - recipe
+              - food-item
               - post
               - video
           example: recipe
@@ -34549,7 +34551,7 @@ paths:
 
         **Quyền truy cập:** Bắt buộc Firebase ID token, tài khoản active và quyền sở hữu resource. Backend lấy danh tính từ token; ID của người khác không cấp quyền truy cập.
 
-        **Nghiệp vụ:** Lưu/bỏ lưu nội dung của chính người dùng. Target phải hợp lệ và có thể truy cập; danh sách không tiết lộ nội dung đã bị ẩn hoặc không còn khả dụng.
+        **Nghiệp vụ:** Lưu/bỏ lưu công thức, thực phẩm, bài viết hoặc video của chính người dùng. Target phải hợp lệ và có thể truy cập; danh sách không tiết lộ nội dung đã bị ẩn hoặc không còn khả dụng.
 
         Bỏ lưu đúng targetType/targetId của người gọi; không xóa nội dung gốc.
 
@@ -34567,11 +34569,12 @@ paths:
         - name: targetType
           in: path
           required: true
-          description: "Loại resource đa hình; enum giới hạn theo endpoint. Giá trị cho phép: recipe, post, video."
+          description: "Loại resource đa hình; enum giới hạn theo endpoint. Giá trị cho phép: recipe, food-item, post, video."
           schema:
             type: string
             enum:
               - recipe
+              - food-item
               - post
               - video
           example: recipe
@@ -56936,9 +56939,10 @@ components:
           type: string
           enum:
             - recipe
+            - food-item
             - post
             - video
-          description: "Loại resource đa hình; enum giới hạn theo endpoint. Giá trị cho phép: recipe, post, video."
+          description: "Loại resource đa hình; enum giới hạn theo endpoint. Giá trị cho phép: recipe, food-item, post, video."
         targetId:
           type: string
           pattern: ^[A-Fa-f0-9]{24}$
@@ -72093,9 +72097,10 @@ components:
           type: string
           enum:
             - recipe
+            - food-item
             - post
             - video
-          description: "Loại resource đa hình; enum giới hạn theo endpoint. Giá trị cho phép: recipe, post, video."
+          description: "Loại resource đa hình; enum giới hạn theo endpoint. Giá trị cho phép: recipe, food-item, post, video."
       additionalProperties: false
       description: Dữ liệu Query của getSavedItems; required/default/enum/giới hạn theo validator thật, các quy tắc kiểm tra chéo xem description của operation.
     getSavedItemsResponse:
@@ -72123,9 +72128,10 @@ components:
                 type: string
                 enum:
                   - recipe
+                  - food-item
                   - post
                   - video
-                description: "Loại resource đa hình; enum giới hạn theo endpoint. Giá trị cho phép: recipe, post, video."
+                description: "Loại resource đa hình; enum giới hạn theo endpoint. Giá trị cho phép: recipe, food-item, post, video."
               targetId:
                 type: string
                 pattern: ^[A-Fa-f0-9]{24}$
@@ -72150,6 +72156,8 @@ components:
                 anyOf:
                   - anyOf:
                       - $ref: "#/components/schemas/RecipesContent"
+                        description: Mục tiêu của chỉ số.
+                      - $ref: "#/components/schemas/FoodItems"
                         description: Mục tiêu của chỉ số.
                       - $ref: "#/components/schemas/PostsContent"
                         description: Mục tiêu của chỉ số.
@@ -72181,9 +72189,10 @@ components:
           type: string
           enum:
             - recipe
+            - food-item
             - post
             - video
-          description: "Loại resource đa hình; enum giới hạn theo endpoint. Giá trị cho phép: recipe, post, video."
+          description: "Loại resource đa hình; enum giới hạn theo endpoint. Giá trị cho phép: recipe, food-item, post, video."
         targetId:
           type: string
           pattern: ^[a-f\d]{24}$
@@ -72224,9 +72233,10 @@ components:
           type: string
           enum:
             - recipe
+            - food-item
             - post
             - video
-          description: "Loại resource đa hình; enum giới hạn theo endpoint. Giá trị cho phép: recipe, post, video."
+          description: "Loại resource đa hình; enum giới hạn theo endpoint. Giá trị cho phép: recipe, food-item, post, video."
         targetId:
           type: string
           pattern: ^[a-f\d]{24}$

@@ -746,6 +746,91 @@ describe("Complete content modules", () => {
     await h.call("saved-items", "unsaveItem", { params });
     expect((await h.repositories.recipes.findById(recipe._id)).saveCount).toBe(0);
   });
+  it("keeps owner-scoped bookmarks idempotent on standalone MongoDB", async () => {
+    const recipe = published();
+    const h = createHarness({ recipes: [recipe] });
+    const params = { targetType: "recipe", targetId: recipe._id };
+    delete h.deps.transaction;
+    await h.call("saved-items", "saveItem", { params });
+    await h.call("saved-items", "saveItem", { params });
+    expect(await h.repositories.savedItems.count({ userId: owner.userId })).toBe(1);
+    expect((await h.repositories.recipes.findById(recipe._id)).saveCount).toBe(1);
+    expect((await h.call("saved-items", "getSavedItems")).data).toHaveLength(1);
+    await h.call("saved-items", "unsaveItem", { params });
+    await h.call("saved-items", "unsaveItem", { params });
+    expect(await h.repositories.savedItems.count({ userId: owner.userId })).toBe(0);
+    expect((await h.repositories.recipes.findById(recipe._id)).saveCount).toBe(0);
+  });
+  it("saves active food items without requiring a content counter", async () => {
+    const foodItem = {
+      _id: newId(),
+      name: "Chickpeas",
+      slug: "chickpeas",
+      status: "active",
+      imageUrl: "https://images.test/chickpeas.jpg",
+      isVegan: true,
+      isVegetarian: true,
+    };
+    const h = createHarness({ foodItems: [foodItem] });
+    const params = { targetType: "food-item", targetId: foodItem._id };
+
+    await h.call("saved-items", "saveItem", { params });
+    await h.call("saved-items", "saveItem", { params });
+
+    const saved = await h.call("saved-items", "getSavedItems", {
+      query: { targetType: "food-item" },
+    });
+    expect(saved.data).toHaveLength(1);
+    expect(saved.data[0]).toMatchObject({
+      targetType: "food-item",
+      targetId: foodItem._id,
+      target: { name: "Chickpeas", status: "active" },
+    });
+
+    await h.call("saved-items", "unsaveItem", { params });
+    expect(await h.repositories.savedItems.count({ userId: owner.userId })).toBe(0);
+  });
+  it("does not expose inactive food items through saved items", async () => {
+    const foodItem = {
+      _id: newId(),
+      name: "Unavailable food",
+      slug: "unavailable-food",
+      status: "inactive",
+      isVegan: true,
+      isVegetarian: true,
+    };
+    const h = createHarness({ foodItems: [foodItem] });
+
+    await expect(
+      h.call("saved-items", "saveItem", {
+        params: { targetType: "food-item", targetId: foodItem._id },
+      }),
+    ).rejects.toMatchObject({ statusCode: 404 });
+  });
+  it("compensates standalone bookmark writes when the counter update fails", async () => {
+    const recipe = published();
+    const h = createHarness({ recipes: [recipe] });
+    const params = { targetType: "recipe", targetId: recipe._id };
+    delete h.deps.transaction;
+    const adjustCounters = h.deps.services.content.adjustCounters;
+    h.deps.services.content.adjustCounters = vi.fn(async () => {
+      throw new Error("counter unavailable");
+    });
+    await expect(h.call("saved-items", "saveItem", { params })).rejects.toThrow(
+      "counter unavailable",
+    );
+    expect(await h.repositories.savedItems.count({ userId: owner.userId })).toBe(0);
+
+    h.deps.services.content.adjustCounters = adjustCounters;
+    await h.call("saved-items", "saveItem", { params });
+    h.deps.services.content.adjustCounters = vi.fn(async () => {
+      throw new Error("counter unavailable");
+    });
+    await expect(h.call("saved-items", "unsaveItem", { params })).rejects.toThrow(
+      "counter unavailable",
+    );
+    expect(await h.repositories.savedItems.count({ userId: owner.userId })).toBe(1);
+  });
   it("rolls back an interaction when its target counter write fails", async () => {
     const post = published();
     const h = createHarness({ posts: [post] });
