@@ -448,6 +448,22 @@ describe("complete identity, nutrition, onboarding and master domain contracts",
     });
     expect((await call("onboarding", "completeOnboarding")).completed).toBe(true);
   });
+  it("deletes a regular account when the MongoDB transaction attempt is rejected", async () => {
+    const transactionUnavailable = async () => {
+      const error = new Error("This operation requires a MongoDB replica set");
+      error.code = "TRANSACTIONS_REQUIRED";
+      throw error;
+    };
+    const { call, repositories } = fixture({ transaction: transactionUnavailable });
+    expect(await call("users", "deleteMyAccount")).toMatchObject({
+      status: "deleted",
+    });
+    expect(await repositories.users.findById(USER)).toMatchObject({
+      status: "deleted",
+      onboardingCompleted: false,
+      avatarMediaId: null,
+    });
+  });
   it("rolls back onboarding step if a nutrition reference is invalid", async () => {
     const { call, repositories } = fixture();
     await expect(
