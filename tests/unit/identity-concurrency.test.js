@@ -11,7 +11,7 @@ const ONE = "200000000000000000000001";
 const TWO = "200000000000000000000002";
 const actor = { userId: USER, role: "user", status: "active" };
 const admin = { userId: ADMIN, role: "admin", status: "active" };
-const fixture = ({ existingNutrition = false } = {}) => {
+const fixture = ({ existingNutrition = false, transaction = true } = {}) => {
   const repositories = createMemoryRepositories({
     users: [
       {
@@ -62,7 +62,7 @@ const fixture = ({ existingNutrition = false } = {}) => {
     repositories,
     services: {},
     clock: () => new Date("2026-10-03T12:00:00Z"),
-    transaction: memoryTransaction(repositories),
+    ...(transaction ? { transaction: memoryTransaction(repositories) } : {}),
     audit: { record: vi.fn(async () => {}) },
   };
   const modules = [
@@ -167,6 +167,20 @@ describe("identity transaction and concurrency regressions", () => {
     const after = await repositories.users.findById(USER);
     expect(after.fcmTokens).toEqual([]);
     expect(after.fcmTokensVersion).toBe(before.fcmTokensVersion + 1);
+  });
+  it("deletes a regular account when MongoDB transaction support is unavailable", async () => {
+    const { repositories, users } = fixture({ transaction: false });
+    const result = await users.operations.deleteMyAccount({
+      actor,
+      body: {},
+      requestId: "standalone-delete",
+    });
+    expect(result).toMatchObject({ userId: USER, status: "deleted" });
+    expect(await repositories.users.findById(USER)).toMatchObject({
+      status: "deleted",
+      onboardingCompleted: false,
+      avatarMediaId: null,
+    });
   });
   it.each([true, false])(
     "retains concurrent distinct manual nutrition targets and recalculation (existing=%s)",

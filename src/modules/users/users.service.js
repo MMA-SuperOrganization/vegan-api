@@ -329,7 +329,51 @@ export const createUsersService = ({ deps, users, profiles, guards }) => {
           );
         return { userId: String(after._id), status: after.status, deletedAt: after.deletedAt };
       };
-      return serialized(() => transaction(remove));
+      const removeWithoutTransaction = async () => {
+        const before = await load(user._id);
+        active(before);
+        if (before.role === "admin")
+          throw AppError.serviceUnavailable(
+            "Transaction support is required to delete an administrator account",
+            "TRANSACTIONS_REQUIRED",
+          );
+        const changes = {
+          status: "deleted",
+          deletedAt: now(),
+          fcmTokens: [],
+          onboardingCompleted: false,
+          avatarMediaId: null,
+          avatarUrl: null,
+        };
+        if (before.avatarMediaId)
+          await deps.services.media.unlink(before.avatarMediaId, "user", before._id, {
+            actor: context.actor,
+          });
+        try {
+          const after = found(
+            await users.updateOne(
+              { _id: before._id, status: "active" },
+              { $set: changes, $inc: { fcmTokensVersion: 1 } },
+              { new: true },
+            ),
+          );
+          return { userId: String(after._id), status: after.status, deletedAt: after.deletedAt };
+        } catch (error) {
+          if (before.avatarMediaId)
+            await deps.services.media
+              .link(before.avatarMediaId, "user", before._id, { actor: context.actor })
+              .catch(() => {});
+          throw error;
+        }
+      };
+      return serialized(async () => {
+        try {
+          return await transaction(remove);
+        } catch (error) {
+          if (error?.code !== "TRANSACTIONS_REQUIRED") throw error;
+          return removeWithoutTransaction();
+        }
+      });
     },
     async getPublicUserProfile({ params }) {
       const user = await users.findOne({ _id: uid(params.userId), status: "active" });
