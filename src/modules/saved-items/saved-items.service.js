@@ -58,7 +58,7 @@ export const createSavedItemsService = (deps) => {
         try {
           after = await repo.create(filter, { session });
         } catch (error) {
-          if (error?.code !== 11000) throw error;
+          if (error?.code !== 11000 || session) throw error;
           return repo.findOne(filter, { session });
         }
         if (!hasSaveCounter(params.targetType)) return after;

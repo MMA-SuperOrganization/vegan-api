@@ -831,6 +831,56 @@ describe("Complete content modules", () => {
     );
     expect(await h.repositories.savedItems.count({ userId: owner.userId })).toBe(1);
   });
+  it("keeps post reactions responsive and idempotent on standalone MongoDB", async () => {
+    const post = published();
+    const h = createHarness({ posts: [post] });
+    const params = { targetType: "post", targetId: post._id };
+    delete h.deps.transaction;
+
+    await h.call("reactions", "upsertReaction", { params, body: { type: "like" } });
+    await h.call("reactions", "upsertReaction", { params, body: { type: "love" } });
+    await h.call("reactions", "upsertReaction", { params, body: { type: "love" } });
+
+    expect(await h.repositories.reactions.count({ userId: owner.userId })).toBe(1);
+    expect(await h.repositories.reactions.findOne({ userId: owner.userId })).toMatchObject({
+      targetType: "post",
+      targetId: post._id,
+      type: "love",
+    });
+    expect((await h.repositories.posts.findById(post._id)).reactionCount).toBe(1);
+
+    await h.call("reactions", "deleteReaction", { params });
+    await h.call("reactions", "deleteReaction", { params });
+    expect(await h.repositories.reactions.count({ userId: owner.userId })).toBe(0);
+    expect((await h.repositories.posts.findById(post._id)).reactionCount).toBe(0);
+  });
+  it("compensates standalone post reaction writes when counter updates fail", async () => {
+    const post = published();
+    const h = createHarness({ posts: [post] });
+    const params = { targetType: "post", targetId: post._id };
+    delete h.deps.transaction;
+    const adjustCounters = h.deps.services.content.adjustCounters;
+    h.deps.services.content.adjustCounters = vi.fn(async () => {
+      throw new Error("counter unavailable");
+    });
+
+    await expect(
+      h.call("reactions", "upsertReaction", { params, body: { type: "love" } }),
+    ).rejects.toThrow("counter unavailable");
+    expect(await h.repositories.reactions.count({ userId: owner.userId })).toBe(0);
+
+    h.deps.services.content.adjustCounters = adjustCounters;
+    await h.call("reactions", "upsertReaction", { params, body: { type: "love" } });
+    h.deps.services.content.adjustCounters = vi.fn(async () => {
+      throw new Error("counter unavailable");
+    });
+    await expect(h.call("reactions", "deleteReaction", { params })).rejects.toThrow(
+      "counter unavailable",
+    );
+    expect(await h.repositories.reactions.findOne({ userId: owner.userId })).toMatchObject({
+      type: "love",
+    });
+  });
   it("rolls back an interaction when its target counter write fails", async () => {
     const post = published();
     const h = createHarness({ posts: [post] });
