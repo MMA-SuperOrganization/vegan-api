@@ -4,6 +4,12 @@ import { loadEnv } from "../src/config/env.js";
 import { createLogger } from "../src/config/logger.js";
 import { connectDatabase as connectDB, disconnectDatabase } from "../src/config/database.js";
 import { normalizeNutrition, calculateRecipeNutrition } from "../src/common/utils/nutrition.js";
+import {
+  EXTRA_FOOD_ROWS,
+  EXTRA_RECIPE_ROWS,
+  foodImageUrl,
+  recipeImageUrl,
+} from "./seed-data/discovery.fixtures.js";
 
 export const DEMO_AUTHOR_UID = "internal:vegan-demo-fixtures:v1";
 export const DEMO_AUTHOR_EMAIL = "vegan-demo-fixtures@example.invalid";
@@ -54,6 +60,7 @@ const foodRows = [
   ["Chia Seeds", "Nuts & Seeds", 486, 16.5, 30.7, 42.1, 34.4],
   ["Flaxseeds", "Nuts & Seeds", 534, 18.3, 42.2, 28.9, 27.3],
   ["Peanut Butter", "Nuts & Seeds", 588, 25.1, 50.4, 20, 6, "Peanuts"],
+  ...EXTRA_FOOD_ROWS,
 ];
 export const FOOD_FIXTURES = foodRows.map(
   ([name, category, caloriesKcal, proteinG, fatG, carbsG, fiberG, allergen]) => ({
@@ -63,6 +70,7 @@ export const FOOD_FIXTURES = foodRows.map(
     normalizedName: name.toLowerCase(),
     slug: slug(name),
     aliases: ["demo fixture"],
+    imageUrl: foodImageUrl(category),
     status: "active",
     isVegan: true,
     isVegetarian: true,
@@ -172,11 +180,15 @@ const recipeRows = [
     ],
     ["Blend banana and chia seeds with water."],
   ],
+  ...EXTRA_RECIPE_ROWS,
 ];
 export function buildRecipeFixtures({ categories, foods, authorId, sourceType = "admin" }) {
   if (!authorId) throw new Error("Demo recipes require an explicit author");
   return recipeRows.map(
-    ([title, category, difficulty, prepMinutes, cookMinutes, servings, rows, instructions]) => {
+    (
+      [title, category, difficulty, prepMinutes, cookMinutes, servings, rows, instructions],
+      index,
+    ) => {
       const ingredients = rows.map(([name, quantity], order) => {
         const food = foods[name];
         if (!food?._id) throw new Error(`Missing canonical food fixture: ${name}`);
@@ -209,9 +221,13 @@ export function buildRecipeFixtures({ categories, foods, authorId, sourceType = 
         servings,
         summary:
           "Demo fixture. Approximate nutrition; not clinical or fully researched dietary advice.",
+        coverImageUrl: recipeImageUrl(index),
         tags: ["demo-fixture"],
         ingredients,
-        steps: instructions.map((instruction, index) => ({ order: index + 1, instruction })),
+        steps: instructions.map((step, stepIndex) => ({
+          order: stepIndex + 1,
+          ...(typeof step === "string" ? { instruction: step } : step),
+        })),
         nutritionPerServing: calculateRecipeNutrition(ingredients, { servings }),
         allergenIds: [
           ...new Map(
@@ -392,7 +408,7 @@ export async function runSeed(container, options = {}) {
       );
   else
     logger.info(
-      "Master-only: explicitly skipping all 8 recipes; add --with-demo-content to create an internal demo author and recipes",
+      `Master-only: explicitly skipping all ${recipeRows.length} recipes; add --with-demo-content to create an internal demo author and recipes`,
     );
   logger.info({ counts }, "Seed finished; no data deleted");
   return counts;

@@ -12,7 +12,7 @@ export const unionPage = async (sources, { page = 1, limit = 20, sort }) => {
           { $sort: sort },
           { $skip: (page - 1) * limit },
           { $limit: limit },
-          { $unset: ["_sortTitle", "_sortViews"] },
+          { $unset: ["_sortTitle", "_sortViews", "_sortRating", "_sortMinutes"] },
         ],
         total: [{ $count: "count" }],
       },
@@ -32,6 +32,8 @@ const sourcePipeline = ({ repository, filter, projection, type }) => [
       type: { $literal: type },
       _sortTitle: { $ifNull: ["$title", "$name"] },
       _sortViews: { $ifNull: ["$viewCount", 0] },
+      _sortRating: { $ifNull: ["$ratingAverage", 0] },
+      _sortMinutes: { $ifNull: ["$totalMinutes", 2147483647] },
     },
   },
 ];

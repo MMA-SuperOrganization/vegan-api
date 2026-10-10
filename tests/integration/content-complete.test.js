@@ -761,7 +761,7 @@ describe("Complete content modules", () => {
     expect(await h.repositories.savedItems.count({ userId: owner.userId })).toBe(0);
     expect((await h.repositories.recipes.findById(recipe._id)).saveCount).toBe(0);
   });
-  it("saves active food items without requiring a content counter", async () => {
+  it("saves active food items on standalone MongoDB without a content counter", async () => {
     const foodItem = {
       _id: newId(),
       name: "Chickpeas",
@@ -772,6 +772,7 @@ describe("Complete content modules", () => {
       isVegetarian: true,
     };
     const h = createHarness({ foodItems: [foodItem] });
+    delete h.deps.transaction;
     const params = { targetType: "food-item", targetId: foodItem._id };
 
     await h.call("saved-items", "saveItem", { params });

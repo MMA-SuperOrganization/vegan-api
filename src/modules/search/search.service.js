@@ -34,7 +34,7 @@ const filters = {
   tags: boundedList(text(50)).optional(),
   excludeAllergenIds: boundedList(id).optional(),
   dietType: dietTypes.optional(),
-  sort: z.enum(["newest", "oldest", "title", "popular"]).default("newest"),
+  sort: z.enum(["newest", "oldest", "title", "popular", "rating", "quickest"]).default("newest"),
 };
 export const searchValidation = {
   searchContent: {
@@ -55,9 +55,13 @@ const sorting = (sort) =>
     ? { createdAt: 1, _id: 1, type: 1 }
     : sort === "title"
       ? { _sortTitle: 1, _id: 1, type: 1 }
-      : sort === "popular"
-        ? { _sortViews: -1, createdAt: -1, _id: -1, type: 1 }
-        : { createdAt: -1, _id: -1, type: 1 };
+      : sort === "rating"
+        ? { _sortRating: -1, ratingCount: -1, _id: -1, type: 1 }
+        : sort === "quickest"
+          ? { _sortMinutes: 1, _id: 1, type: 1 }
+          : sort === "popular"
+            ? { _sortViews: -1, createdAt: -1, _id: -1, type: 1 }
+            : { createdAt: -1, _id: -1, type: 1 };
 const makeFilter = (type, query) => {
   const filter = type === "food-item" ? { status: "active" } : { ...publicFilter };
   if (query.q) {

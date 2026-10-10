@@ -412,6 +412,34 @@ describe("Discovery behavior and input safety", () => {
     const result = await h.call("searchContent", { actor: null, query: { sort: "popular" } });
     expect(result.data.map((item) => item._id)).toEqual([IDS.recipe, IDS.post, IDS.allergicRecipe]);
   });
+  it("supports recipe rating and quickest search sorts used by the mobile filters", async () => {
+    const h = harness({
+      recipes: [
+        content({ _id: IDS.recipe, ratingAverage: 3, ratingCount: 10, totalMinutes: 45 }),
+        content({
+          _id: IDS.allergicRecipe,
+          slug: "top-and-quick",
+          ratingAverage: 5,
+          ratingCount: 2,
+          totalMinutes: 15,
+        }),
+      ],
+      posts: [],
+      videos: [],
+      foodItems: [],
+    });
+    expect(h.validation.searchContent.query.parse({ sort: "rating" }).sort).toBe("rating");
+    const rated = await h.call("searchContent", {
+      actor: null,
+      query: { type: "recipe", sort: "rating" },
+    });
+    expect(rated.data.map((item) => item._id)).toEqual([IDS.allergicRecipe, IDS.recipe]);
+    const quickest = await h.call("searchContent", {
+      actor: null,
+      query: { type: "recipe", sort: "quickest" },
+    });
+    expect(quickest.data.map((item) => item._id)).toEqual([IDS.allergicRecipe, IDS.recipe]);
+  });
   it("records/deduplicates bounded history and deletes only owner rows", async () => {
     const seed = Array.from({ length: 51 }, (_, index) => ({
       _id: (index + 1).toString(16).padStart(24, "0"),

@@ -66,21 +66,23 @@ function fakeModel(actual) {
   };
 }
 describe("offline maintenance scripts", () => {
-  it("exports 20 canonical foods and 8 complete recipe snapshots without database imports/connection", async () => {
+  it("exports 40 canonical foods and 20 complete recipe snapshots without database imports/connection", async () => {
     expect(mongoose.connection.readyState).toBe(0);
     expect(CATEGORY_FIXTURES).toHaveLength(12);
     expect(ALLERGEN_FIXTURES).toHaveLength(5);
-    expect(FOOD_FIXTURES).toHaveLength(20);
+    expect(FOOD_FIXTURES).toHaveLength(40);
     const context = fixtureContext();
     for (const food of Object.values(context.foods)) {
       await new FoodItemsModel(food).validate();
       expect(Object.keys(food.nutritionPer100g)).toEqual(NUTRIENT_KEYS);
+      expect(food.imageUrl).toMatch(/^https:\/\/images\.unsplash\.com\//);
     }
     const recipes = buildRecipeFixtures(context);
-    expect(recipes).toHaveLength(8);
-    expect(new Set(recipes.map((row) => row.slug)).size).toBe(8);
+    expect(recipes).toHaveLength(20);
+    expect(new Set(recipes.map((row) => row.slug)).size).toBe(20);
     for (const recipe of recipes) {
       await new RecipesModel(recipe).validate();
+      expect(recipe.coverImageUrl).toMatch(/^https:\/\/images\.unsplash\.com\//);
       expect(recipe).not.toHaveProperty("viewCount");
       expect(recipe).not.toHaveProperty("version");
       expect(
@@ -144,18 +146,18 @@ describe("offline maintenance scripts", () => {
     );
     const container = { models, env: { seed: {} }, logger: log() };
     const first = await runSeed(container, { masterOnly: true });
-    expect(first.foodItems.inserted).toBe(20);
+    expect(first.foodItems.inserted).toBe(40);
     expect(models.users.records.size).toBe(0);
     expect(models.recipes.records.size).toBe(0);
     const second = await runSeed(container, { masterOnly: true });
     expect(second.foodItems.inserted).toBe(0);
     expect(second.foodItems.updated).toBe(0);
-    expect(second.foodItems.unchanged).toBe(20);
-    expect(models.foodItems.records.size).toBe(20);
+    expect(second.foodItems.unchanged).toBe(40);
+    expect(models.foodItems.records.size).toBe(40);
     await runSeed(container, { masterOnly: true, withDemoContent: true });
     await runSeed(container, { masterOnly: true, withDemoContent: true });
     expect(models.users.records.size).toBe(1);
-    expect(models.recipes.records.size).toBe(8);
+    expect(models.recipes.records.size).toBe(20);
     expect([...models.users.records.values()][0].role).toBe("user");
     expect(
       [...models.recipes.records.values()].every((recipe) => recipe.sourceType === "community"),

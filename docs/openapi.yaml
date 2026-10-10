@@ -13218,7 +13218,7 @@ paths:
         - name: sort
           in: query
           required: false
-          description: 'Thứ tự sắp xếp; các giá trị hỗ trợ/default nằm trong schema. Mặc định: "newest". Giá trị cho phép: newest, oldest, title, popular.'
+          description: 'Thứ tự sắp xếp; các giá trị hỗ trợ/default nằm trong schema. Mặc định: "newest". Giá trị cho phép: newest, oldest, title, popular, rating, quickest.'
           schema:
             default: newest
             type: string
@@ -13227,6 +13227,8 @@ paths:
               - oldest
               - title
               - popular
+              - rating
+              - quickest
           example: newest
         - name: page
           in: query
@@ -67240,7 +67242,9 @@ components:
             - oldest
             - title
             - popular
-          description: 'Thứ tự sắp xếp; các giá trị hỗ trợ/default nằm trong schema. Mặc định: "newest". Giá trị cho phép: newest, oldest, title, popular.'
+            - rating
+            - quickest
+          description: 'Thứ tự sắp xếp; các giá trị hỗ trợ/default nằm trong schema. Mặc định: "newest". Giá trị cho phép: newest, oldest, title, popular, rating, quickest.'
         page:
           default: 1
           type: integer
