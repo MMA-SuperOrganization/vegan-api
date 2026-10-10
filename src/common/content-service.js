@@ -1,12 +1,13 @@
 import { AppError } from "./errors/app-error.js";
 import {
   assertOwner,
+  escapeRegex,
   objectIdString,
   publicFilter,
   requireFound,
-  escapeRegex,
   redact,
 } from "./domain.js";
+import { fuzzyMongoRegex } from "./utils/fuzzy-search.js";
 
 export const requireActor = (actor) => {
   if (!actor?.userId) throw AppError.unauthorized();
@@ -114,8 +115,12 @@ export const assertEditable = (resource, actor) => {
 export const listFilter = (query = {}) => {
   const filter = {};
   if (query.q) {
-    const regex = { $regex: escapeRegex(query.q), $options: "i" };
-    filter.$or = [{ title: regex }, { description: regex }, { summary: regex }];
+    const exactRegex = { $regex: escapeRegex(query.q), $options: "i" };
+    filter.$or = [
+      { title: fuzzyMongoRegex(query.q) },
+      { description: exactRegex },
+      { summary: exactRegex },
+    ];
   }
   if (query.category ?? query.categoryId) filter.categoryIds = query.category ?? query.categoryId;
   if (query.tags?.length) filter.tags = { $all: query.tags };

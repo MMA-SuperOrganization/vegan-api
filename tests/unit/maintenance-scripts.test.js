@@ -25,6 +25,7 @@ import { UsersModel } from "../../src/modules/users/users.model.js";
 import { RecipesModel } from "../../src/modules/recipes/recipes.model.js";
 import { AiMessageModel } from "../../src/modules/ai/ai.model.js";
 import { NUTRIENT_KEYS } from "../../src/common/utils/nutrition.js";
+import { fuzzyRegexSource } from "../../src/common/utils/fuzzy-search.js";
 const id = () => new mongoose.Types.ObjectId();
 const log = () => ({ info: vi.fn(), warn: vi.fn() });
 const fixtureContext = () => {
@@ -97,6 +98,9 @@ describe("offline maintenance scripts", () => {
     }
     expect(recipes[0].nutritionPerServing.caloriesKcal).toBeCloseTo(211.6);
     expect(recipes.find((row) => row.slug === "tofu-scramble").allergenIds).toHaveLength(1);
+    const tofu = FOOD_FIXTURES.find((food) => food.name === "Tofu");
+    expect(tofu.aliases).toEqual(expect.arrayContaining(["đậu hũ", "đậu phụ"]));
+    expect(new RegExp(fuzzyRegexSource("dau hu"), "i").test(tofu.aliases.join(" "))).toBe(true);
   });
   it("requires explicit safe seed mode and real admin configuration", () => {
     expect(() =>

@@ -1,7 +1,8 @@
 import { AppError } from "../../common/errors/app-error.js";
 import { id } from "../../common/validators/domain.schemas.js";
-import { requireFound, slug, escapeRegex } from "../../common/domain.js";
+import { requireFound, slug } from "../../common/domain.js";
 import { dietFilter } from "../../common/utils/diet.js";
+import { fuzzyMongoRegex } from "../../common/utils/fuzzy-search.js";
 const publicFields = [
   "_id",
   "name",
@@ -107,7 +108,7 @@ export const createFoodItemsService = ({ deps, repository }) => {
         const filter = { status: "active" };
         if (query.q)
           filter.$or = ["name", "normalizedName", "aliases"].map((key) => ({
-            [key]: { $regex: escapeRegex(query.q), $options: "i" },
+            [key]: fuzzyMongoRegex(query.q),
           }));
         if (query.categoryId ?? query.category)
           filter.categoryId = query.categoryId ?? query.category;

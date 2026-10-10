@@ -7,6 +7,7 @@ import { normalizeNutrition, calculateRecipeNutrition } from "../src/common/util
 import {
   EXTRA_FOOD_ROWS,
   EXTRA_RECIPE_ROWS,
+  foodAliases,
   foodImageUrl,
   recipeImageUrl,
 } from "./seed-data/discovery.fixtures.js";
@@ -69,7 +70,7 @@ export const FOOD_FIXTURES = foodRows.map(
     allergenNames: allergen ? [allergen] : [],
     normalizedName: name.toLowerCase(),
     slug: slug(name),
-    aliases: ["demo fixture"],
+    aliases: foodAliases(name),
     imageUrl: foodImageUrl(category),
     status: "active",
     isVegan: true,

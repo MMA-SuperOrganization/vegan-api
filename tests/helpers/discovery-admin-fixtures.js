@@ -100,6 +100,7 @@ export const fixtureSeed = () => ({
       name: "Tofu",
       aliases: ["bean curd"],
       slug: "tofu",
+      imageUrl: "https://images.test/tofu.jpg",
       categoryId: IDS.category,
       status: "active",
       isVegan: true,

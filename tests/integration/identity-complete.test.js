@@ -153,7 +153,9 @@ const fixture = ({ transaction } = {}) => {
           _id: FOOD,
           name: "Tofu",
           normalizedName: "tofu",
+          aliases: ["đậu hũ"],
           slug: "tofu",
+          imageUrl: "https://images.test/tofu.jpg",
           categoryId: CATEGORY,
           isVegan: true,
           isVegetarian: true,
@@ -575,6 +577,12 @@ describe("complete identity, nutrition, onboarding and master domain contracts",
       status: "inactive",
     });
     expect((await call("food-items", "searchFoodItems")).data.map((v) => v.name)).toEqual(["Tofu"]);
+    expect(
+      (await call("food-items", "searchFoodItems", { query: { q: "toffu" } })).data[0],
+    ).toMatchObject({ name: "Tofu", imageUrl: "https://images.test/tofu.jpg" });
+    expect(
+      (await call("food-items", "searchFoodItems", { query: { q: "dau hu" } })).data[0],
+    ).toMatchObject({ name: "Tofu" });
     expect(
       (await call("food-items", "searchFoodItems", { query: { excludeAllergenIds: ALLERGEN } }))
         .data,

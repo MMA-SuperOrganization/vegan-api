@@ -8630,7 +8630,7 @@ paths:
 
         **Nghiệp vụ:** Thực phẩm chuẩn và dinh dưỡng trên 100 g. isVegan=true phải tương thích isVegetarian và không được chứa trứng/sữa; PATCH kiểm tra cả trạng thái sau khi ghép dữ liệu cũ.
 
-        Lọc thực phẩm theo từ khóa/danh mục/vegan/vegetarian/dị ứng. Boolean query phải là chuỗi true/false. Bộ lọc dị ứng nhận dạng wire được khai báo trong schema.
+        Lọc thực phẩm theo từ khóa/danh mục/vegan/vegetarian/dị ứng. Tên và alias hỗ trợ tìm gần đúng có giới hạn, bỏ dấu tiếng Việt và một lỗi thêm/xóa/thay ký tự. Boolean query phải là chuỗi true/false. Bộ lọc dị ứng nhận dạng wire được khai báo trong schema.
 
         **Query:** xem danh sách tham số để biết bộ lọc, default và giới hạn. page bắt đầu từ 1 nếu endpoint phân trang; không gửi chuỗi 'undefined' hoặc 'null' thay cho tham số bị bỏ qua.
 
@@ -10145,7 +10145,7 @@ paths:
 
         **Nghiệp vụ:** Công thức gồm nguyên liệu, bước thực hiện và dinh dưỡng tính từ thực phẩm chuẩn. Luồng nội dung sử dụng draft, pending_review, published và các trạng thái kiểm duyệt.
 
-        Danh sách công thức công khai có phân trang và bộ lọc chế độ ăn, dị ứng, độ khó, thời gian và ẩm thực theo query.
+        Danh sách công thức công khai có phân trang và bộ lọc chế độ ăn, dị ứng, độ khó, thời gian và ẩm thực theo query. Tên công thức hỗ trợ tìm gần đúng có giới hạn và bỏ dấu tiếng Việt.
 
         **Query:** xem danh sách tham số để biết bộ lọc, default và giới hạn. page bắt đầu từ 1 nếu endpoint phân trang; không gửi chuỗi 'undefined' hoặc 'null' thay cho tham số bị bỏ qua.
 
@@ -13094,7 +13094,7 @@ paths:
 
         **Nghiệp vụ:** Tìm kiếm nội dung có quyền truy cập; lịch sử tìm kiếm thuộc từng người dùng. Guest không có lịch sử cá nhân.
 
-        Tìm trên các loại content được query cho phép; response có type để phân biệt recipe/post/video và có thể cá nhân hóa khi token hợp lệ.
+        Tìm trên các loại content được query cho phép; tên recipe và tên/alias food-item hỗ trợ tìm gần đúng có giới hạn, bỏ dấu và một lỗi ký tự. Response có type để phân biệt recipe/food-item/post/video; food-item giữ imageUrl trong summary.
 
         **Query:** xem danh sách tham số để biết bộ lọc, default và giới hạn. page bắt đầu từ 1 nếu endpoint phân trang; không gửi chuỗi 'undefined' hoặc 'null' thay cho tham số bị bỏ qua.
 

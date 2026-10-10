@@ -11,6 +11,51 @@ const categoryImages = {
 
 export const foodImageUrl = (category) => categoryImages[category];
 
+const vietnameseFoodAliases = {
+  Broccoli: ["bông cải xanh", "súp lơ xanh"],
+  Spinach: ["cải bó xôi", "rau bina"],
+  Carrot: ["cà rốt"],
+  Kale: ["cải xoăn"],
+  Apple: ["táo"],
+  Banana: ["chuối"],
+  Orange: ["cam"],
+  Blueberries: ["việt quất"],
+  Oats: ["yến mạch"],
+  Quinoa: ["hạt diêm mạch"],
+  "Brown Rice": ["gạo lứt"],
+  Lentils: ["đậu lăng"],
+  Chickpeas: ["đậu gà"],
+  "Black Beans": ["đậu đen"],
+  Tofu: ["đậu hũ", "đậu phụ"],
+  Almonds: ["hạnh nhân"],
+  Walnuts: ["óc chó"],
+  "Chia Seeds": ["hạt chia"],
+  Flaxseeds: ["hạt lanh"],
+  "Peanut Butter": ["bơ đậu phộng", "bơ lạc"],
+  "Sweet Potato": ["khoai lang"],
+  Tomato: ["cà chua"],
+  Cucumber: ["dưa leo", "dưa chuột"],
+  Mushroom: ["nấm"],
+  "Bell Pepper": ["ớt chuông"],
+  Avocado: ["bơ"],
+  "Green Peas": ["đậu hà lan"],
+  Cauliflower: ["súp lơ trắng", "bông cải trắng"],
+  Zucchini: ["bí ngòi"],
+  Pumpkin: ["bí đỏ"],
+  Tempeh: ["tương nén"],
+  Edamame: ["đậu nành nhật"],
+  "Coconut Milk": ["nước cốt dừa"],
+  Cashews: ["hạt điều"],
+  "Sesame Seeds": ["hạt mè", "hạt vừng"],
+  "Whole Wheat Pasta": ["mì ống nguyên cám"],
+  "Rice Noodles": ["bún gạo", "mì gạo"],
+  "Kidney Beans": ["đậu thận", "đậu đỏ tây"],
+  Corn: ["bắp", "ngô"],
+  Lime: ["chanh xanh"],
+};
+
+export const foodAliases = (name) => ["demo fixture", ...(vietnameseFoodAliases[name] ?? [])];
+
 // name, category, kcal, protein, fat, carbohydrate, fibre, optional allergen
 export const EXTRA_FOOD_ROWS = [
   ["Sweet Potato", "Vegetables", 86, 1.6, 0.1, 20.1, 3],

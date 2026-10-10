@@ -351,6 +351,25 @@ describe("Discovery behavior and input safety", () => {
       query: { q: "bean curd", type: "food-item" },
     });
     expect(aliases).toEqual([{ id: IDS.food, type: "food-item", text: "Tofu", slug: "tofu" }]);
+    const typo = await h.call("searchContent", {
+      actor: null,
+      query: { q: "toffu", type: "food-item" },
+    });
+    expect(typo.data).toEqual([
+      expect.objectContaining({
+        _id: IDS.food,
+        name: "Tofu",
+        type: "food-item",
+        imageUrl: "https://images.test/tofu.jpg",
+      }),
+    ]);
+    const recipeTypo = await h.call("searchContent", {
+      actor: null,
+      query: { q: "Toffu bowl", type: "recipe" },
+    });
+    expect(recipeTypo.data.map((item) => item._id).sort()).toEqual(
+      [IDS.recipe, IDS.allergicRecipe, IDS.ingredientAllergyRecipe].sort(),
+    );
     expect((await h.call("searchContent", { actor: null, query: { q: ".*" } })).data).toEqual([]);
   });
   it.each(["vegetarian", "lacto_vegetarian", "ovo_vegetarian", "lacto_ovo_vegetarian"])(

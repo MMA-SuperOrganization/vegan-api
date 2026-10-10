@@ -14,10 +14,10 @@ import {
   found,
   repository,
   publicFilter,
-  escapeRegex,
   summarizeContent,
   now,
 } from "../app-config/index.js";
+import { fuzzyMongoRegex } from "../../common/utils/fuzzy-search.js";
 const types = ["all", "recipe", "food-item", "post", "video"];
 const boundedList = (schema) =>
   z.preprocess(
@@ -65,7 +65,7 @@ const sorting = (sort) =>
 const makeFilter = (type, query) => {
   const filter = type === "food-item" ? { status: "active" } : { ...publicFilter };
   if (query.q) {
-    const regex = { $regex: escapeRegex(query.q), $options: "i" };
+    const regex = fuzzyMongoRegex(query.q);
     if (type === "food-item") filter.$or = [{ name: regex }, { aliases: regex }];
     else filter.title = regex;
   }
@@ -90,6 +90,7 @@ const summary = (item, type) =>
         _id: item._id,
         name: item.name,
         slug: item.slug,
+        imageUrl: item.imageUrl,
         categoryId: item.categoryId,
         allergenIds: item.allergenIds,
         isVegan: item.isVegan,

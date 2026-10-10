@@ -122,7 +122,7 @@ export const operationNotes = {
   deleteAllergen:
     "Admin chuyển status sang inactive và ghi audit, không tự xóa dị ứng khỏi mọi hồ sơ hoặc thực phẩm tham chiếu.",
   searchFoodItems:
-    "Lọc thực phẩm theo từ khóa/danh mục/vegan/vegetarian/dị ứng. Boolean query phải là chuỗi true/false. Bộ lọc dị ứng nhận dạng wire được khai báo trong schema.",
+    "Lọc thực phẩm theo từ khóa/danh mục/vegan/vegetarian/dị ứng. Tên và alias hỗ trợ tìm gần đúng có giới hạn, bỏ dấu tiếng Việt và một lỗi thêm/xóa/thay ký tự. Boolean query phải là chuỗi true/false. Bộ lọc dị ứng nhận dạng wire được khai báo trong schema.",
   getFoodItem:
     "id là ObjectId thực phẩm. Đọc defaultServing và nutritionPer100g để quy đổi lượng dùng, không coi dinh dưỡng này là cho một piece.",
   createFoodItem:
@@ -132,7 +132,7 @@ export const operationNotes = {
   deleteFoodItem:
     "Admin chuyển status sang inactive, cập nhật updatedBy và ghi audit; không xóa cứng thực phẩm. Snapshot lịch sử không tự sửa theo request này.",
   getRecipes:
-    "Danh sách công thức công khai có phân trang và bộ lọc chế độ ăn, dị ứng, độ khó, thời gian và ẩm thực theo query.",
+    "Danh sách công thức công khai có phân trang và bộ lọc chế độ ăn, dị ứng, độ khó, thời gian và ẩm thực theo query. Tên công thức hỗ trợ tìm gần đúng có giới hạn và bỏ dấu tiếng Việt.",
   getMyRecipes:
     "Danh sách công thức của tác giả hiện tại, hỗ trợ lọc trạng thái để quản lý draft/pending_review/rejected/published.",
   getRecipe:
@@ -146,7 +146,7 @@ export const operationNotes = {
   rejectRecipe:
     "Admin từ chối công thức, bắt buộc reason để tác giả biết lý do; version hỗ trợ tránh xử lý trạng thái đã thay đổi.",
   searchContent:
-    "Tìm trên các loại content được query cho phép; response có type để phân biệt recipe/post/video và có thể cá nhân hóa khi token hợp lệ.",
+    "Tìm trên các loại content được query cho phép; tên recipe và tên/alias food-item hỗ trợ tìm gần đúng có giới hạn, bỏ dấu và một lỗi ký tự. Response có type để phân biệt recipe/food-item/post/video; food-item giữ imageUrl trong summary.",
   getSearchSuggestions:
     "Lấy từ khóa/nội dung gợi ý theo q và giới hạn schema; không ghi lịch sử cá nhân cho guest.",
   getRecentSearches:
