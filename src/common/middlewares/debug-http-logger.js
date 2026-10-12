@@ -1,5 +1,6 @@
 import { STATUS_CODES } from "node:http";
 import { performance } from "node:perf_hooks";
+import { isHealthCheckRequest } from "../http/health-check.js";
 
 /**
  * Debug HTTP logger: in ra console một "khối" đẹp gồm toàn bộ thông tin
@@ -360,7 +361,8 @@ export const createDebugHttpLogger = (config = {}) => {
   const options = { ...DEFAULTS, ...rest };
 
   return (req, res, next) => {
-    if (options.skipPaths.some((pattern) => pattern.test(req.path))) return next();
+    if (isHealthCheckRequest(req) || options.skipPaths.some((pattern) => pattern.test(req.path)))
+      return next();
 
     const start = performance.now();
     const startedAt = time();

@@ -1,8 +1,46 @@
+import pino from "pino";
 import request from "supertest";
 import { describe, expect, it } from "vitest";
+import { createApp } from "../../src/app.js";
+import { createDebugHttpLogger } from "../../src/common/middlewares/debug-http-logger.js";
 import { bearer, buildTestApp, TEST_TOKENS } from "../helpers/test-app.js";
 
 describe("Application boundaries", () => {
+  it("keeps health probes out of request logs", async () => {
+    const lines = [];
+    const stream = { write: (line) => lines.push(JSON.parse(line)) };
+    const { container } = buildTestApp();
+    container.logger = pino({ level: "info" }, stream);
+    const app = createApp(container);
+
+    await request(app).get("/api/v1/health");
+    await request(app).get("/api/v1/health/ready");
+    expect(lines).toHaveLength(0);
+
+    await request(app).get("/api/v1/does-not-exist");
+    expect(lines).toHaveLength(1);
+    expect(lines[0].req.url).toBe("/api/v1/does-not-exist");
+  });
+
+  it("skips health probes in the detailed debug logger", () => {
+    const writes = [];
+    const middleware = createDebugHttpLogger({ write: (line) => writes.push(line) });
+    let continued = false;
+    const response = {};
+
+    middleware(
+      { originalUrl: "/api/v1/health/ready?source=probe", path: "/api/v1/health/ready" },
+      response,
+      () => {
+        continued = true;
+      },
+    );
+
+    expect(continued).toBe(true);
+    expect(writes).toEqual([]);
+    expect(response).toEqual({});
+  });
+
   it("liveness is independent of readiness and echoes a safe request ID", async () => {
     const { app } = buildTestApp({ overrides: { getDatabaseStatus: () => "disconnected" } });
     const live = await request(app).get("/api/v1/health").set("X-Request-Id", "req-live");

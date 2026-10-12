@@ -11,6 +11,7 @@ import {
   createDebugHttpLogger,
   isDebugHttpLogEnabled,
 } from "./common/middlewares/debug-http-logger.js";
+import { isHealthCheckRequest } from "./common/http/health-check.js";
 import { createErrorHandler } from "./common/middlewares/error-handler.js";
 import { notFound } from "./common/middlewares/not-found.js";
 import { AppError } from "./common/errors/app-error.js";
@@ -36,6 +37,9 @@ export const createApp = (container) => {
     pinoHttp({
       logger,
       genReqId: (req) => req.id,
+      autoLogging: {
+        ignore: isHealthCheckRequest,
+      },
       serializers: {
         req: (req) => ({ id: req.id, method: req.method, url: req.url?.split("?")[0] }),
         res: (res) => ({ statusCode: res.statusCode }),
