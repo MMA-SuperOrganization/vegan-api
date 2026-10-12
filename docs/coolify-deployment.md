@@ -27,16 +27,14 @@ Application credentials belong in Coolify runtime variables, not GitHub build ar
 
 Create a **Docker Image** application on the deployment server. Set:
 
-| Setting          | Value                                     |
-| ---------------- | ----------------------------------------- |
-| Docker image     | `ghcr.io/mma-superorganization/vegan-api` |
-| Image tag        | `latest`                                  |
-| Port exposed     | `3000`                                    |
-| Domain           | Your backend HTTPS domain                 |
-| Healthcheck path | `/api/v1/health/ready`                    |
-| Healthcheck port | `3000`                                    |
+| Setting      | Value                                     |
+| ------------ | ----------------------------------------- |
+| Docker image | `ghcr.io/mma-superorganization/vegan-api` |
+| Image tag    | `latest`                                  |
+| Port exposed | `3000`                                    |
+| Domain       | Your backend HTTPS domain                 |
 
-Use the application's existing Docker readiness check, or configure the equivalent HTTP check above. If you change `API_PREFIX` or `PORT`, update the Coolify check too. The container starts with the Dockerfile's command; leave the command override empty. This resource pulls the published image, so do not configure source rebuilding or a separate Git auto-deploy for it.
+Disable Coolify's health check and leave its healthcheck path empty. The image does not define a Docker healthcheck, so it will not poll `/api/v1/health/ready` and fill the application logs. The endpoint remains available for an operator to check manually. The container starts with the Dockerfile's command; leave the command override empty. This resource pulls the published image, so do not configure source rebuilding or a separate Git auto-deploy for it.
 
 For a private GHCR package, authenticate Docker on each deployment server as the server user used by Coolify. Use a GitHub account with package access and a token with `read:packages`; enter the token privately through `docker login ghcr.io --username YOUR_GITHUB_USERNAME`. This pull credential is separate from the Coolify deploy token and the workflow's temporary `GITHUB_TOKEN`.
 

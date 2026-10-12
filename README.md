@@ -214,13 +214,13 @@ Maintain annotations and curated examples in `scripts/openapi-details.js`, not d
 
 For the GitHub Actions → GHCR → Coolify release pipeline, follow [Coolify deployment setup](docs/coolify-deployment.md). The workflow verifies Node 24 build/tests and isolated MongoDB persistence before publishing the image and calling the authenticated deploy webhook.
 
-The Dockerfile uses Node 24 Alpine, production-only lockfile dependencies, non-root execution and native-fetch readiness healthchecks. It excludes `.env` and starts `node src/server.js`, using runtime-injected configuration. Compose targets external Atlas/replica-set MongoDB; it does **not** provision or initialize a database. Compose requires the production app HTTPS URL, Firebase credentials and private R2 settings. Compose variable interpolation may read a local `.env` to inject variables; the application image does not read/copy that file.
+The Dockerfile uses Node 24 Alpine, production-only lockfile dependencies and non-root execution. It excludes `.env` and starts `node src/server.js`, using runtime-injected configuration. The image and Compose file do not poll the health endpoints; use them manually when diagnosing the deployment. Compose targets external Atlas/replica-set MongoDB; it does **not** provision or initialize a database. Compose requires the production app HTTPS URL, Firebase credentials and private R2 settings. Compose variable interpolation may read a local `.env` to inject variables; the application image does not read/copy that file.
 
 ```bash
 # Only after configuration is provisioned/reviewed on staging:
 docker compose build
 docker compose up -d
-# Health requests are local checks; they do not prove all providers work.
+# Health endpoints can be checked manually; they do not prove all providers work.
 ```
 
 - [ ] Replace all placeholders securely; `NODE_ENV=production`, HTTPS `APP_BASE_URL`, explicit origins/trust proxy, `SWAGGER_ENABLED=false`.

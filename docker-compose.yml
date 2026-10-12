@@ -72,18 +72,6 @@ services:
       # ── Seed Admin ──
       SEED_ADMIN_FIREBASE_UID: ${SEED_ADMIN_FIREBASE_UID:-}
       SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-}
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "node",
-          "-e",
-          "fetch('http://127.0.0.1:3000/api/v1/health/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
-        ]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 15s
     logging:
       driver: json-file
       options:
