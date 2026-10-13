@@ -21,6 +21,7 @@ import { repository, transaction, newId } from "./planning.helpers.js";
 const userId = newId();
 const otherId = newId();
 const foodId = newId();
+const categoryId = newId();
 const recipeId = newId();
 const actor = { userId };
 const clock = () => new Date("2026-10-03T12:00:00Z");
@@ -28,6 +29,7 @@ const food = {
   _id: foodId,
   name: "Tofu",
   status: "active",
+  categoryId,
   nutritionPer100g: { caloriesKcal: 100, proteinG: 10 },
   defaultServing: { amount: 1, unit: "piece", gramEquivalent: 50 },
 };
@@ -52,6 +54,7 @@ function setup(seed = {}) {
   );
   const services = {
     foodItems: { getById: vi.fn(async () => food) },
+    categories: { getById: vi.fn(async () => ({ _id: categoryId, name: "Protein" })) },
     recipes: {
       getById: vi.fn(async () => recipe),
       listPublic: vi.fn(async () => ({
@@ -432,7 +435,12 @@ describe("meal plans and grocery child isolation", () => {
     services.foodItems.getById.mockResolvedValue({ ...food, name: "Renamed tofu" });
     const historical = await services.mealPlans.generateGroceryList(userId, plan._id);
     expect(historical.items[0].nameSnapshot).toBe("Tofu");
-    expect(services.foodItems.getById).not.toHaveBeenCalled();
+    expect(historical.items[0].categorySnapshot).toBe("Protein");
+    expect(services.foodItems.getById).toHaveBeenCalledWith(foodId, {
+      actor: { userId },
+      session: undefined,
+      allowInactive: true,
+    });
     const manual = await services.groceryLists.createForUser(userId, {
       name: "Manual",
       items: [{ foodItemId: foodId, nameSnapshot: "Untrusted name", quantity: 1, unit: "g" }],
@@ -515,7 +523,7 @@ describe("meal plans and grocery child isolation", () => {
         expect.objectContaining({ nameSnapshot: "Original tofu", quantity: 1, unit: "cup" }),
       ]),
     );
-    expect(services.foodItems.getById).toHaveBeenCalledTimes(2);
+    expect(services.foodItems.getById).toHaveBeenCalledTimes(4);
     for (const [, options] of services.foodItems.getById.mock.calls)
       expect(options.allowInactive).toBe(true);
   });

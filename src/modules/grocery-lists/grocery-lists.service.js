@@ -16,22 +16,36 @@ export function createGroceryListsService({ groceryListsRepository: repo, servic
     const parsed = groceryItemInput.parse(input);
     let nameSnapshot = parsed.nameSnapshot;
     let categorySnapshot;
+    const trustedSnapshot = Boolean(
+      options.trustedMealPlanSnapshots && options.sourceMealPlanId && parsed.nameSnapshot,
+    );
     // Only the internal plan-generation path may preserve verified historical names.
-    // Manual HTTP creation never passes this option and always resolves master data.
-    if (
-      parsed.foodItemId &&
-      !(options.trustedMealPlanSnapshots && options.sourceMealPlanId && parsed.nameSnapshot)
-    ) {
-      if (!services.foodItems?.getById)
+    // Manual HTTP creation always resolves the current master-data name. Generated
+    // lists preserve the historical recipe name while still resolving its category.
+    if (parsed.foodItemId) {
+      if (!services.foodItems?.getById) {
+        if (trustedSnapshot) {
+          return { ...parsed, itemId: randomUUID(), nameSnapshot, checked: false };
+        }
         throw AppError.serviceUnavailable("Food item service is unavailable");
+      }
       const food = await services.foodItems.getById(parsed.foodItemId, {
         actor: { userId },
         session: options.session,
+        allowInactive: trustedSnapshot,
       });
-      if (!food || food.status === "inactive") throw AppError.notFound("Food item not found");
-      nameSnapshot = food.name;
-      categorySnapshot =
-        typeof food.categorySnapshot === "string" ? food.categorySnapshot : undefined;
+      if (!trustedSnapshot) {
+        if (!food || food.status === "inactive") throw AppError.notFound("Food item not found");
+        nameSnapshot = food.name;
+      }
+      if (typeof food.categorySnapshot === "string") categorySnapshot = food.categorySnapshot;
+      else if (food.categoryId && services.categories?.getById) {
+        const category = await services.categories.getById(food.categoryId, {
+          session: options.session,
+          allowInactive: trustedSnapshot,
+        });
+        categorySnapshot = category?.name;
+      }
     }
     return { ...parsed, itemId: randomUUID(), nameSnapshot, categorySnapshot, checked: false };
   }
