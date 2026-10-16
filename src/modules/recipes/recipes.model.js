@@ -69,5 +69,10 @@ export const RecipesModel = registerModel(
     sourceType: { type: String, enum: ["admin", "community", "ai_assisted"], default: "community" },
   },
   "recipes",
-  [...contentIndexes, [{ categoryIds: 1, status: 1 }], [{ tags: 1, status: 1 }]],
+  [
+    ...contentIndexes,
+    [{ categoryIds: 1, status: 1 }],
+    [{ tags: 1, status: 1 }],
+    [{ "ingredients.foodItemId": 1, status: 1, visibility: 1, publishedAt: -1, _id: -1 }],
+  ],
 );

@@ -90,6 +90,7 @@ export const createRecipesService = (deps) => {
   };
   const listPublic = async (query = {}, options = {}) => {
     const filter = listFilter(query);
+    if (query.foodItemId) filter["ingredients.foodItemId"] = query.foodItemId;
     if (query.cuisine) filter.cuisine = query.cuisine;
     if (query.maxTotalMinutes) filter.totalMinutes = { $lte: query.maxTotalMinutes };
     if (query.excludeAllergenIds?.length) filter.allergenIds = { $nin: query.excludeAllergenIds };

@@ -10438,6 +10438,14 @@ paths:
               - rating
               - quickest
           example: newest
+        - name: foodItemId
+          in: query
+          required: false
+          description: ID thực phẩm chuẩn; phải tồn tại và hợp lệ theo kiểm tra service. ObjectId gồm 24 ký tự hexadecimal.
+          schema:
+            type: string
+            pattern: ^[a-f\d]{24}$
+          example: 507f1f77bcf86cd799439011
         - name: cuisine
           in: query
           required: false
@@ -66700,6 +66708,10 @@ components:
             - rating
             - quickest
           description: 'Thứ tự sắp xếp; các giá trị hỗ trợ/default nằm trong schema. Mặc định: "newest". Giá trị cho phép: newest, oldest, popular, rating, quickest.'
+        foodItemId:
+          type: string
+          pattern: ^[a-f\d]{24}$
+          description: ID thực phẩm chuẩn; phải tồn tại và hợp lệ theo kiểm tra service. ObjectId gồm 24 ký tự hexadecimal.
         cuisine:
           type: string
           minLength: 1

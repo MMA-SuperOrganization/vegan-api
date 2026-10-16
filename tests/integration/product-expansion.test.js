@@ -50,6 +50,43 @@ const fixture = (seed = {}) =>
   buildTestApp({ seed: { categories: [category], foodItems: [food], recipes: [recipe], ...seed } });
 const auth = (kind = "user") => bearer(TEST_TOKENS[kind]);
 describe("product expansion contracts", () => {
+  it("lists only public published recipes using the exact ingredient ID, with pagination", async () => {
+    const recipes = [
+      recipe,
+      { ...recipe, _id: id(450), title: "Second carrot bowl", slug: "second-carrot-bowl" },
+      {
+        ...recipe,
+        _id: id(451),
+        title: "Carrot in title only",
+        ingredients: [{ ...recipe.ingredients[0], foodItemId: id(999) }],
+      },
+      { ...recipe, _id: id(452), visibility: "private" },
+      { ...recipe, _id: id(453), status: "draft" },
+      { ...recipe, _id: id(454), deletedAt: new Date() },
+    ];
+    const { app } = fixture({ recipes });
+    for (const token of [null, auth()]) {
+      const get = (query) => {
+        const call = request(app).get("/api/v1/recipes").query(query);
+        return token ? call.set(token) : call;
+      };
+      const first = await get({ foodItemId: food._id, page: 1, limit: 1 });
+      expect(first.status, JSON.stringify(first.body)).toBe(200);
+      expect(first.body.data).toHaveLength(1);
+      expect(first.body.meta).toMatchObject({ total: 2, totalPages: 2 });
+      const second = await get({ foodItemId: food._id, page: 2, limit: 1 });
+      expect(second.status).toBe(200);
+      expect(new Set([...first.body.data, ...second.body.data].map((item) => item._id))).toEqual(
+        new Set([recipe._id, id(450)]),
+      );
+      const empty = await get({ foodItemId: id(998) });
+      expect(empty.status).toBe(200);
+      expect(empty.body.data).toEqual([]);
+      expect((await get({ foodItemId: "invalid" })).status).toBe(400);
+      expect((await get({ "foodItemId[$ne]": food._id })).status).toBe(400);
+    }
+  });
+
   it("round-trips private profile fields, rejects duplicate usernames and protects privacy", async () => {
     const { app } = fixture();
     const body = {

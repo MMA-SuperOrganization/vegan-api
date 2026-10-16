@@ -68,6 +68,7 @@ export const recipeInput = z
 export const createRecipesValidation = () => ({
   getRecipes: {
     query: contentQuery.extend({
+      foodItemId: id.optional(),
       cuisine: text(100).optional(),
       maxTotalMinutes: z.coerce.number().int().min(1).max(20160).optional(),
       excludeAllergenIds: excludedAllergens.optional(),

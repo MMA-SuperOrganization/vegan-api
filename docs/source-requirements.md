@@ -1637,3 +1637,7 @@ npm run dev
 ```
 
 Không kết thúc bằng một kế hoạch chưa thực hiện. Hãy xây dựng backend thực tế từ A–Z theo tài liệu này.
+
+## Recipes using a food ingredient
+
+`GET /api/v1/recipes?foodItemId=<food-item ObjectId>` filters published, public, non-deleted recipes by an exact `ingredients.foodItemId` match. The optional ID is validated before lookup and combines with the existing recipe filters, sort and pagination. A valid ID with no matching recipes returns an empty page. Private and draft recipes remain excluded for both guests and signed-in users. The ingredient detail UI uses this query to show recipes that include the selected food; other ingredients may still be required.
