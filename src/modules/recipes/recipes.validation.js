@@ -8,6 +8,10 @@ import {
   url,
 } from "../../common/validators/domain.schemas.js";
 import {
+  RECIPE_DIFFICULTIES,
+  CONTENT_VISIBILITIES,
+} from "../../common/constants/enums/content.enums.js";
+import {
   idParams,
   slugParams,
   versionBody,
@@ -52,7 +56,7 @@ export const recipeInput = z
     servings: z.number().int().min(1).max(1000).optional(),
     prepMinutes: z.number().int().min(0).max(10080).optional(),
     cookMinutes: z.number().int().min(0).max(10080).optional(),
-    difficulty: z.enum(["easy", "medium", "hard"]).optional(),
+    difficulty: z.enum(RECIPE_DIFFICULTIES.values()).optional(),
     ingredients: z.array(ingredientInput).max(200).optional(),
     steps: z
       .array(stepInput)
@@ -62,7 +66,7 @@ export const recipeInput = z
         "Step order must be unique",
       )
       .optional(),
-    visibility: z.enum(["public", "private", "unlisted"]).optional(),
+    visibility: z.enum(CONTENT_VISIBILITIES.values()).optional(),
   })
   .strict();
 export const createRecipesValidation = () => ({

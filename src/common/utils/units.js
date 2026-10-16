@@ -1,14 +1,6 @@
-export const UNITS = Object.freeze([
-  "g",
-  "kg",
-  "ml",
-  "l",
-  "piece",
-  "tbsp",
-  "tsp",
-  "cup",
-  "serving",
-]);
+import { MEASUREMENT_UNITS } from "../constants/enums/master-data.enums.js";
+
+export const UNITS = MEASUREMENT_UNITS.values();
 const dimensions = { g: ["mass", 1], kg: ["mass", 1000], ml: ["volume", 1], l: ["volume", 1000] };
 export const normalizeUnit = (unit) =>
   typeof unit === "string" && UNITS.includes(unit.trim().toLowerCase())

@@ -9,6 +9,8 @@ import {
   patch,
   emptyBody,
 } from "../../common/validators/domain.schemas.js";
+import { GROCERY_LIST_STATUSES } from "../../common/constants/enums/planning.enums.js";
+
 export const groceryItemInput = z
   .object({
     foodItemId: id.optional(),
@@ -26,14 +28,14 @@ const params = z.object({ id }).strict();
 export const createGroceryListsValidation = () => ({
   getGroceryLists: {
     query: pagination
-      .extend({ status: z.enum(["active", "completed", "archived"]).optional() })
+      .extend({ status: z.enum(GROCERY_LIST_STATUSES.values()).optional() })
       .strict(),
   },
   getGroceryList: { params },
   createGroceryList: { body: groceryListInput },
   updateGroceryList: {
     params,
-    body: patch(z.object({ name: text(200), status: z.enum(["active", "completed", "archived"]) })),
+    body: patch(z.object({ name: text(200), status: z.enum(GROCERY_LIST_STATUSES.values()) })),
   },
   deleteGroceryList: { params },
   addGroceryItem: { params, body: groceryItemInput },

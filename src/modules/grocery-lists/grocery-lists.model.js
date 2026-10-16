@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 import { UNITS } from "../../common/utils/units.js";
+import { GROCERY_LIST_STATUSES } from "../../common/constants/enums/planning.enums.js";
+
 const item = new mongoose.Schema(
   {
     itemId: { type: String, required: true },
@@ -18,7 +20,11 @@ const schema = new mongoose.Schema(
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "Users", required: true },
     name: { type: String, trim: true, required: true, maxlength: 200 },
     sourceMealPlanId: { type: mongoose.Schema.Types.ObjectId, ref: "MealPlans" },
-    status: { type: String, enum: ["active", "completed", "archived"], default: "active" },
+    status: {
+      type: String,
+      enum: GROCERY_LIST_STATUSES.values(),
+      default: GROCERY_LIST_STATUSES.ACTIVE,
+    },
     items: { type: [item], default: [], validate: (value) => value.length <= 500 },
     version: { type: Number, default: 0 },
   },

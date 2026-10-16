@@ -1,13 +1,9 @@
 import { z } from "zod";
 import { id, positive, text, emptyBody } from "../../common/validators/domain.schemas.js";
-export const activityLevelSchema = z.enum([
-  "sedentary",
-  "light",
-  "moderate",
-  "active",
-  "very_active",
-]);
-export const goalSchema = z.enum(["lose_weight", "maintain", "gain_weight", "improve_nutrition"]);
+import { ACTIVITY_LEVELS, NUTRITION_GOALS } from "../../common/constants/enums/planning.enums.js";
+
+export const activityLevelSchema = z.enum(ACTIVITY_LEVELS.values());
+export const goalSchema = z.enum(NUTRITION_GOALS.values());
 export const nutritionProfileSchema = z
   .object({
     heightCm: positive(250).min(50).optional(),

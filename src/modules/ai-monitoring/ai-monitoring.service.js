@@ -10,8 +10,14 @@ import {
   range,
   repository,
 } from "../app-config/index.js";
-const features = z.enum(["chat", "meal_plan", "ingredient_recognition", "video_summary"]);
-const statuses = z.enum(["pending", "completed", "failed", "blocked"]);
+import {
+  AI_AUDIT_TASK_TYPES,
+  AI_AUDIT_STATUSES,
+  AI_FEEDBACK_RATINGS,
+} from "../../common/constants/enums/ai.enums.js";
+
+const features = z.enum(AI_AUDIT_TASK_TYPES.values());
+const statuses = z.enum(AI_AUDIT_STATUSES.values());
 const filters = {
   feature: features.optional(),
   model: text(100).optional(),
@@ -25,7 +31,7 @@ export const aiMonitoringValidation = {
     query: rangeSchema({
       ...pagination,
       feature: features.optional(),
-      rating: z.enum(["helpful", "not_helpful"]).optional(),
+      rating: z.enum(AI_FEEDBACK_RATINGS.values()).optional(),
       aiRunId: id.optional(),
     }),
   },

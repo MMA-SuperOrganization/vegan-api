@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { text, targetParams } from "../../common/validators/domain.schemas.js";
-const params = targetParams(["recipe", "video"]);
+import { RATING_TARGET_TYPES } from "../../common/constants/enums/engagement.enums.js";
+
+const params = targetParams(RATING_TARGET_TYPES.values());
 export const createRatingsValidation = () => ({
   upsertRating: {
     params,

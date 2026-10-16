@@ -18,7 +18,13 @@ import {
   now,
 } from "../app-config/index.js";
 import { fuzzyMongoRegex } from "../../common/utils/fuzzy-search.js";
-const types = ["all", "recipe", "food-item", "post", "video"];
+import { SEARCH_SCOPE_TYPES } from "../../common/constants/enums/ai.enums.js";
+import {
+  RECIPE_DIFFICULTIES,
+  CONTENT_SORTS,
+} from "../../common/constants/enums/content.enums.js";
+
+const types = SEARCH_SCOPE_TYPES.values();
 const boundedList = (schema) =>
   z.preprocess(
     (value) => (typeof value === "string" ? value.split(",").filter(Boolean) : value),
@@ -26,15 +32,15 @@ const boundedList = (schema) =>
   );
 const filters = {
   q: text(120).optional(),
-  type: z.enum(types).default("all"),
+  type: z.enum(types).default(SEARCH_SCOPE_TYPES.ALL),
   category: id.optional(),
   cuisine: text(80).optional(),
-  difficulty: z.enum(["easy", "medium", "hard"]).optional(),
+  difficulty: z.enum(RECIPE_DIFFICULTIES.values()).optional(),
   maxTotalMinutes: z.coerce.number().int().min(1).max(1440).optional(),
   tags: boundedList(text(50)).optional(),
   excludeAllergenIds: boundedList(id).optional(),
   dietType: dietTypes.optional(),
-  sort: z.enum(["newest", "oldest", "title", "popular", "rating", "quickest"]).default("newest"),
+  sort: z.enum(CONTENT_SORTS.values()).default(CONTENT_SORTS.NEWEST),
 };
 export const searchValidation = {
   searchContent: {

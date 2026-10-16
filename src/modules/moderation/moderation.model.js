@@ -1,7 +1,14 @@
 import mongoose from "mongoose";
+import {
+  MODERATION_ACTION_TYPES,
+  REPORT_TARGET_TYPES,
+  REPORT_STATUSES,
+  MODERATION_PRIORITIES,
+} from "../../common/constants/enums/moderation.enums.js";
+
 const actionSchema = new mongoose.Schema(
   {
-    type: { type: String, enum: ["hide", "restore"], required: true },
+    type: { type: String, enum: MODERATION_ACTION_TYPES.values(), required: true },
     actorId: { type: mongoose.Schema.Types.ObjectId, ref: "Users", required: true },
     reason: { type: String, maxlength: 2000 },
     beforeStatus: String,
@@ -22,17 +29,21 @@ const schema = new mongoose.Schema(
     },
     targetType: {
       type: String,
-      enum: ["recipe", "post", "video", "comment", "user"],
+      enum: REPORT_TARGET_TYPES.values(),
       required: true,
     },
     targetId: { type: mongoose.Schema.Types.ObjectId, required: true },
     status: {
       type: String,
-      enum: ["open", "reviewing", "resolved", "dismissed"],
-      default: "open",
+      enum: REPORT_STATUSES.values(),
+      default: REPORT_STATUSES.OPEN,
       required: true,
     },
-    priority: { type: String, enum: ["low", "normal", "high", "urgent"], default: "normal" },
+    priority: {
+      type: String,
+      enum: MODERATION_PRIORITIES.values(),
+      default: MODERATION_PRIORITIES.NORMAL,
+    },
     assignedAdminId: { type: mongoose.Schema.Types.ObjectId, ref: "Users", default: null },
     resolution: { type: String, maxlength: 2000 },
     resolvedAt: Date,

@@ -1,5 +1,10 @@
 import { z } from "zod";
 import { id, text, pagination } from "./domain.schemas.js";
+import {
+  RECIPE_DIFFICULTIES,
+  CONTENT_SORTS,
+  CONTENT_STATUSES,
+} from "../constants/enums/content.enums.js";
 export const idParams = z.object({ id }).strict();
 export const slugParams = z.object({ idOrSlug: text(240).regex(/^[a-zA-Z0-9_-]+$/) }).strict();
 export const empty = z.object({}).strict();
@@ -30,15 +35,13 @@ export const contentQuery = pagination
     category: id.optional(),
     categoryId: id.optional(),
     tags: queryArray(text(60), 30).optional(),
-    difficulty: z.enum(["easy", "medium", "hard"]).optional(),
-    sort: z.enum(["newest", "oldest", "popular", "rating", "quickest"]).default("newest"),
+    difficulty: z.enum(RECIPE_DIFFICULTIES.values()).optional(),
+    sort: z.enum(CONTENT_SORTS.values().filter((s) => s !== CONTENT_SORTS.TITLE)).default(CONTENT_SORTS.NEWEST),
   })
   .strict();
 export const mineQuery = pagination
   .extend({
-    status: z
-      .enum(["draft", "pending_review", "processing", "published", "rejected", "hidden", "deleted"])
-      .optional(),
+    status: z.enum(CONTENT_STATUSES.values()).optional(),
   })
   .strict();
 export const contentPatch = (schema) =>

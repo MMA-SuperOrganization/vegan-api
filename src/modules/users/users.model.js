@@ -1,11 +1,18 @@
 import mongoose from "mongoose";
+import {
+  CLIENT_PLATFORMS,
+  USER_ROLES,
+  USER_STATUSES,
+  GENDERS,
+  DIET_TYPES,
+} from "../../common/constants/enums/identity.enums.js";
 
 const { Schema } = mongoose;
 const tokenSchema = new Schema(
   {
     tokenId: { type: String, required: true },
     token: { type: String, required: true },
-    platform: { type: String, enum: ["android"], default: "android" },
+    platform: { type: String, enum: CLIENT_PLATFORMS.values(), default: CLIENT_PLATFORMS.ANDROID },
     deviceName: String,
     lastUsedAt: Date,
   },
@@ -18,11 +25,11 @@ const schema = new Schema(
     displayName: { type: String, trim: true, maxlength: 100 },
     avatarUrl: String,
     avatarMediaId: { type: Schema.Types.ObjectId, ref: "Media", default: null, index: true },
-    role: { type: String, enum: ["user", "admin"], default: "user", required: true },
+    role: { type: String, enum: USER_ROLES.values(), default: USER_ROLES.USER, required: true },
     status: {
       type: String,
-      enum: ["active", "suspended", "deleted"],
-      default: "active",
+      enum: USER_STATUSES.values(),
+      default: USER_STATUSES.ACTIVE,
       required: true,
     },
     onboardingCompleted: { type: Boolean, default: false },
@@ -54,19 +61,10 @@ const profileSchema = new Schema(
     city: { type: String, trim: true, maxlength: 100 },
     country: { type: String, trim: true, maxlength: 100 },
     dateOfBirth: Date,
-    gender: { type: String, enum: ["female", "male", "non_binary", "other", "prefer_not_to_say"] },
+    gender: { type: String, enum: GENDERS.values() },
     dietType: {
       type: String,
-      enum: [
-        "vegan",
-        "vegetarian",
-        "lacto_vegetarian",
-        "ovo_vegetarian",
-        "lacto_ovo_vegetarian",
-        "pescatarian",
-        "flexitarian",
-        "other",
-      ],
+      enum: DIET_TYPES.values(),
     },
     preferredCuisines: [String],
     dislikedFoodItemIds: [{ type: Schema.Types.ObjectId, ref: "FoodItems" }],

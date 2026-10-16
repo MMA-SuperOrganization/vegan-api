@@ -1,6 +1,19 @@
 import { z } from "zod";
 import { AppError } from "../../common/errors/app-error.js";
 import { dateOnly } from "../../common/validators/domain.schemas.js";
+import { REPORT_TARGET_TYPES } from "../../common/constants/enums/moderation.enums.js";
+import {
+  COMMENT_TARGET_TYPES,
+  REACTION_TARGET_TYPES,
+} from "../../common/constants/enums/engagement.enums.js";
+import {
+  CONTENT_STATUSES,
+  CONTENT_VISIBILITIES,
+} from "../../common/constants/enums/content.enums.js";
+import {
+  USER_STATUSES,
+  USER_ROLES,
+} from "../../common/constants/enums/identity.enums.js";
 
 export const id = z.string().regex(/^[a-f\d]{24}$/i, "Invalid ObjectId");
 export const text = (max, min = 1) => z.string().trim().min(min).max(max);
@@ -15,26 +28,30 @@ export const pagination = {
   limit: integer(100, 20),
 };
 export const dateTime = z.iso.datetime({ offset: true }).transform((value) => new Date(value));
-export const targetTypes = ["recipe", "post", "video", "comment", "user"];
-export const contentTypes = ["recipe", "post", "video"];
+export const targetTypes = REPORT_TARGET_TYPES.values();
+export const contentTypes = COMMENT_TARGET_TYPES.values();
 export const empty = z.object({}).strict();
 export const idParams = z.object({ id }).strict();
 export const targetParams = z
-  .object({ targetType: z.enum(["recipe", "post", "video", "comment"]), targetId: id })
+  .object({ targetType: z.enum(REACTION_TARGET_TYPES.values()), targetId: id })
   .strict();
-export const publicFilter = { status: "published", visibility: "public", deletedAt: null };
+export const publicFilter = {
+  status: CONTENT_STATUSES.PUBLISHED,
+  visibility: CONTENT_VISIBILITIES.PUBLIC,
+  deletedAt: null,
+};
 export const found = (value, message = "Resource not found") => {
   if (!value) throw AppError.notFound(message);
   return value;
 };
 export const user = (actor) => {
   if (!actor?.userId) throw AppError.unauthorized();
-  if (actor.status && actor.status !== "active") throw AppError.forbidden("Account is not active");
+  if (actor.status && actor.status !== USER_STATUSES.ACTIVE) throw AppError.forbidden("Account is not active");
   return actor.userId;
 };
 export const admin = (actor) => {
   user(actor);
-  if (actor.role !== "admin") throw AppError.forbidden();
+  if (actor.role !== USER_ROLES.ADMIN) throw AppError.forbidden();
   return actor.userId;
 };
 export const repository = (deps, key) => {

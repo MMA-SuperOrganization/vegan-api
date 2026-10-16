@@ -18,7 +18,9 @@ import {
   now,
 } from "../app-config/index.js";
 import { reportStatuses, validateAssignee, validateTransition } from "../reports/index.js";
-const priority = z.enum(["low", "normal", "high", "urgent"]);
+import { MODERATION_PRIORITIES } from "../../common/constants/enums/moderation.enums.js";
+
+const priority = z.enum(MODERATION_PRIORITIES.values());
 const reportIds = z
   .array(id)
   .max(50)

@@ -1,4 +1,8 @@
 import { z } from "zod";
+import { MEAL_TYPES } from "../../common/constants/enums/planning.enums.js";
+import { MEASUREMENT_UNITS } from "../../common/constants/enums/master-data.enums.js";
+import { AI_FEEDBACK_RATINGS } from "../../common/constants/enums/ai.enums.js";
+
 const id = z.string().regex(/^[a-f\d]{24}$/i);
 const text = (max) => z.string().trim().min(1).max(max);
 const date = z
@@ -18,7 +22,7 @@ export const mealPlanOutput = z.strictObject({
         meals: z
           .array(
             z.strictObject({
-              slot: z.enum(["breakfast", "lunch", "dinner", "snack"]),
+              slot: z.enum(MEAL_TYPES.values()),
               recipeId: id,
               servings: z.number().positive().max(20),
             }),
@@ -38,7 +42,7 @@ export const pantryOutput = z.strictObject({
         foodItemId: id.optional(),
         name: text(160),
         quantity: z.number().positive().max(100000),
-        unit: z.enum(["g", "kg", "ml", "l", "piece", "cup", "tbsp", "tsp", "serving"]),
+        unit: z.enum(MEASUREMENT_UNITS.values()),
         expiryDate: date.optional(),
       }),
     )
@@ -108,7 +112,7 @@ export const createAiValidation = () => ({
   submitAiFeedback: {
     params: z.strictObject({ runId: id }),
     body: z.strictObject({
-      rating: z.enum(["helpful", "not_helpful"]),
+      rating: z.enum(AI_FEEDBACK_RATINGS.values()),
       reason: z.string().trim().max(300).optional(),
       comment: z.string().trim().max(2000).optional(),
     }),

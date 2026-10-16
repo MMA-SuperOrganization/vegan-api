@@ -11,6 +11,13 @@ import {
   url,
   timezone,
 } from "../../common/validators/domain.schemas.js";
+import {
+  GENDERS,
+  USER_ROLES,
+  USER_STATUSES,
+} from "../../common/constants/enums/identity.enums.js";
+import { CONTENT_STATUSES } from "../../common/constants/enums/content.enums.js";
+import { VIEW_HISTORY_TARGET_TYPES } from "../../common/constants/enums/engagement.enums.js";
 
 export const profileSchema = z
   .object({
@@ -38,7 +45,7 @@ export const profileSchema = z
       .nullable()
       .optional(),
     gender: z
-      .enum(["female", "male", "non_binary", "other", "prefer_not_to_say"])
+      .enum(GENDERS.values())
       .nullable()
       .optional(),
     dietType: dietTypes.optional(),
@@ -73,18 +80,8 @@ export const createUsersValidation = () => ({
   getMyContent: {
     query: pagination
       .extend({
-        type: z.enum(["recipe", "post", "video"]).default("recipe"),
-        status: z
-          .enum([
-            "draft",
-            "pending_review",
-            "published",
-            "rejected",
-            "hidden",
-            "deleted",
-            "processing",
-          ])
-          .optional(),
+        type: z.enum(VIEW_HISTORY_TARGET_TYPES.values()).default(VIEW_HISTORY_TARGET_TYPES.RECIPE),
+        status: z.enum(CONTENT_STATUSES.values()).optional(),
       })
       .strict(),
   },
@@ -102,14 +99,14 @@ export const createUsersValidation = () => ({
     query: pagination
       .extend({
         q: text(100).optional(),
-        status: z.enum(["active", "suspended", "deleted"]).optional(),
-        role: z.enum(["user", "admin"]).optional(),
+        status: z.enum(USER_STATUSES.values()).optional(),
+        role: z.enum(USER_ROLES.values()).optional(),
       })
       .strict(),
   },
   getAdminUserDetail: { params: idParams },
   changeUserRole: {
     params: idParams,
-    body: z.object({ role: z.enum(["user", "admin"]) }).strict(),
+    body: z.object({ role: z.enum(USER_ROLES.values()) }).strict(),
   },
 });

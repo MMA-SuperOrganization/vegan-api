@@ -7,6 +7,12 @@ import {
   shortText,
   nutritionFields,
 } from "../../common/persistence/content-model.js";
+import { MEASUREMENT_UNITS } from "../../common/constants/enums/master-data.enums.js";
+import {
+  RECIPE_DIFFICULTIES,
+  CONTENT_SOURCE_TYPES,
+} from "../../common/constants/enums/content.enums.js";
+
 const ingredient = new mongoose.Schema(
   {
     foodItemId: ref("FoodItems", true),
@@ -20,7 +26,7 @@ const ingredient = new mongoose.Schema(
     quantity: { type: Number, min: 0, required: true },
     unit: {
       type: String,
-      enum: ["g", "kg", "ml", "l", "piece", "tbsp", "tsp", "cup", "serving"],
+      enum: MEASUREMENT_UNITS.values(),
       required: true,
     },
     gramEquivalent: { type: Number, min: 0, required: true },
@@ -54,7 +60,11 @@ export const RecipesModel = registerModel(
     prepMinutes: { type: Number, min: 0, default: 0 },
     cookMinutes: { type: Number, min: 0, default: 0 },
     totalMinutes: { type: Number, min: 0, default: 0 },
-    difficulty: { type: String, enum: ["easy", "medium", "hard"], default: "easy" },
+    difficulty: {
+      type: String,
+      enum: RECIPE_DIFFICULTIES.values(),
+      default: RECIPE_DIFFICULTIES.EASY,
+    },
     ingredients: [ingredient],
     steps: [step],
     nutritionPerServing: {
@@ -66,7 +76,11 @@ export const RecipesModel = registerModel(
     isVegetarian: Boolean,
     containsEggs: Boolean,
     containsDairy: Boolean,
-    sourceType: { type: String, enum: ["admin", "community", "ai_assisted"], default: "community" },
+    sourceType: {
+      type: String,
+      enum: CONTENT_SOURCE_TYPES.values(),
+      default: CONTENT_SOURCE_TYPES.COMMUNITY,
+    },
   },
   "recipes",
   [

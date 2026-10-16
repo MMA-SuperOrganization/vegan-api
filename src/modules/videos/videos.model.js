@@ -6,6 +6,8 @@ import {
   ref,
   shortText,
 } from "../../common/persistence/content-model.js";
+import { RECIPE_DIFFICULTIES } from "../../common/constants/enums/content.enums.js";
+
 export const VideosModel = registerModel(
   "Videos",
   {
@@ -15,7 +17,11 @@ export const VideosModel = registerModel(
     thumbnailMediaId: ref("Media"),
     videoMediaId: ref("Media", true),
     durationSeconds: { type: Number, min: 1, max: 86400, required: true },
-    difficulty: { type: String, enum: ["easy", "medium", "hard"], default: "easy" },
+    difficulty: {
+      type: String,
+      enum: RECIPE_DIFFICULTIES.values(),
+      default: RECIPE_DIFFICULTIES.EASY,
+    },
     recipeId: ref("Recipes"),
     transcript: shortText(100000),
     summary: shortText(10000),

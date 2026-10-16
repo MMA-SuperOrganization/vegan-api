@@ -1,10 +1,12 @@
 import mongoose from "mongoose";
+import { SEARCH_SCOPE_TYPES } from "../../common/constants/enums/ai.enums.js";
+
 const schema = new mongoose.Schema(
   {
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "Users", required: true },
     query: { type: String, required: true, maxlength: 120 },
     normalizedQuery: { type: String, required: true, maxlength: 120 },
-    type: { type: String, enum: ["all", "recipe", "post", "video", "food-item"], default: "all" },
+    type: { type: String, enum: SEARCH_SCOPE_TYPES.values(), default: SEARCH_SCOPE_TYPES.ALL },
     searchedAt: { type: Date, required: true },
   },
   { timestamps: true, versionKey: false, collection: "searchhistories" },

@@ -1,46 +1,47 @@
 import { z } from "zod";
 import { text, pagination } from "../../common/validators/domain.schemas.js";
 import { idParams, empty } from "../../common/validators/content.schemas.js";
-export const mediaPurposes = [
-  "avatar",
-  "recipe",
-  "recipe_step",
-  "post",
-  "video",
-  "video_thumbnail",
-  "ai_ingredient",
-  "other",
-];
+import {
+  MEDIA_MIME_TYPES,
+  MEDIA_PURPOSES,
+  MEDIA_STATUSES,
+} from "../../common/constants/enums/media.enums.js";
+
+export const mediaPurposes = MEDIA_PURPOSES.values();
 export const createMediaValidation = () => ({
   createUploadRequest: {
     body: z
       .object({
         filename: text(255),
-        mimeType: z.enum(["image/jpeg", "image/png", "image/webp", "video/mp4", "video/webm"]),
+        mimeType: z.enum(MEDIA_MIME_TYPES.values()),
         sizeBytes: z
           .number()
           .int()
           .positive()
           .max(1024 * 1024 * 1024),
-        purpose: z.enum(mediaPurposes),
+        purpose: z.enum(MEDIA_PURPOSES.values()),
       })
       .strict()
       .refine(
         ({ mimeType, purpose }) =>
-          !["avatar", "recipe_step", "video_thumbnail", "ai_ingredient"].includes(purpose) ||
-          mimeType.startsWith("image/"),
+          ![
+            MEDIA_PURPOSES.AVATAR,
+            MEDIA_PURPOSES.RECIPE_STEP,
+            MEDIA_PURPOSES.VIDEO_THUMBNAIL,
+            MEDIA_PURPOSES.AI_INGREDIENT,
+          ].includes(purpose) || mimeType.startsWith("image/"),
         "Purpose requires an image",
       )
       .refine(
-        ({ mimeType, purpose }) => purpose !== "video" || mimeType.startsWith("video/"),
+        ({ mimeType, purpose }) => purpose !== MEDIA_PURPOSES.VIDEO || mimeType.startsWith("video/"),
         "Video purpose requires a video",
       ),
   },
   getMyMedia: {
     query: pagination
       .extend({
-        status: z.enum(["pending", "ready", "rejected", "deleting", "deleted"]).optional(),
-        purpose: z.enum(mediaPurposes).optional(),
+        status: z.enum(MEDIA_STATUSES.values()).optional(),
+        purpose: z.enum(MEDIA_PURPOSES.values()).optional(),
       })
       .strict(),
   },

@@ -1,12 +1,18 @@
 import mongoose from "mongoose";
+import {
+  REMINDER_TYPES,
+  REMINDER_FREQUENCIES,
+  REMINDER_STATUSES,
+} from "../../common/constants/enums/notification.enums.js";
+
 const schema = new mongoose.Schema(
   {
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "Users", required: true },
-    type: { type: String, enum: ["meal", "water", "custom"], required: true },
+    type: { type: String, enum: REMINDER_TYPES.values(), required: true },
     title: { type: String, required: true, maxlength: 200 },
     body: { type: String, required: true, maxlength: 4000 },
     schedule: {
-      mode: { type: String, enum: ["once", "daily", "weekly"], required: true },
+      mode: { type: String, enum: REMINDER_FREQUENCIES.values(), required: true },
       at: { type: String, required: true },
       daysOfWeek: [{ type: Number, min: 0, max: 6 }],
       timezone: { type: String, default: "UTC" },
@@ -15,8 +21,8 @@ const schema = new mongoose.Schema(
     lastRunAt: Date,
     status: {
       type: String,
-      enum: ["active", "paused", "completed", "cancelled"],
-      default: "active",
+      enum: REMINDER_STATUSES.values(),
+      default: REMINDER_STATUSES.ACTIVE,
     },
     lockedAt: Date,
     lockedBy: String,

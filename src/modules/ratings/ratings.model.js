@@ -1,10 +1,12 @@
 import mongoose from "mongoose";
 import { registerModel, ref, shortText } from "../../common/persistence/content-model.js";
+import { RATING_TARGET_TYPES } from "../../common/constants/enums/engagement.enums.js";
+
 export const RatingsModel = registerModel(
   "Ratings",
   {
     userId: ref("User", true),
-    targetType: { type: String, enum: ["recipe", "video"], required: true },
+    targetType: { type: String, enum: RATING_TARGET_TYPES.values(), required: true },
     targetId: { type: mongoose.Schema.Types.ObjectId, required: true },
     score: { type: Number, min: 1, max: 5, required: true, validate: Number.isInteger },
     review: shortText(3000),
