@@ -11,11 +11,7 @@ import {
   url,
   timezone,
 } from "../../common/validators/domain.schemas.js";
-import {
-  GENDERS,
-  USER_ROLES,
-  USER_STATUSES,
-} from "../../common/constants/enums/identity.enums.js";
+import { GENDERS, USER_ROLES, USER_STATUSES } from "../../common/constants/enums/identity.enums.js";
 import { CONTENT_STATUSES } from "../../common/constants/enums/content.enums.js";
 import { VIEW_HISTORY_TARGET_TYPES } from "../../common/constants/enums/engagement.enums.js";
 
@@ -44,10 +40,7 @@ export const profileSchema = z
       .refine((v) => new Date(v) <= new Date(), "Birth date cannot be in the future")
       .nullable()
       .optional(),
-    gender: z
-      .enum(GENDERS.values())
-      .nullable()
-      .optional(),
+    gender: z.enum(GENDERS.values()).nullable().optional(),
     dietType: dietTypes.optional(),
     preferredCuisines: z
       .array(text(60))

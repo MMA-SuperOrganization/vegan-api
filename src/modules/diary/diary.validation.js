@@ -11,10 +11,7 @@ import {
   patch,
   timezone,
 } from "../../common/validators/domain.schemas.js";
-import {
-  MEAL_TYPES,
-  DIARY_SOURCE_TYPES,
-} from "../../common/constants/enums/planning.enums.js";
+import { MEAL_TYPES, DIARY_SOURCE_TYPES } from "../../common/constants/enums/planning.enums.js";
 
 const common = {
   date: dateOnly,
@@ -24,7 +21,12 @@ const common = {
 };
 export const diaryInput = z.discriminatedUnion("sourceType", [
   z
-    .object({ ...common, sourceType: z.literal(DIARY_SOURCE_TYPES.RECIPE), recipeId: id, servings: positive(100) })
+    .object({
+      ...common,
+      sourceType: z.literal(DIARY_SOURCE_TYPES.RECIPE),
+      recipeId: id,
+      servings: positive(100),
+    })
     .strict(),
   z
     .object({

@@ -5,10 +5,7 @@ import {
   ref,
   shortText,
 } from "../../common/persistence/content-model.js";
-import {
-  POST_TYPES,
-  POST_VISIBILITIES,
-} from "../../common/constants/enums/content.enums.js";
+import { POST_TYPES, POST_VISIBILITIES } from "../../common/constants/enums/content.enums.js";
 
 export const PostsModel = registerModel(
   "Posts",
@@ -17,7 +14,11 @@ export const PostsModel = registerModel(
     content: { ...shortText(30000), required: true },
     mediaIds: [ref("Media")],
     postType: { type: String, enum: POST_TYPES.values(), default: POST_TYPES.COMMUNITY },
-    visibility: { type: String, enum: POST_VISIBILITIES.values(), default: POST_VISIBILITIES.PUBLIC },
+    visibility: {
+      type: String,
+      enum: POST_VISIBILITIES.values(),
+      default: POST_VISIBILITIES.PUBLIC,
+    },
   },
   "posts",
   contentIndexes,

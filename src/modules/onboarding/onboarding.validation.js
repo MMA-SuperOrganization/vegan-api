@@ -6,10 +6,7 @@ import {
   timezone,
   emptyBody,
 } from "../../common/validators/domain.schemas.js";
-import {
-  NUTRITION_GOALS,
-  ACTIVITY_LEVELS,
-} from "../../common/constants/enums/planning.enums.js";
+import { NUTRITION_GOALS, ACTIVITY_LEVELS } from "../../common/constants/enums/planning.enums.js";
 export const createOnboardingValidation = () => ({
   getOnboardingStatus: {},
   updateOnboarding: {

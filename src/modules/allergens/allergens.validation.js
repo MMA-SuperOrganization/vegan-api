@@ -20,7 +20,9 @@ export const createAllergensValidation = () => ({
   createAllergen: { body: allergenSchema },
   updateAllergen: {
     params: z.object({ id }).strict(),
-    body: patch(allergenSchema.extend({ status: z.enum(MASTER_DATA_STATUSES.values()).optional() })),
+    body: patch(
+      allergenSchema.extend({ status: z.enum(MASTER_DATA_STATUSES.values()).optional() }),
+    ),
   },
   deleteAllergen: { params: z.object({ id }).strict(), body: emptyBody },
 });

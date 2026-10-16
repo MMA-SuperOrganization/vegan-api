@@ -33,7 +33,8 @@ export const createMediaValidation = () => ({
         "Purpose requires an image",
       )
       .refine(
-        ({ mimeType, purpose }) => purpose !== MEDIA_PURPOSES.VIDEO || mimeType.startsWith("video/"),
+        ({ mimeType, purpose }) =>
+          purpose !== MEDIA_PURPOSES.VIDEO || mimeType.startsWith("video/"),
         "Video purpose requires a video",
       ),
   },

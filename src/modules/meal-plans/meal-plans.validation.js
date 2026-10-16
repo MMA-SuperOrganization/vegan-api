@@ -9,10 +9,7 @@ import {
   patch,
   emptyBody,
 } from "../../common/validators/domain.schemas.js";
-import {
-  MEAL_TYPES,
-  MEAL_PLAN_STATUSES,
-} from "../../common/constants/enums/planning.enums.js";
+import { MEAL_TYPES, MEAL_PLAN_STATUSES } from "../../common/constants/enums/planning.enums.js";
 
 export const mealInput = z
   .object({

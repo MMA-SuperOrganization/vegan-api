@@ -1,10 +1,7 @@
 import mongoose from "mongoose";
 import { NUTRIENT_KEYS } from "../../common/utils/nutrition.js";
 import { UNITS } from "../../common/utils/units.js";
-import {
-  MEAL_TYPES,
-  MEAL_PLAN_STATUSES,
-} from "../../common/constants/enums/planning.enums.js";
+import { MEAL_TYPES, MEAL_PLAN_STATUSES } from "../../common/constants/enums/planning.enums.js";
 
 const nutrition = new mongoose.Schema(
   Object.fromEntries(NUTRIENT_KEYS.map((key) => [key, { type: Number, min: 0, default: 0 }])),

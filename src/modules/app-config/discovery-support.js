@@ -10,10 +10,7 @@ import {
   CONTENT_STATUSES,
   CONTENT_VISIBILITIES,
 } from "../../common/constants/enums/content.enums.js";
-import {
-  USER_STATUSES,
-  USER_ROLES,
-} from "../../common/constants/enums/identity.enums.js";
+import { USER_STATUSES, USER_ROLES } from "../../common/constants/enums/identity.enums.js";
 
 export const id = z.string().regex(/^[a-f\d]{24}$/i, "Invalid ObjectId");
 export const text = (max, min = 1) => z.string().trim().min(min).max(max);
@@ -46,7 +43,8 @@ export const found = (value, message = "Resource not found") => {
 };
 export const user = (actor) => {
   if (!actor?.userId) throw AppError.unauthorized();
-  if (actor.status && actor.status !== USER_STATUSES.ACTIVE) throw AppError.forbidden("Account is not active");
+  if (actor.status && actor.status !== USER_STATUSES.ACTIVE)
+    throw AppError.forbidden("Account is not active");
   return actor.userId;
 };
 export const admin = (actor) => {

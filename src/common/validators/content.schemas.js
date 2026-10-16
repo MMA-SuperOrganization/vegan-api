@@ -36,7 +36,9 @@ export const contentQuery = pagination
     categoryId: id.optional(),
     tags: queryArray(text(60), 30).optional(),
     difficulty: z.enum(RECIPE_DIFFICULTIES.values()).optional(),
-    sort: z.enum(CONTENT_SORTS.values().filter((s) => s !== CONTENT_SORTS.TITLE)).default(CONTENT_SORTS.NEWEST),
+    sort: z
+      .enum(CONTENT_SORTS.values().filter((s) => s !== CONTENT_SORTS.TITLE))
+      .default(CONTENT_SORTS.NEWEST),
   })
   .strict();
 export const mineQuery = pagination

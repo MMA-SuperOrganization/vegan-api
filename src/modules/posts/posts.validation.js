@@ -1,9 +1,6 @@
 import { z } from "zod";
 import { text } from "../../common/validators/domain.schemas.js";
-import {
-  POST_TYPES,
-  POST_VISIBILITIES,
-} from "../../common/constants/enums/content.enums.js";
+import { POST_TYPES, POST_VISIBILITIES } from "../../common/constants/enums/content.enums.js";
 import {
   idParams,
   versionBody,

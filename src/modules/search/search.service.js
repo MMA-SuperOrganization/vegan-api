@@ -19,10 +19,7 @@ import {
 } from "../app-config/index.js";
 import { fuzzyMongoRegex } from "../../common/utils/fuzzy-search.js";
 import { SEARCH_SCOPE_TYPES } from "../../common/constants/enums/ai.enums.js";
-import {
-  RECIPE_DIFFICULTIES,
-  CONTENT_SORTS,
-} from "../../common/constants/enums/content.enums.js";
+import { RECIPE_DIFFICULTIES, CONTENT_SORTS } from "../../common/constants/enums/content.enums.js";
 
 const types = SEARCH_SCOPE_TYPES.values();
 const boundedList = (schema) =>
