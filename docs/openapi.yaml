@@ -4385,17 +4385,17 @@ paths:
         - name: status
           in: query
           required: false
-          description: "Trạng thái resource; chỉ dùng các enum cho phép ở endpoint này. Giá trị cho phép: draft, pending_review, published, rejected, hidden, deleted, processing."
+          description: "Trạng thái resource; chỉ dùng các enum cho phép ở endpoint này. Giá trị cho phép: draft, pending_review, processing, published, rejected, hidden, deleted."
           schema:
             type: string
             enum:
               - draft
               - pending_review
+              - processing
               - published
               - rejected
               - hidden
               - deleted
-              - processing
           example: draft
       responses:
         "200":
@@ -13324,16 +13324,16 @@ paths:
         - name: type
           in: query
           required: false
-          description: 'Loại resource/hành động theo enum của endpoint, không dùng chung enum giữa mọi API. Mặc định: "all". Giá trị cho phép: all, recipe, food-item, post, video.'
+          description: 'Loại resource/hành động theo enum của endpoint, không dùng chung enum giữa mọi API. Mặc định: "all". Giá trị cho phép: all, recipe, post, video, food-item.'
           schema:
             default: all
             type: string
             enum:
               - all
               - recipe
-              - food-item
               - post
               - video
+              - food-item
           example: all
         - name: category
           in: query
@@ -13713,16 +13713,16 @@ paths:
         - name: type
           in: query
           required: false
-          description: 'Loại resource/hành động theo enum của endpoint, không dùng chung enum giữa mọi API. Mặc định: "all". Giá trị cho phép: all, recipe, food-item, post, video.'
+          description: 'Loại resource/hành động theo enum của endpoint, không dùng chung enum giữa mọi API. Mặc định: "all". Giá trị cho phép: all, recipe, post, video, food-item.'
           schema:
             default: all
             type: string
             enum:
               - all
               - recipe
-              - food-item
               - post
               - video
+              - food-item
           example: all
         - name: limit
           in: query
@@ -64239,11 +64239,11 @@ components:
                   - ml
                   - l
                   - piece
-                  - cup
                   - tbsp
                   - tsp
+                  - cup
                   - serving
-                description: "Đơn vị quantity theo enum; không tự coi mọi đơn vị là gram. Giá trị cho phép: g, kg, ml, l, piece, cup, tbsp, tsp, serving."
+                description: "Đơn vị quantity theo enum; không tự coi mọi đơn vị là gram. Giá trị cho phép: g, kg, ml, l, piece, tbsp, tsp, cup, serving."
               expiryDate:
                 type: string
                 pattern: ^\d{4}-\d{2}-\d{2}$
@@ -64446,11 +64446,11 @@ components:
                   - ml
                   - l
                   - piece
-                  - cup
                   - tbsp
                   - tsp
+                  - cup
                   - serving
-                description: "Đơn vị quantity theo enum; không tự coi mọi đơn vị là gram. Giá trị cho phép: g, kg, ml, l, piece, cup, tbsp, tsp, serving."
+                description: "Đơn vị quantity theo enum; không tự coi mọi đơn vị là gram. Giá trị cho phép: g, kg, ml, l, piece, tbsp, tsp, cup, serving."
               expiryDate:
                 type: string
                 pattern: ^\d{4}-\d{2}-\d{2}$
@@ -65224,12 +65224,12 @@ components:
           enum:
             - draft
             - pending_review
+            - processing
             - published
             - rejected
             - hidden
             - deleted
-            - processing
-          description: "Trạng thái resource; chỉ dùng các enum cho phép ở endpoint này. Giá trị cho phép: draft, pending_review, published, rejected, hidden, deleted, processing."
+          description: "Trạng thái resource; chỉ dùng các enum cho phép ở endpoint này. Giá trị cho phép: draft, pending_review, processing, published, rejected, hidden, deleted."
       additionalProperties: false
       description: Dữ liệu Query của getMyContent; required/default/enum/giới hạn theo validator thật, các quy tắc kiểm tra chéo xem description của operation.
     getMyContentResponse:
@@ -67567,10 +67567,10 @@ components:
           enum:
             - all
             - recipe
-            - food-item
             - post
             - video
-          description: 'Loại resource/hành động theo enum của endpoint, không dùng chung enum giữa mọi API. Mặc định: "all". Giá trị cho phép: all, recipe, food-item, post, video.'
+            - food-item
+          description: 'Loại resource/hành động theo enum của endpoint, không dùng chung enum giữa mọi API. Mặc định: "all". Giá trị cho phép: all, recipe, post, video, food-item.'
         category:
           type: string
           pattern: ^[a-f\d]{24}$
@@ -67682,10 +67682,10 @@ components:
           enum:
             - all
             - recipe
-            - food-item
             - post
             - video
-          description: 'Loại resource/hành động theo enum của endpoint, không dùng chung enum giữa mọi API. Mặc định: "all". Giá trị cho phép: all, recipe, food-item, post, video.'
+            - food-item
+          description: 'Loại resource/hành động theo enum của endpoint, không dùng chung enum giữa mọi API. Mặc định: "all". Giá trị cho phép: all, recipe, post, video, food-item.'
         limit:
           default: 8
           type: integer
@@ -73054,11 +73054,11 @@ components:
                   - ml
                   - l
                   - piece
-                  - cup
                   - tbsp
                   - tsp
+                  - cup
                   - serving
-                description: "Đơn vị quantity theo enum; không tự coi mọi đơn vị là gram. Giá trị cho phép: g, kg, ml, l, piece, cup, tbsp, tsp, serving."
+                description: "Đơn vị quantity theo enum; không tự coi mọi đơn vị là gram. Giá trị cho phép: g, kg, ml, l, piece, tbsp, tsp, cup, serving."
               expiryDate:
                 type: string
                 pattern: ^\d{4}-\d{2}-\d{2}$
