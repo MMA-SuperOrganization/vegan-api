@@ -229,7 +229,11 @@ export function createPantriesService({
       );
       const safeRecipes = recipes.filter(
         (recipe) =>
-          !(recipe.ingredients ?? []).some((item) => unsafeIds.has(String(item.foodItemId))),
+          !(recipe.ingredients ?? []).some(
+            (item) =>
+              unsafeIds.has(String(item.foodItemId)) ||
+              (profile?.excludedFoodItemIds ?? []).map(String).includes(String(item.foodItemId)),
+          ),
       );
       const data = (await match(userId, safeRecipes)).filter(
         (result) => result.matchRatio >= (query.minMatch ?? 0),

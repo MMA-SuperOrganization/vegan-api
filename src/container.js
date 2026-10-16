@@ -6,6 +6,7 @@ import { createR2StorageProvider } from "./providers/r2/r2-storage.provider.js";
 import { createAiProvider } from "./providers/ai/ai.provider.js";
 import { createFirebaseMessagingProvider } from "./providers/firebase/firebase-messaging.provider.js";
 import { createTransaction } from "./common/persistence/repository.js";
+import { coordinateRepositories } from "./common/persistence/repository-coordination.js";
 import { createAuthGuards } from "./common/middlewares/auth-guards.js";
 import { createRateLimiter } from "./common/middlewares/rate-limit.js";
 import { createHealthModule } from "./modules/health/index.js";
@@ -113,7 +114,11 @@ export const createContainer = ({ env, logger, overrides = {} }) => {
     repositories,
     services,
     clock,
-    transaction: overrides.transaction ?? createTransaction(),
+    cache: overrides.cache,
+    standalone: overrides.standalone,
+    transaction:
+      overrides.transaction ??
+      createTransaction(undefined, { standalone: overrides.standalone, cache: overrides.cache }),
     authProvider,
     storageProvider,
     aiProvider,
@@ -137,6 +142,11 @@ export const createContainer = ({ env, logger, overrides = {} }) => {
     Object.assign(services, module.services);
     Object.assign(models, module.models);
   }
+  coordinateRepositories({
+    repositories,
+    standalone: overrides.standalone,
+    cache: overrides.cache,
+  });
   const limits = env.rateLimits;
   return {
     ...deps,

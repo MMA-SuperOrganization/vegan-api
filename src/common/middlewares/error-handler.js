@@ -111,10 +111,13 @@ export const createErrorHandler =
       return;
     }
 
+    const hideDetails = appError.statusCode >= 500 || !appError.isOperational;
     const body = buildErrorBody({
-      message: appError.message,
+      message: hideDetails
+        ? "Unable to complete your request. Please try again later."
+        : appError.message,
       code: appError.code,
-      errors: appError.details,
+      errors: hideDetails ? [] : appError.details,
       requestId,
     });
 

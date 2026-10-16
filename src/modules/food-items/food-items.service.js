@@ -10,6 +10,8 @@ const publicFields = [
   "aliases",
   "categoryId",
   "imageUrl",
+  "description",
+  "seasons",
   "defaultServing",
   "nutritionPer100g",
   "allergenIds",
@@ -104,8 +106,8 @@ export const createFoodItemsService = ({ deps, repository }) => {
   };
   return {
     operations: {
-      async searchFoodItems({ query = {} }) {
-        const filter = { status: "active" };
+      async searchFoodItems({ query = {}, actor }) {
+        const filter = { status: actor?.role === "admin" ? (query.status ?? "active") : "active" };
         if (query.q)
           filter.$or = ["name", "normalizedName", "aliases"].map((key) => ({
             [key]: fuzzyMongoRegex(query.q),

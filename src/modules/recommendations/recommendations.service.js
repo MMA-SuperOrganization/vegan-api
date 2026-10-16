@@ -70,6 +70,9 @@ export const createRecommendationsService = (deps) => {
         nutrition?.targets?.caloriesKcal ??
         null,
       goal: nutrition?.goal ?? profile?.goal ?? null,
+      excluded: new Set((profile?.excludedFoodItemIds ?? []).map(stringId)),
+      disliked: new Set((profile?.dislikedFoodItemIds ?? []).map(stringId)),
+      preferred: new Set((profile?.preferredFoodItemIds ?? []).map(stringId)),
     };
   };
   const rank = async (type, ctx) => {
@@ -125,8 +128,10 @@ export const createRecommendationsService = (deps) => {
         (item) =>
           isPublic(item) &&
           !hasAllergen(item, ctx.allergies) &&
-          !(item.ingredients ?? []).some((ingredient) =>
-            ingredientAllergies.has(stringId(ingredient.foodItemId)),
+          !(item.ingredients ?? []).some(
+            (ingredient) =>
+              ingredientAllergies.has(stringId(ingredient.foodItemId)) ||
+              ctx.excluded?.has(stringId(ingredient.foodItemId)),
           ) &&
           (type !== "recipe" || fitsDiet(item, ctx.dietType)),
       )
@@ -142,6 +147,8 @@ export const createRecommendationsService = (deps) => {
         const pantryRatio = ingredientIds.length ? matches / ingredientIds.length : 0;
         const reasons = [];
         let score = 0;
+        score += ingredientIds.filter((id) => ctx.preferred?.has(id)).length * 10;
+        score -= ingredientIds.filter((id) => ctx.disliked?.has(id)).length * 10;
         if (
           ctx.dietType &&
           (type === "recipe"

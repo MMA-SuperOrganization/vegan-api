@@ -2,6 +2,7 @@ import { Router } from "express";
 import { apiManifest } from "./api-manifest.js";
 import { validate } from "../common/middlewares/validate.js";
 import { authorize } from "../common/middlewares/authorize.js";
+import { cachedController } from "../common/cache/operation-cache.js";
 
 export { CREATED } from "../common/constants/http-status.js";
 export const createApiRouter = (container) => {
@@ -22,7 +23,7 @@ export const createApiRouter = (container) => {
     if (operation.module === "ai" || operation.operationId === "generateVideoSummaryFromVideoId")
       chain.push(container.aiRateLimiter);
     chain.push(validate(schemas));
-    chain.push(handler);
+    chain.push(cachedController(container, operation, handler));
     router[operation.method.toLowerCase()](operation.path, ...chain);
     router.registeredOperations.push({ ...operation, middleware: chain, validation: schemas });
   }

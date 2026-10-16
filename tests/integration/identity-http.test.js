@@ -167,7 +167,7 @@ describe("identity and master-data mounted HTTP API", () => {
     async (_name, entry) => {
       const { app } = fixture();
       let response;
-      if (entry.auth !== "public") response = await runRequest(app, entry);
+      if (!["public", "optional"].includes(entry.auth)) response = await runRequest(app, entry);
       else if (
         entry.operationId === "getCategories" ||
         entry.operationId === "getAllergens" ||

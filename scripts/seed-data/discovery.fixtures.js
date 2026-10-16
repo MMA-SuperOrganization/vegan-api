@@ -1,15 +1,7 @@
 const unsplash = (photoId) =>
   `https://images.unsplash.com/${photoId}?auto=format&fit=crop&w=1200&q=80`;
 
-const categoryImages = {
-  Vegetables: unsplash("photo-1566385101042-1a0aa0c1268c"),
-  Fruits: unsplash("photo-1610832958506-aa56368176cf"),
-  Grains: unsplash("photo-1586201375761-83865001e31c"),
-  Legumes: unsplash("photo-1515543904379-3d757afe72e4"),
-  "Nuts & Seeds": unsplash("photo-1599599810769-bcde5a160d32"),
-};
-
-export const foodImageUrl = (category) => categoryImages[category];
+export { foodImageUrl } from "./food-images.js";
 
 const vietnameseFoodAliases = {
   Broccoli: ["bông cải xanh", "súp lơ xanh"],

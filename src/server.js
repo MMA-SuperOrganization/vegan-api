@@ -6,6 +6,9 @@ import { loadEnv } from "./config/env.js";
 import { createLogger } from "./config/logger.js";
 import { createContainer } from "./container.js";
 import { createReminderScheduler } from "./scheduler/reminder.scheduler.js";
+import mongoose from "mongoose";
+import { connectRedis, createRedisSupport } from "./common/cache/redis.js";
+import { createStandaloneCoordinator } from "./common/persistence/standalone-coordinator.js";
 
 export const startServer = async ({
   env = loadEnv(),
@@ -14,7 +17,28 @@ export const startServer = async ({
 } = {}) => {
   if (!overrides.skipDatabaseConnect)
     await connectDatabase({ ...env.database, autoIndex: !env.isProduction, logger });
-  const container = createContainer({ env, logger, overrides });
+  const redisClient = await connectRedis({ config: env.redis, logger });
+  const cache = redisClient
+    ? createRedisSupport({
+        client: redisClient,
+        prefix: env.redis.prefix,
+        ttlSeconds: env.redis.ttlSeconds,
+        commandTimeoutMs: env.redis.commandTimeoutMs,
+      })
+    : undefined;
+  let standalone;
+  if (env.standaloneRedisEnabled && !overrides.skipDatabaseConnect) {
+    const hello = await mongoose.connection.db.admin().command({ hello: 1 });
+    if (!hello.setName && hello.msg !== "isdbgrid") {
+      standalone = createStandaloneCoordinator({ connection: mongoose.connection, redis: cache });
+      logger.warn("MongoDB standalone uses serialized operations with compensating rollback");
+    }
+  }
+  const container = createContainer({
+    env,
+    logger,
+    overrides: { cache, standalone, ...overrides },
+  });
   const app = createApp(container);
   const server = createServer(app);
   const scheduler = createReminderScheduler({
@@ -52,6 +76,7 @@ export const startServer = async ({
         await scheduler.stop();
         await closeServer;
         if (!overrides.skipDatabaseConnect) await disconnectDatabase();
+        if (redisClient?.isOpen) redisClient.destroy();
         container.storageProvider?.destroy?.();
       };
       try {

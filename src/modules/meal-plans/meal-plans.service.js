@@ -143,8 +143,8 @@ export function createMealPlansService({
   async function activate(userId, id, { session } = {}) {
     return runTransaction(async (session) => {
       const target = await getOwned(userId, id, { session });
-      if (target.status === "archived")
-        throw AppError.conflict("Archived plans cannot be activated");
+      if (["archived", "completed"].includes(target.status))
+        throw AppError.conflict("Closed plans cannot be activated; clone the plan to reuse it");
       // Write the stable guard before inspecting/updating active statuses. Across processes,
       // concurrent activation transactions conflict on this one document and retry fresh.
       await updateSlot(userId, target.weekStartDate, target._id, session);
@@ -302,7 +302,7 @@ export function createMealPlansService({
       const userId = owner(actor);
       const meal = await snapshotMeal(userId, body);
       return change(userId, params.id, (plan) => {
-        if (plan.status === "archived")
+        if (["archived", "completed"].includes(plan.status))
           throw AppError.conflict("Archived meal plans cannot be edited");
         const offset = new Date(body.date) - new Date(plan.weekStartDate);
         if (offset < 0 || offset >= 7 * 86400000)
@@ -321,7 +321,7 @@ export function createMealPlansService({
     updateMealInPlan: async ({ actor, params, body }) => {
       const userId = owner(actor);
       return change(userId, params.id, async (plan) => {
-        if (plan.status === "archived")
+        if (["archived", "completed"].includes(plan.status))
           throw AppError.conflict("Archived meal plans cannot be edited");
         const meal = plan.days
           .flatMap((day) => day.meals)
@@ -338,7 +338,7 @@ export function createMealPlansService({
     },
     deleteMealFromPlan: async ({ actor, params }) =>
       change(owner(actor), params.id, (plan) => {
-        if (plan.status === "archived")
+        if (["archived", "completed"].includes(plan.status))
           throw AppError.conflict("Archived meal plans cannot be edited");
         if (!plan.days.some((day) => day.meals.some((meal) => meal.mealId === params.mealId)))
           throw AppError.notFound("Meal not found");

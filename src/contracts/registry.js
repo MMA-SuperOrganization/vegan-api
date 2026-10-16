@@ -195,6 +195,7 @@ export function createContractRegistry(container = createContractContainer()) {
       bio: string,
       dietType: string,
       preferredCuisines: array(string),
+      username: string,
     },
     ["userId"],
   );

@@ -26,6 +26,9 @@ const safeProfile = (profile) =>
       "carbTargetG",
       "fatTargetG",
       "fiberTargetG",
+      "preferredFoodItemIds",
+      "dislikedFoodItemIds",
+      "excludedFoodItemIds",
     ]
       .filter((k) => profile?.[k] !== undefined)
       .map((k) => [k, profile[k]]),
@@ -128,6 +131,7 @@ export function createAiService({
     const nutrition = await services.users?.getNutrition?.(userId, { session });
     return {
       dietType: profile?.dietType ?? "vegan",
+      excludedFoodItemIds: new Set((profile?.excludedFoodItemIds ?? []).map(String)),
       allergenIds: new Set(
         [...(profile?.allergenIds || []), ...(nutrition?.allergenIds || [])].map(String),
       ),
@@ -142,6 +146,7 @@ export function createAiService({
       food.status !== "active" ||
       !fitsDiet(food, safety.dietType) ||
       food.deletedAt ||
+      safety.excludedFoodItemIds.has(String(foodItemId)) ||
       (food.allergenIds || []).some((id) => safety.allergenIds.has(String(id)))
     )
       throw invalidOutput();
@@ -392,7 +397,10 @@ export function createAiService({
           "chat",
           chatOutput,
           [
-            { role: "user", content: JSON.stringify(await context(userId)) },
+            {
+              role: "user",
+              content: JSON.stringify(body.useProfile === true ? await context(userId) : {}),
+            },
             ...history.data.reverse().map((m) => ({ role: m.role, content: m.content })),
             { role: "user", content },
           ],
@@ -436,7 +444,7 @@ export function createAiService({
             role: "user",
             content: JSON.stringify({
               request: body,
-              context: await context(userId),
+              context: body.useProfile === true ? await context(userId) : {},
               recipes: catalog.data,
             }),
           },

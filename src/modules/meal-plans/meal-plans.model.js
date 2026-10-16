@@ -49,7 +49,7 @@ const schema = new mongoose.Schema(
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "Users", required: true, index: true },
     weekStartDate: { type: Date, required: true },
     title: { type: String, trim: true, required: true, maxlength: 200 },
-    status: { type: String, enum: ["draft", "active", "archived"], default: "draft" },
+    status: { type: String, enum: ["draft", "active", "completed", "archived"], default: "draft" },
     days: { type: [day], default: [], validate: (value) => value.length <= 7 },
     nutritionSummary: { type: nutrition, required: true },
     version: { type: Number, default: 0 },

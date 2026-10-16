@@ -142,6 +142,30 @@ suite(
         await expect(models[key].create(data)).rejects.toMatchObject({ code: 11000 });
       }
     });
+    it("enforces username uniqueness under concurrent writes while allowing profiles without usernames", async () => {
+      const users = await Promise.all(
+        Array.from({ length: 4 }, (_, index) =>
+          create(container.models.users, {
+            firebaseUid: `username-${suffix}-${index}`,
+            role: "user",
+            status: "active",
+          }),
+        ),
+      );
+      const username = `user_${suffix.slice(0, 16)}`;
+      const attempts = await Promise.allSettled(
+        users
+          .slice(0, 2)
+          .map((user) => create(container.models.userProfiles, { userId: user._id, username })),
+      );
+      expect(attempts.filter((attempt) => attempt.status === "fulfilled")).toHaveLength(1);
+      expect(attempts.find((attempt) => attempt.status === "rejected").reason).toMatchObject({
+        code: 11000,
+      });
+      await Promise.all(
+        users.slice(2).map((user) => create(container.models.userProfiles, { userId: user._id })),
+      );
+    });
     it("switches distinct active meal plans through one stable unique owner/week slot", async () => {
       const model = container.models.MealPlansModel;
       const slotModel = container.models.MealPlanActiveSlotsModel;
@@ -226,8 +250,8 @@ suite(
           .map((food) => String(food._id))
           .sort();
         const second = await runSeed(container, { masterOnly: true, withDemoContent: true });
-        expect(first.foodItems.inserted).toBe(20);
-        expect(first.recipes.inserted).toBe(8);
+        expect(first.foodItems.inserted).toBe(FOOD_FIXTURES.length);
+        expect(first.recipes.inserted).toBe(20);
         expect(second.foodItems.inserted).toBe(0);
         expect(second.recipes.inserted).toBe(0);
         expect(
@@ -240,7 +264,7 @@ suite(
             .sort(),
         ).toEqual(originalIds);
         const recipes = await container.models.recipes.find({ tags: "demo-fixture" }).lean();
-        expect(recipes).toHaveLength(8);
+        expect(recipes).toHaveLength(first.recipes.inserted);
         expect(
           recipes.every((recipe) =>
             recipe.ingredients.every(

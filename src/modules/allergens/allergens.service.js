@@ -50,9 +50,9 @@ export const createAllergensService = ({ deps, repository }) => {
   };
   return {
     operations: {
-      getAllergens: ({ query = {} }) =>
+      getAllergens: ({ query = {}, actor }) =>
         repository.findMany(
-          { status: "active" },
+          { status: actor?.role === "admin" ? (query.status ?? "active") : "active" },
           { page: query.page, limit: query.limit, sort: { name: 1, _id: 1 } },
         ),
       createAllergen: (context) =>

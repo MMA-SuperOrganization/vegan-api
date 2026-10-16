@@ -85,6 +85,14 @@ export const envSchema = z
       .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
       .default("info"),
     MONGODB_URI: optional,
+    REDIS_URL: optional,
+    REDIS_KEY_PREFIX: z
+      .string()
+      .regex(/^[a-zA-Z0-9:_-]{1,80}$/)
+      .default("vegeta"),
+    REDIS_CACHE_TTL_SECONDS: integer(60, 1, 600),
+    REDIS_COMMAND_TIMEOUT_MS: integer(1000, 100, 10000),
+    MONGODB_STANDALONE_REDIS_ENABLED: boolean(false),
     MONGODB_DB_NAME: z
       .string()
       .regex(/^[\w-]+$/)
@@ -136,6 +144,16 @@ export const envSchema = z
     if (firstDifference >= 0 && minimum[firstDifference] > latest[firstDifference])
       issue("APP_LATEST_VERSION", "Latest version must be at least the minimum supported version");
     if (env.NODE_ENV !== "test") requireReal("MONGODB_URI");
+    if (env.REDIS_URL) {
+      try {
+        if (!["redis:", "rediss:"].includes(new URL(env.REDIS_URL).protocol))
+          issue("REDIS_URL", "Expected redis:// or rediss:// URL");
+      } catch {
+        issue("REDIS_URL", "Expected a Redis URL");
+      }
+    }
+    if (env.MONGODB_STANDALONE_REDIS_ENABLED && !supplied(env.REDIS_URL))
+      issue("REDIS_URL", "Redis is required for standalone coordination");
     if (supplied(env.MONGODB_URI) && !/^mongodb(?:\+srv)?:\/\//.test(env.MONGODB_URI))
       issue("MONGODB_URI", "Expected a MongoDB connection URI");
     if (env.NODE_ENV === "production" || env.FCM_ENABLED) {
@@ -229,6 +247,13 @@ export const loadEnv = (source = process.env) => {
     logLevel: e.LOG_LEVEL,
     swaggerEnabled: e.SWAGGER_ENABLED,
     mongodbUri: e.MONGODB_URI,
+    redis: {
+      url: e.REDIS_URL,
+      prefix: `${e.REDIS_KEY_PREFIX}:${e.MONGODB_DB_NAME}`,
+      ttlSeconds: e.REDIS_CACHE_TTL_SECONDS,
+      commandTimeoutMs: e.REDIS_COMMAND_TIMEOUT_MS,
+    },
+    standaloneRedisEnabled: e.MONGODB_STANDALONE_REDIS_ENABLED,
     database: {
       uri: e.MONGODB_URI,
       dbName: e.MONGODB_DB_NAME,

@@ -153,7 +153,7 @@ export const apiManifest = [
   {
     method: "GET",
     path: "/categories",
-    auth: "public",
+    auth: "optional",
     module: "categories",
     operationId: "getCategories",
   },
@@ -182,7 +182,7 @@ export const apiManifest = [
   {
     method: "GET",
     path: "/allergens",
-    auth: "public",
+    auth: "optional",
     module: "allergens",
     operationId: "getAllergens",
   },
@@ -211,7 +211,7 @@ export const apiManifest = [
   {
     method: "GET",
     path: "/food-items",
-    auth: "public",
+    auth: "optional",
     module: "food-items",
     operationId: "searchFoodItems",
   },

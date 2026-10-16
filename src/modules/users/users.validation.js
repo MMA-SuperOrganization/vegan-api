@@ -15,6 +15,23 @@ import {
 export const profileSchema = z
   .object({
     bio: text(500, 0).optional(),
+    username: text(30)
+      .min(3)
+      .regex(/^[a-zA-Z0-9_]+$/)
+      .transform((value) => value.toLowerCase())
+      .optional(),
+    city: text(100, 0).optional(),
+    country: text(100, 0).optional(),
+    preferredFoodItemIds: z
+      .array(id)
+      .max(50)
+      .transform((values) => [...new Set(values)])
+      .optional(),
+    excludedFoodItemIds: z
+      .array(id)
+      .max(50)
+      .transform((values) => [...new Set(values)])
+      .optional(),
     dateOfBirth: z
       .union([dateOnly, dateTime])
       .refine((v) => new Date(v) <= new Date(), "Birth date cannot be in the future")

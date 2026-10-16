@@ -12,7 +12,9 @@ export const allergenSchema = z
   })
   .strict();
 export const createAllergensValidation = () => ({
-  getAllergens: { query: pagination.strict() },
+  getAllergens: {
+    query: pagination.extend({ status: z.enum(["active", "inactive"]).optional() }).strict(),
+  },
   createAllergen: { body: allergenSchema },
   updateAllergen: {
     params: z.object({ id }).strict(),

@@ -44,7 +44,7 @@ export const createMealPlansValidation = () => ({
     query: pagination
       .extend({
         weekStartDate: dateOnly.optional(),
-        status: z.enum(["draft", "active", "archived"]).optional(),
+        status: z.enum(["draft", "active", "completed", "archived"]).optional(),
       })
       .strict(),
   },
@@ -53,7 +53,7 @@ export const createMealPlansValidation = () => ({
   createMealPlan: { body: mealPlanInput },
   updateMealPlan: {
     params,
-    body: patch(z.object({ title: text(200), status: z.enum(["draft", "archived"]) })),
+    body: patch(z.object({ title: text(200), status: z.enum(["draft", "completed", "archived"]) })),
   },
   deleteMealPlan: { params },
   addMealToPlan: { params, body: mealInput.extend({ date: dateOnly }).strict() },

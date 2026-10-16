@@ -50,6 +50,9 @@ const profileSchema = new Schema(
   {
     userId: { type: Schema.Types.ObjectId, ref: "Users", required: true, unique: true },
     bio: { type: String, maxlength: 500, trim: true },
+    username: { type: String, trim: true, lowercase: true, minlength: 3, maxlength: 30 },
+    city: { type: String, trim: true, maxlength: 100 },
+    country: { type: String, trim: true, maxlength: 100 },
     dateOfBirth: Date,
     gender: { type: String, enum: ["female", "male", "non_binary", "other", "prefer_not_to_say"] },
     dietType: {
@@ -67,10 +70,16 @@ const profileSchema = new Schema(
     },
     preferredCuisines: [String],
     dislikedFoodItemIds: [{ type: Schema.Types.ObjectId, ref: "FoodItems" }],
+    preferredFoodItemIds: [{ type: Schema.Types.ObjectId, ref: "FoodItems" }],
+    excludedFoodItemIds: [{ type: Schema.Types.ObjectId, ref: "FoodItems" }],
     locale: String,
     timezone: String,
   },
   { timestamps: true, versionKey: false, collection: "userProfiles" },
+);
+profileSchema.index(
+  { username: 1 },
+  { unique: true, partialFilterExpression: { username: { $type: "string" } } },
 );
 export const UserProfilesModel =
   mongoose.models.UserProfiles || mongoose.model("UserProfiles", profileSchema);

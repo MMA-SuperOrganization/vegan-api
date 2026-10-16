@@ -6300,11 +6300,11 @@ paths:
     get:
       tags:
         - categories
-      summary: Danh sách active, filter type
+      summary: Danh sách active; admin có thể lọc inactive; phân cấp parentId
       description: |-
-        Danh sách active, filter type.
+        Danh sách active; admin có thể lọc inactive; phân cấp parentId.
 
-        **Quyền truy cập:** Không yêu cầu token. Chỉ dữ liệu được phép công khai được trả về.
+        **Quyền truy cập:** Có thể gọi không token. Nếu gửi Authorization: Bearer <Firebase ID token> thì token phải hợp lệ; token lỗi không được tự động coi là guest.
 
         **Nghiệp vụ:** Danh mục master data: public đọc, admin quản lý. Các thao tác ghi áp dụng kiểm tra tham chiếu và audit ở service.
 
@@ -6316,11 +6316,13 @@ paths:
 
         **Lỗi:** envelope {success:false,error:{code,message,details},meta:{requestId}}. 400 là dữ liệu/điều kiện nghiệp vụ không hợp lệ; 404 có thể che resource không được phép truy cập. Xem responses cho lỗi xác thực, xung đột, giới hạn và dependency. Các mã lỗi chung là khả năng của middleware, không bảo đảm mọi nhánh xuất hiện ở mọi request.
       operationId: getCategories
-      x-auth: public
+      x-auth: optional
       x-tests:
         - tests/contract/api-contract.test.js
         - tests/integration/identity-http.test.js
-      security: []
+      security:
+        - {}
+        - bearerAuth: []
       parameters:
         - name: page
           in: query
@@ -6353,6 +6355,24 @@ paths:
               - recipe
               - post
           example: food
+        - name: parentId
+          in: query
+          required: false
+          description: ID tham chiếu parentId; xem resource tương ứng và kiểm tra quyền ở service. ObjectId gồm 24 ký tự hexadecimal.
+          schema:
+            type: string
+            pattern: ^[a-f\d]{24}$
+          example: 507f1f77bcf86cd799439011
+        - name: status
+          in: query
+          required: false
+          description: "Trạng thái resource; chỉ dùng các enum cho phép ở endpoint này. Giá trị cho phép: active, inactive."
+          schema:
+            type: string
+            enum:
+              - active
+              - inactive
+          example: active
       responses:
         "200":
           description: Success
@@ -6404,6 +6424,56 @@ paths:
                           path: exampleField
                           code: invalid_type
                           message: Invalid field value
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "401":
+          description: "Missing, expired or invalid Firebase token. Các mã có thể gặp từ middleware/service: TOKEN_MISSING, TOKEN_INVALID, TOKEN_EXPIRED, TOKEN_REVOKED, UNAUTHORIZED. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 401 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: UNAUTHORIZED
+                      message: Authentication required
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "403":
+          description: "Inactive account, insufficient role or non-owner. Các mã có thể gặp từ middleware/service: FORBIDDEN, ACCOUNT_DISABLED, ACCOUNT_SUSPENDED, ACCOUNT_DELETED. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 403 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: FORBIDDEN
+                      message: Access denied
+                      details: []
                     meta:
                       requestId: swagger-example-request
           headers:
@@ -7469,11 +7539,11 @@ paths:
     get:
       tags:
         - allergens
-      summary: Danh sách active
+      summary: Danh sách active; admin có thể lọc inactive
       description: |-
-        Danh sách active.
+        Danh sách active; admin có thể lọc inactive.
 
-        **Quyền truy cập:** Không yêu cầu token. Chỉ dữ liệu được phép công khai được trả về.
+        **Quyền truy cập:** Có thể gọi không token. Nếu gửi Authorization: Bearer <Firebase ID token> thì token phải hợp lệ; token lỗi không được tự động coi là guest.
 
         **Nghiệp vụ:** Danh mục chất gây dị ứng: public đọc, admin quản lý. ID được tham chiếu bởi thực phẩm và hồ sơ dinh dưỡng.
 
@@ -7485,11 +7555,13 @@ paths:
 
         **Lỗi:** envelope {success:false,error:{code,message,details},meta:{requestId}}. 400 là dữ liệu/điều kiện nghiệp vụ không hợp lệ; 404 có thể che resource không được phép truy cập. Xem responses cho lỗi xác thực, xung đột, giới hạn và dependency. Các mã lỗi chung là khả năng của middleware, không bảo đảm mọi nhánh xuất hiện ở mọi request.
       operationId: getAllergens
-      x-auth: public
+      x-auth: optional
       x-tests:
         - tests/contract/api-contract.test.js
         - tests/integration/identity-http.test.js
-      security: []
+      security:
+        - {}
+        - bearerAuth: []
       parameters:
         - name: page
           in: query
@@ -7511,6 +7583,16 @@ paths:
             minimum: 1
             maximum: 100
           example: 20
+        - name: status
+          in: query
+          required: false
+          description: "Trạng thái resource; chỉ dùng các enum cho phép ở endpoint này. Giá trị cho phép: active, inactive."
+          schema:
+            type: string
+            enum:
+              - active
+              - inactive
+          example: active
       responses:
         "200":
           description: Success
@@ -7561,6 +7643,56 @@ paths:
                           path: exampleField
                           code: invalid_type
                           message: Invalid field value
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "401":
+          description: "Missing, expired or invalid Firebase token. Các mã có thể gặp từ middleware/service: TOKEN_MISSING, TOKEN_INVALID, TOKEN_EXPIRED, TOKEN_REVOKED, UNAUTHORIZED. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 401 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: UNAUTHORIZED
+                      message: Authentication required
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "403":
+          description: "Inactive account, insufficient role or non-owner. Các mã có thể gặp từ middleware/service: FORBIDDEN, ACCOUNT_DISABLED, ACCOUNT_SUSPENDED, ACCOUNT_DELETED. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 403 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: FORBIDDEN
+                      message: Access denied
+                      details: []
                     meta:
                       requestId: swagger-example-request
           headers:
@@ -8622,11 +8754,11 @@ paths:
     get:
       tags:
         - food-items
-      summary: Search/filter/pagination
+      summary: Search/filter/pagination; admin có thể lọc inactive
       description: |-
-        Search/filter/pagination.
+        Search/filter/pagination; admin có thể lọc inactive.
 
-        **Quyền truy cập:** Không yêu cầu token. Chỉ dữ liệu được phép công khai được trả về.
+        **Quyền truy cập:** Có thể gọi không token. Nếu gửi Authorization: Bearer <Firebase ID token> thì token phải hợp lệ; token lỗi không được tự động coi là guest.
 
         **Nghiệp vụ:** Thực phẩm chuẩn và dinh dưỡng trên 100 g. isVegan=true phải tương thích isVegetarian và không được chứa trứng/sữa; PATCH kiểm tra cả trạng thái sau khi ghép dữ liệu cũ.
 
@@ -8638,11 +8770,13 @@ paths:
 
         **Lỗi:** envelope {success:false,error:{code,message,details},meta:{requestId}}. 400 là dữ liệu/điều kiện nghiệp vụ không hợp lệ; 404 có thể che resource không được phép truy cập. Xem responses cho lỗi xác thực, xung đột, giới hạn và dependency. Các mã lỗi chung là khả năng của middleware, không bảo đảm mọi nhánh xuất hiện ở mọi request.
       operationId: searchFoodItems
-      x-auth: public
+      x-auth: optional
       x-tests:
         - tests/contract/api-contract.test.js
         - tests/integration/identity-http.test.js
-      security: []
+      security:
+        - {}
+        - bearerAuth: []
       parameters:
         - name: page
           in: query
@@ -8727,6 +8861,16 @@ paths:
               - "true"
               - "false"
           example: "true"
+        - name: status
+          in: query
+          required: false
+          description: "Trạng thái resource; chỉ dùng các enum cho phép ở endpoint này. Giá trị cho phép: active, inactive."
+          schema:
+            type: string
+            enum:
+              - active
+              - inactive
+          example: active
         - name: isVegetarian
           in: query
           required: false
@@ -8810,6 +8954,56 @@ paths:
                           path: exampleField
                           code: invalid_type
                           message: Invalid field value
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "401":
+          description: "Missing, expired or invalid Firebase token. Các mã có thể gặp từ middleware/service: TOKEN_MISSING, TOKEN_INVALID, TOKEN_EXPIRED, TOKEN_REVOKED, UNAUTHORIZED. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 401 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: UNAUTHORIZED
+                      message: Authentication required
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "403":
+          description: "Inactive account, insufficient role or non-owner. Các mã có thể gặp từ middleware/service: FORBIDDEN, ACCOUNT_DISABLED, ACCOUNT_SUSPENDED, ACCOUNT_DELETED. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 403 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: FORBIDDEN
+                      message: Access denied
+                      details: []
                     meta:
                       requestId: swagger-example-request
           headers:
@@ -17451,12 +17645,13 @@ paths:
         - name: status
           in: query
           required: false
-          description: "Trạng thái resource; chỉ dùng các enum cho phép ở endpoint này. Giá trị cho phép: draft, active, archived."
+          description: "Trạng thái resource; chỉ dùng các enum cho phép ở endpoint này. Giá trị cho phép: draft, active, completed, archived."
           schema:
             type: string
             enum:
               - draft
               - active
+              - completed
               - archived
           example: draft
       responses:
@@ -54988,6 +55183,24 @@ components:
             - "null"
           maxLength: 500
           description: Giới thiệu cá nhân trong hồ sơ.
+        username:
+          type:
+            - string
+            - "null"
+          maxLength: 30
+          description: Trường username trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+        city:
+          type:
+            - string
+            - "null"
+          maxLength: 100
+          description: Trường city trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+        country:
+          type:
+            - string
+            - "null"
+          maxLength: 100
+          description: Trường country trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
         dateOfBirth:
           type:
             - string
@@ -55042,6 +55255,28 @@ components:
             pattern: ^[A-Fa-f0-9]{24}$
             description: Trường disliked Food Item Ids item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. ObjectId gồm 24 ký tự hexadecimal.
           description: ID thực phẩm không thích, dùng cá nhân hóa khi service hỗ trợ.
+        preferredFoodItemIds:
+          type:
+            - array
+            - "null"
+          items:
+            type:
+              - string
+              - "null"
+            pattern: ^[A-Fa-f0-9]{24}$
+            description: Trường preferred Food Item Ids item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. ObjectId gồm 24 ký tự hexadecimal.
+          description: ID tham chiếu preferredFoodItemIds; xem resource tương ứng và kiểm tra quyền ở service.
+        excludedFoodItemIds:
+          type:
+            - array
+            - "null"
+          items:
+            type:
+              - string
+              - "null"
+            pattern: ^[A-Fa-f0-9]{24}$
+            description: Trường excluded Food Item Ids item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. ObjectId gồm 24 ký tự hexadecimal.
+          description: ID tham chiếu excludedFoodItemIds; xem resource tương ứng và kiểm tra quyền ở service.
         locale:
           type:
             - string
@@ -55280,6 +55515,12 @@ components:
             - number
             - "null"
           description: Thứ tự hiển thị theo schema master data.
+        parentId:
+          type:
+            - string
+            - "null"
+          pattern: ^[A-Fa-f0-9]{24}$
+          description: ID tham chiếu parentId; xem resource tương ứng và kiểm tra quyền ở service. ObjectId gồm 24 ký tự hexadecimal.
         _id:
           type: string
           pattern: ^[A-Fa-f0-9]{24}$
@@ -55393,6 +55634,22 @@ components:
             - string
             - "null"
           description: URL ảnh dùng cho master data; input yêu cầu HTTPS không chứa username/password.
+        description:
+          type:
+            - string
+            - "null"
+          maxLength: 2000
+          description: Nội dung mô tả chi tiết.
+        seasons:
+          type:
+            - array
+            - "null"
+          items:
+            type:
+              - number
+              - "null"
+            description: Trường seasons item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+          description: Trường seasons trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
         defaultServing:
           type: object
           required:
@@ -57197,9 +57454,10 @@ components:
           enum:
             - draft
             - active
+            - completed
             - archived
             - null
-          description: "Trạng thái resource; chỉ dùng các enum cho phép ở endpoint này. Giá trị cho phép: draft, active, archived, ."
+          description: "Trạng thái resource; chỉ dùng các enum cho phép ở endpoint này. Giá trị cho phép: draft, active, completed, archived, ."
         days:
           type:
             - array
@@ -58965,6 +59223,22 @@ components:
             - string
             - "null"
           description: URL ảnh dùng cho master data; input yêu cầu HTTPS không chứa username/password.
+        description:
+          type:
+            - string
+            - "null"
+          maxLength: 2000
+          description: Nội dung mô tả chi tiết.
+        seasons:
+          type:
+            - array
+            - "null"
+          items:
+            type:
+              - number
+              - "null"
+            description: Trường seasons item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+          description: Trường seasons trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
         defaultServing:
           type: object
           required:
@@ -59262,6 +59536,9 @@ components:
             type: string
             description: Trường Json Value trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
           description: Danh sách ẩm thực ưu tiên của hồ sơ.
+        username:
+          type: string
+          description: Trường Json Value trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
       required:
         - userId
       additionalProperties: false
@@ -65080,6 +65357,38 @@ components:
           minLength: 0
           maxLength: 500
           description: Giới thiệu cá nhân trong hồ sơ.
+        username:
+          type: string
+          minLength: 3
+          maxLength: 30
+          pattern: ^[a-zA-Z0-9_]+$
+          description: Trường username trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+        city:
+          type: string
+          minLength: 0
+          maxLength: 100
+          description: Trường city trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+        country:
+          type: string
+          minLength: 0
+          maxLength: 100
+          description: Trường country trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+        preferredFoodItemIds:
+          maxItems: 50
+          type: array
+          items:
+            type: string
+            pattern: ^[a-f\d]{24}$
+            description: Trường preferred Food Item Ids item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. ObjectId gồm 24 ký tự hexadecimal.
+          description: ID tham chiếu preferredFoodItemIds; xem resource tương ứng và kiểm tra quyền ở service.
+        excludedFoodItemIds:
+          maxItems: 50
+          type: array
+          items:
+            type: string
+            pattern: ^[a-f\d]{24}$
+            description: Trường excluded Food Item Ids item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. ObjectId gồm 24 ký tự hexadecimal.
+          description: ID tham chiếu excludedFoodItemIds; xem resource tương ứng và kiểm tra quyền ở service.
         dateOfBirth:
           anyOf:
             - anyOf:
@@ -65334,6 +65643,16 @@ components:
             - recipe
             - post
           description: "Loại resource/hành động theo enum của endpoint, không dùng chung enum giữa mọi API. Giá trị cho phép: food, recipe, post."
+        parentId:
+          type: string
+          pattern: ^[a-f\d]{24}$
+          description: ID tham chiếu parentId; xem resource tương ứng và kiểm tra quyền ở service. ObjectId gồm 24 ký tự hexadecimal.
+        status:
+          type: string
+          enum:
+            - active
+            - inactive
+          description: "Trạng thái resource; chỉ dùng các enum cho phép ở endpoint này. Giá trị cho phép: active, inactive."
       additionalProperties: false
       description: Dữ liệu Query của getCategories; required/default/enum/giới hạn theo validator thật, các quy tắc kiểm tra chéo xem description của operation.
     getCategoriesResponse:
@@ -65377,6 +65696,14 @@ components:
           minLength: 0
           maxLength: 2000
           description: Nội dung mô tả chi tiết.
+        parentId:
+          anyOf:
+            - type: string
+              pattern: ^[a-f\d]{24}$
+              description: ID tham chiếu parentId; xem resource tương ứng và kiểm tra quyền ở service. ObjectId gồm 24 ký tự hexadecimal.
+            - type: "null"
+              description: ID tham chiếu parentId; xem resource tương ứng và kiểm tra quyền ở service.
+          description: ID tham chiếu parentId; xem resource tương ứng và kiểm tra quyền ở service.
         type:
           type: string
           enum:
@@ -65451,6 +65778,14 @@ components:
           minLength: 0
           maxLength: 2000
           description: Nội dung mô tả chi tiết.
+        parentId:
+          anyOf:
+            - type: string
+              pattern: ^[a-f\d]{24}$
+              description: ID tham chiếu parentId; xem resource tương ứng và kiểm tra quyền ở service. ObjectId gồm 24 ký tự hexadecimal.
+            - type: "null"
+              description: ID tham chiếu parentId; xem resource tương ứng và kiểm tra quyền ở service.
+          description: ID tham chiếu parentId; xem resource tương ứng và kiểm tra quyền ở service.
         type:
           type: string
           enum:
@@ -65540,6 +65875,12 @@ components:
           minimum: 1
           maximum: 100
           description: "Số bản ghi tối đa mỗi trang; default và giới hạn nằm trong schema. Mặc định: 20."
+        status:
+          type: string
+          enum:
+            - active
+            - inactive
+          description: "Trạng thái resource; chỉ dùng các enum cho phép ở endpoint này. Giá trị cho phép: active, inactive."
       additionalProperties: false
       description: Dữ liệu Query của getAllergens; required/default/enum/giới hạn theo validator thật, các quy tắc kiểm tra chéo xem description của operation.
     getAllergensResponse:
@@ -65775,6 +66116,12 @@ components:
             - "true"
             - "false"
           description: "Có phù hợp vegan không; vegan không được chứa trứng/sữa. Giá trị cho phép: true, false."
+        status:
+          type: string
+          enum:
+            - active
+            - inactive
+          description: "Trạng thái resource; chỉ dùng các enum cho phép ở endpoint này. Giá trị cho phép: active, inactive."
         isVegetarian:
           type: string
           enum:
@@ -65882,6 +66229,20 @@ components:
             - type: "null"
               description: URL ảnh dùng cho master data; input yêu cầu HTTPS không chứa username/password.
           description: URL ảnh dùng cho master data; input yêu cầu HTTPS không chứa username/password.
+        description:
+          type: string
+          minLength: 0
+          maxLength: 2000
+          description: Nội dung mô tả chi tiết.
+        seasons:
+          maxItems: 12
+          type: array
+          items:
+            type: integer
+            minimum: 1
+            maximum: 12
+            description: Trường seasons item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+          description: Trường seasons trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
         defaultServing:
           type: object
           properties:
@@ -66086,6 +66447,20 @@ components:
             - type: "null"
               description: URL ảnh dùng cho master data; input yêu cầu HTTPS không chứa username/password.
           description: URL ảnh dùng cho master data; input yêu cầu HTTPS không chứa username/password.
+        description:
+          type: string
+          minLength: 0
+          maxLength: 2000
+          description: Nội dung mô tả chi tiết.
+        seasons:
+          maxItems: 12
+          type: array
+          items:
+            type: integer
+            minimum: 1
+            maximum: 12
+            description: Trường seasons item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+          description: Trường seasons trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
         defaultServing:
           type: object
           properties:
@@ -68360,8 +68735,9 @@ components:
           enum:
             - draft
             - active
+            - completed
             - archived
-          description: "Trạng thái resource; chỉ dùng các enum cho phép ở endpoint này. Giá trị cho phép: draft, active, archived."
+          description: "Trạng thái resource; chỉ dùng các enum cho phép ở endpoint này. Giá trị cho phép: draft, active, completed, archived."
       additionalProperties: false
       description: Dữ liệu Query của getMealPlans; required/default/enum/giới hạn theo validator thật, các quy tắc kiểm tra chéo xem description của operation.
     getMealPlansResponse:
@@ -68559,8 +68935,9 @@ components:
           type: string
           enum:
             - draft
+            - completed
             - archived
-          description: "Trạng thái resource; chỉ dùng các enum cho phép ở endpoint này. Giá trị cho phép: draft, archived."
+          description: "Trạng thái resource; chỉ dùng các enum cho phép ở endpoint này. Giá trị cho phép: draft, completed, archived."
       additionalProperties: false
       description: Dữ liệu Body của updateMealPlan; required/default/enum/giới hạn theo validator thật, các quy tắc kiểm tra chéo xem description của operation.
     updateMealPlanResponse:
@@ -72414,6 +72791,9 @@ components:
           minLength: 1
           maxLength: 4000
           description: Nội dung theo loại resource; xem schema nhánh tương ứng.
+        useProfile:
+          type: boolean
+          description: Trường use Profile trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
       required:
         - content
       additionalProperties: false
@@ -72459,6 +72839,9 @@ components:
           type: string
           maxLength: 2000
           description: Yêu cầu bổ sung cho AI hoặc cấu hình theo schema endpoint.
+        useProfile:
+          type: boolean
+          description: Trường use Profile trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
       required:
         - startDate
       additionalProperties: false

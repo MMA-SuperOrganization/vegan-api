@@ -108,6 +108,18 @@ for (const c of cases.filter((c) => c.id.startsWith("API-"))) {
         case "Cross-user access":
           input.token = TEST_TOKENS.other;
           statuses = [403, 404];
+          if (route.operationId === "removeFcmToken") {
+            // Removal is idempotent and scoped to the caller, including unknown IDs.
+            statuses = [200];
+          }
+          if (route.operationId === "updateVideoProgress") {
+            // Public videos accept each viewer's own progress. Use a private video
+            // to exercise denied access instead of rejecting a valid public view.
+            await h.repositories.videos.updateOne(
+              { _id: ID.video },
+              { $set: { visibility: "private" } },
+            );
+          }
           break;
         case "Missing target":
           // Replace the leaf target, preserving an existing parent for nested routes.
@@ -186,6 +198,17 @@ for (const c of cases.filter((c) => c.id.startsWith("API-"))) {
       expect(statuses, `${c.id}: ${JSON.stringify(result.body)}`).toContain(result.status);
       expect(result.body.meta?.requestId).toEqual(expect.any(String));
       expect(result.response.headers()["x-request-id"]).toBe(result.body.meta.requestId);
+      if (c.type === "Cross-user access" && route.operationId === "removeFcmToken") {
+        const after = business(h.snapshot());
+        expect(after.users.find((user) => user._id === TEST_IDS.user)).toEqual(
+          before.users.find((user) => user._id === TEST_IDS.user),
+        );
+        expect(after.users.find((user) => user._id === TEST_IDS.other).fcmTokens).toEqual(
+          before.users.find((user) => user._id === TEST_IDS.other).fcmTokens,
+        );
+        expect(result.data).toEqual({ tokenId: input.params.tokenId, removed: true });
+        expect(JSON.stringify(result.body)).not.toContain("fcm-test");
+      }
       if (statuses[0] >= 400) {
         expect(result.body.success).toBe(false);
         expect(result.body.error.code).toEqual(expect.any(String));
@@ -234,21 +257,23 @@ for (const c of cases.filter((c) => c.id.startsWith("API-"))) {
         }
         // Read repositories independently of the DTO to ensure owner-scoped mutations never touch B.
         if (["POST", "PUT", "PATCH", "DELETE"].includes(route.method) && route.auth !== "admin") {
+          const protectedUserId =
+            input.token === TEST_TOKENS.other ? TEST_IDS.user : TEST_IDS.other;
           for (const [key, rows] of Object.entries(before)) {
             const other = rows.filter(
               (row) =>
-                row.userId === TEST_IDS.other ||
-                row.ownerId === TEST_IDS.other ||
-                row.authorId === TEST_IDS.other ||
-                row._id === TEST_IDS.other,
+                row.userId === protectedUserId ||
+                row.ownerId === protectedUserId ||
+                row.authorId === protectedUserId ||
+                row._id === protectedUserId,
             );
             expect(
               business(h.snapshot())[key].filter(
                 (row) =>
-                  row.userId === TEST_IDS.other ||
-                  row.ownerId === TEST_IDS.other ||
-                  row.authorId === TEST_IDS.other ||
-                  row._id === TEST_IDS.other,
+                  row.userId === protectedUserId ||
+                  row.ownerId === protectedUserId ||
+                  row.authorId === protectedUserId ||
+                  row._id === protectedUserId,
               ),
             ).toEqual(other);
           }

@@ -21,6 +21,12 @@ const shape = {
     .optional(),
   categoryId: id,
   imageUrl: url.max(2048).nullable().optional(),
+  description: text(2000, 0).optional(),
+  seasons: z
+    .array(z.number().int().min(1).max(12))
+    .max(12)
+    .transform((months) => [...new Set(months)])
+    .optional(),
   defaultServing: z
     .object({ amount: positive(100000), unit: units, gramEquivalent: positive(100000) })
     .strict(),
@@ -69,6 +75,7 @@ export const createFoodItemsValidation = () => ({
         excludeAllergenIds: idsQuery.optional(),
         allergenExclusion: idsQuery.optional(),
         isVegan: booleanQuery.optional(),
+        status: z.enum(["active", "inactive"]).optional(),
         isVegetarian: booleanQuery.optional(),
         sort: z
           .enum(["name", "-name", "createdAt", "-createdAt", "calories", "-calories"])

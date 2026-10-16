@@ -8,7 +8,9 @@ const queryOptions = (query, { session, projection, sort } = {}) => {
   return query;
 };
 
+export const REPOSITORY_MODEL = Symbol("repositoryModel");
 export const createRepository = (model) => ({
+  [REPOSITORY_MODEL]: model,
   collectionName: model.collection.name,
   castFilter(filter) {
     // Mongoose does not cast aggregation pipelines. Cast against the owning schema first.
@@ -74,17 +76,19 @@ export const buildRepository = ({ repositories, key, model }) => {
 };
 
 export const createTransaction =
-  (connection = mongoose.connection) =>
+  (connection = mongoose.connection, { standalone, cache } = {}) =>
   async (work) => {
     if (connection.readyState !== 1) {
       throw AppError.serviceUnavailable("Database is not ready", "DATABASE_UNAVAILABLE");
     }
+    if (standalone) return standalone.run(() => work(undefined));
     const session = await connection.startSession();
     try {
       let result;
       await session.withTransaction(async () => {
         result = await work(session);
       });
+      await cache?.invalidate();
       return result;
     } catch (error) {
       if (error.code === 20 || error.codeName === "IllegalOperation") {

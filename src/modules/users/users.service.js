@@ -40,6 +40,11 @@ const profile = (value) =>
         "_id",
         "userId",
         "bio",
+        "username",
+        "city",
+        "country",
+        "preferredFoodItemIds",
+        "excludedFoodItemIds",
         "dateOfBirth",
         "gender",
         "dietType",
@@ -191,10 +196,22 @@ export const createUsersService = ({ deps, users, profiles, guards }) => {
   const upsertProfile = async (userId, body, options = {}) => {
     body = profileSchema.parse(body);
     active(await load(userId, options));
-    if (body.dislikedFoodItemIds?.length) {
+    if (body.username) {
+      const existing = await profiles.findOne({ username: body.username }, options);
+      if (existing && String(existing.userId) !== String(userId))
+        throw AppError.conflict("Username is already in use", [], "USERNAME_TAKEN");
+    }
+    const foodIds = [
+      ...new Set([
+        ...(body.dislikedFoodItemIds ?? []),
+        ...(body.preferredFoodItemIds ?? []),
+        ...(body.excludedFoodItemIds ?? []),
+      ]),
+    ];
+    if (foodIds.length) {
       if (!deps.services?.foodItems?.getMany)
         throw AppError.serviceUnavailable("Food item service unavailable");
-      await deps.services.foodItems.getMany(body.dislikedFoodItemIds, options);
+      await deps.services.foodItems.getMany(foodIds, options);
     }
     const data = { ...body };
     if (data.dateOfBirth) data.dateOfBirth = new Date(data.dateOfBirth);
@@ -388,7 +405,7 @@ export const createUsersService = ({ deps, users, profiles, guards }) => {
               avatarExpiresAt: presented.avatarExpiresAt,
             }
           : {}),
-        ...pick(fullProfile, ["bio", "dietType", "preferredCuisines"]),
+        ...pick(fullProfile, ["bio", "username", "dietType", "preferredCuisines"]),
       };
     },
     async getMyContent({ actor, query }) {

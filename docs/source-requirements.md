@@ -1,3 +1,5 @@
+> Implementation override (2026-10-15): the user explicitly authorized Redis for caching and standalone MongoDB coordination. Historical prohibitions below remain source quotations; see [Redis implementation](redis-standalone.md).
+
 # MASTER PROMPT — XÂY DỰNG BACKEND VEGAN SUPPORT APP TỪ A–Z
 
 > Sao chép toàn bộ nội dung file này và đưa cho AI coding agent. Agent phải tự triển khai hoàn chỉnh backend theo đúng đặc tả bên dưới. Tài liệu này là nguồn yêu cầu duy nhất; không cần và không được yêu cầu người dùng mở thêm link, repository mẫu hay tài liệu bên ngoài.
@@ -957,21 +959,21 @@ Không trả `medicalNotes` qua public profile. Kết quả BMI/calorie target p
 
 ### 13.3 Category, allergen và food item
 
-| Method | Path              | Quyền  | Chức năng                      |
-| ------ | ----------------- | ------ | ------------------------------ |
-| GET    | `/categories`     | public | Danh sách active, filter type  |
-| POST   | `/categories`     | admin  | Tạo category                   |
-| PATCH  | `/categories/:id` | admin  | Sửa category                   |
-| DELETE | `/categories/:id` | admin  | Inactivate nếu đang được dùng  |
-| GET    | `/allergens`      | public | Danh sách active               |
-| POST   | `/allergens`      | admin  | Tạo allergen                   |
-| PATCH  | `/allergens/:id`  | admin  | Sửa allergen                   |
-| DELETE | `/allergens/:id`  | admin  | Inactivate nếu đang được dùng  |
-| GET    | `/food-items`     | public | Search/filter/pagination       |
-| GET    | `/food-items/:id` | public | Chi tiết và nutrition          |
-| POST   | `/food-items`     | admin  | Tạo food item                  |
-| PATCH  | `/food-items/:id` | admin  | Cập nhật                       |
-| DELETE | `/food-items/:id` | admin  | Inactivate, không phá snapshot |
+| Method | Path              | Quyền                 | Chức năng                                                      |
+| ------ | ----------------- | --------------------- | -------------------------------------------------------------- |
+| GET    | `/categories`     | public, optional auth | Danh sách active; admin có thể lọc inactive; phân cấp parentId |
+| POST   | `/categories`     | admin                 | Tạo category                                                   |
+| PATCH  | `/categories/:id` | admin                 | Sửa category                                                   |
+| DELETE | `/categories/:id` | admin                 | Inactivate nếu đang được dùng                                  |
+| GET    | `/allergens`      | public, optional auth | Danh sách active; admin có thể lọc inactive                    |
+| POST   | `/allergens`      | admin                 | Tạo allergen                                                   |
+| PATCH  | `/allergens/:id`  | admin                 | Sửa allergen                                                   |
+| DELETE | `/allergens/:id`  | admin                 | Inactivate nếu đang được dùng                                  |
+| GET    | `/food-items`     | public, optional auth | Search/filter/pagination; admin có thể lọc inactive            |
+| GET    | `/food-items/:id` | public                | Chi tiết và nutrition                                          |
+| POST   | `/food-items`     | admin                 | Tạo food item                                                  |
+| PATCH  | `/food-items/:id` | admin                 | Cập nhật                                                       |
+| DELETE | `/food-items/:id` | admin                 | Inactivate, không phá snapshot                                 |
 
 Food search hỗ trợ `q`, category, allergen exclusion, vegan flag và sort whitelist.
 

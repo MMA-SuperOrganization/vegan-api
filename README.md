@@ -14,7 +14,7 @@ Modular-monolith backend for a vegan-support mobile app: Firebase identity, mast
 
 `src/container.js` explicitly assembles module factories and returns `{ models, repositories, services, operations, validation, env, logger, ... }`. Providers, clock, transaction runner and repositories are injectable for offline testing. Importing configuration/scripts does not connect to a database or send provider requests; server/script `main()` performs startup. Historical singular files are not the persistence authority: see [persistence mapping](docs/persistence-mapping.md).
 
-Growing lists are paginated. IDs are internal MongoDB ObjectIds; Firebase UIDs identify authentication identities. State transitions and ownership checks belong in services, not generic CRUD handlers. Cross-document invariants require MongoDB transactions and a **replica set/Atlas**, not a standalone MongoDB server. Production database startup disables automatic index building; development enables Mongoose auto-indexing. Deploy the reviewed canonical indexes explicitly before production traffic.
+Growing lists are paginated. IDs are internal MongoDB ObjectIds; Firebase UIDs identify authentication identities. State transitions and ownership checks belong in services, not generic CRUD handlers. Cross-document invariants use native MongoDB transactions on replica set/Atlas. The opt-in Redis standalone mode provides serialized API workflows with compensating rollback; see [Redis and standalone operations](docs/redis-standalone.md) for recovery and limits. Production database startup disables automatic index building; development enables Mongoose auto-indexing. Deploy the reviewed canonical indexes explicitly before production traffic.
 
 ## Requirements and installation
 

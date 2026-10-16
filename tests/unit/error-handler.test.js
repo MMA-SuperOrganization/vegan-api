@@ -96,7 +96,11 @@ describe("error handler middleware", () => {
     const body = res.json.mock.calls[0][0];
     expect(body).toEqual({
       success: false,
-      error: { message: "Internal server error", code: "INTERNAL_ERROR", details: [] },
+      error: {
+        message: "Unable to complete your request. Please try again later.",
+        code: "INTERNAL_ERROR",
+        details: [],
+      },
       meta: { requestId: "req-1" },
     });
     expect(JSON.stringify(body)).not.toContain("secret detail");
@@ -111,4 +115,43 @@ describe("error handler middleware", () => {
     expect(res.json.mock.calls[0][0]).not.toHaveProperty("stack");
     expect(JSON.stringify(res.json.mock.calls[0][0])).not.toContain("boom");
   });
+});
+
+for (const isProduction of [true, false]) {
+  it(`hides operational infrastructure failures (production=${isProduction})`, () => {
+    const handler = createErrorHandler({ logger, isProduction });
+    const res = createRes();
+    const error = new AppError({
+      statusCode: 503,
+      code: "SERVICE_UNAVAILABLE",
+      message: "Redis connection failed at internal-host:6379",
+      details: [{ message: "private infrastructure detail" }],
+    });
+    handler(error, { id: "req-infrastructure" }, res, vi.fn());
+    expect(res.status).toHaveBeenCalledWith(503);
+    expect(res.json.mock.calls[0][0].error).toEqual({
+      message: "Unable to complete your request. Please try again later.",
+      code: "SERVICE_UNAVAILABLE",
+      details: [],
+    });
+  });
+}
+
+it("keeps the original error available to server logs while sanitizing the response", () => {
+  const original = new Error("internal database diagnostic");
+  const res = createRes();
+  res.locals = {};
+  const requestLogger = { error: vi.fn() };
+  createErrorHandler({ logger, isProduction: true })(
+    original,
+    { id: "req-diagnostics", log: requestLogger },
+    res,
+    vi.fn(),
+  );
+  expect(res.locals.debugError).toBe(original);
+  expect(requestLogger.error).toHaveBeenCalledWith(
+    { requestId: "req-diagnostics", code: "INTERNAL_ERROR", statusCode: 500 },
+    "Unhandled request error",
+  );
+  expect(JSON.stringify(res.json.mock.calls[0][0])).not.toContain(original.message);
 });

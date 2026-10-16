@@ -70,13 +70,17 @@ export const createAiValidation = () => ({
   getAiConversations: { query: pagination },
   createAiConversation: { body: z.strictObject({ title: text(160).default("New conversation") }) },
   getAiMessages: { params: z.strictObject({ id }), query: pagination },
-  sendAiMessage: { params: z.strictObject({ id }), body: z.strictObject({ content: text(4000) }) },
+  sendAiMessage: {
+    params: z.strictObject({ id }),
+    body: z.strictObject({ content: text(4000), useProfile: z.boolean().optional() }),
+  },
   createMealPlanProposal: {
     body: z.strictObject({
       title: text(160).optional(),
       startDate: date,
       days: z.number().int().min(1).max(7).default(7),
       preferences: z.string().max(2000).optional(),
+      useProfile: z.boolean().optional(),
     }),
   },
   confirmMealPlanProposal: {

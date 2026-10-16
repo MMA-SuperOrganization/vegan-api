@@ -38,6 +38,14 @@ const schema = new Schema(
     aliases: [String],
     categoryId: { type: Schema.Types.ObjectId, ref: "Categories", required: true, index: true },
     imageUrl: String,
+    description: { type: String, trim: true, maxlength: 2000 },
+    seasons: {
+      type: [Number],
+      default: [],
+      validate: (months) =>
+        months.length <= 12 &&
+        months.every((month) => Number.isInteger(month) && month >= 1 && month <= 12),
+    },
     defaultServing: { type: servingSchema, required: true },
     nutritionPer100g: { type: nutritionSchema, required: true },
     allergenIds: [{ type: Schema.Types.ObjectId, ref: "Allergens", index: true }],

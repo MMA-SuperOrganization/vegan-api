@@ -7,6 +7,7 @@ export const categorySchema = z
       .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
       .optional(),
     description: text(2000, 0).optional(),
+    parentId: id.nullable().optional(),
     type: z.enum(["food", "recipe", "post"]),
     status: z.enum(["active", "inactive"]).default("active"),
     sortOrder: z.number().int().min(-10000).max(10000).default(0),
@@ -14,7 +15,13 @@ export const categorySchema = z
   .strict();
 export const createCategoriesValidation = () => ({
   getCategories: {
-    query: pagination.extend({ type: z.enum(["food", "recipe", "post"]).optional() }).strict(),
+    query: pagination
+      .extend({
+        type: z.enum(["food", "recipe", "post"]).optional(),
+        parentId: id.optional(),
+        status: z.enum(["active", "inactive"]).optional(),
+      })
+      .strict(),
   },
   createCategory: { body: categorySchema },
   updateCategory: {

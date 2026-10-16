@@ -7,6 +7,12 @@ const schema = new mongoose.Schema(
     type: { type: String, required: true, enum: ["food", "recipe", "post"] },
     status: { type: String, enum: ["active", "inactive"], default: "active" },
     sortOrder: { type: Number, default: 0 },
+    parentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Categories",
+      default: null,
+      index: true,
+    },
   },
   { timestamps: true, versionKey: false, collection: "categories" },
 );

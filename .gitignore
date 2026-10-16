@@ -11,4 +11,13 @@ logs/
 *.log
 firebase-service-account*.json
 serviceAccount*.json
+google-services.json
+GoogleService-Info.plist
+local.properties
+*.jks
+*.keystore
+*.p8
+*.p12
+*.pem
+*.key
 .DS_Store

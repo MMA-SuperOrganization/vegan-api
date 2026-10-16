@@ -76,8 +76,9 @@ describe("offline maintenance scripts", () => {
     for (const food of Object.values(context.foods)) {
       await new FoodItemsModel(food).validate();
       expect(Object.keys(food.nutritionPer100g)).toEqual(NUTRIENT_KEYS);
-      expect(food.imageUrl).toMatch(/^https:\/\/images\.unsplash\.com\//);
+      expect(food.imageUrl).toMatch(/^https:\/\/(img\.spoonacular\.com|www\.themealdb\.com)\//);
     }
+    expect(new Set(FOOD_FIXTURES.map((food) => food.imageUrl)).size).toBe(40);
     const recipes = buildRecipeFixtures(context);
     expect(recipes).toHaveLength(20);
     expect(new Set(recipes.map((row) => row.slug)).size).toBe(20);

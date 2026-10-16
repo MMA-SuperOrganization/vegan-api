@@ -1,5 +1,6 @@
 import { pathToFileURL } from "node:url";
 import { isDeepStrictEqual } from "node:util";
+import { FOOD_DESCRIPTIONS } from "./seed-data/food-descriptions.js";
 import { loadEnv } from "../src/config/env.js";
 import { createLogger } from "../src/config/logger.js";
 import { connectDatabase as connectDB, disconnectDatabase } from "../src/config/database.js";
@@ -71,7 +72,8 @@ export const FOOD_FIXTURES = foodRows.map(
     normalizedName: name.toLowerCase(),
     slug: slug(name),
     aliases: foodAliases(name),
-    imageUrl: foodImageUrl(category),
+    imageUrl: foodImageUrl(name),
+    description: FOOD_DESCRIPTIONS[name],
     status: "active",
     isVegan: true,
     isVegetarian: true,
