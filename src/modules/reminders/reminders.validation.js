@@ -1,5 +1,10 @@
 import { z } from "zod";
 import { timezoneSchema } from "../notifications/index.js";
+import {
+  REMINDER_TYPES,
+  REMINDER_STATUSES,
+} from "../../common/constants/enums/notification.enums.js";
+
 const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 const id = z.string().regex(/^[a-f\d]{24}$/i);
 export const reminderScheduleSchema = z.discriminatedUnion("mode", [
@@ -21,7 +26,7 @@ export const reminderScheduleSchema = z.discriminatedUnion("mode", [
   }),
 ]);
 const fields = {
-  type: z.enum(["meal", "water", "custom"]),
+  type: z.enum(REMINDER_TYPES.values()),
   title: z.string().trim().min(1).max(200),
   body: z.string().trim().min(1).max(4000),
   schedule: reminderScheduleSchema,
@@ -31,7 +36,7 @@ export const createRemindersValidation = () => ({
     query: z.strictObject({
       page: z.coerce.number().int().min(1).max(100000).default(1),
       limit: z.coerce.number().int().min(1).max(100).default(20),
-      status: z.enum(["active", "paused", "completed", "cancelled"]).optional(),
+      status: z.enum(REMINDER_STATUSES.values()).optional(),
     }),
   },
   createReminder: { body: z.strictObject(fields) },
@@ -40,7 +45,7 @@ export const createRemindersValidation = () => ({
     body: z
       .strictObject({
         ...Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, v.optional()])),
-        status: z.enum(["active", "paused"]).optional(),
+        status: z.enum([REMINDER_STATUSES.ACTIVE, REMINDER_STATUSES.PAUSED]).optional(),
       })
       .refine((v) => Object.keys(v).length > 0, "At least one field is required"),
   },

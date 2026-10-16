@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { CONTENT_STATUSES, CONTENT_VISIBILITIES } from "../constants/enums/content.enums.js";
 
 export const ref = (model, required = false) => ({
   type: mongoose.Schema.Types.ObjectId,
@@ -13,11 +14,15 @@ export const contentFields = {
   tags: [shortText(60)],
   status: {
     type: String,
-    enum: ["draft", "pending_review", "processing", "published", "rejected", "hidden", "deleted"],
-    default: "draft",
+    enum: CONTENT_STATUSES.values(),
+    default: CONTENT_STATUSES.DRAFT,
     index: true,
   },
-  visibility: { type: String, enum: ["public", "private", "unlisted"], default: "public" },
+  visibility: {
+    type: String,
+    enum: CONTENT_VISIBILITIES.values(),
+    default: CONTENT_VISIBILITIES.PUBLIC,
+  },
   publishedAt: Date,
   deletedAt: { type: Date, default: null },
   rejectionReason: shortText(1000),

@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { MEASUREMENT_UNITS } from "../constants/enums/master-data.enums.js";
+import { DIET_TYPES } from "../constants/enums/identity.enums.js";
 
 export const id = z.string().regex(/^[a-f\d]{24}$/i, "Expected a MongoDB ObjectId");
 export const uuid = z.uuid();
@@ -12,17 +14,8 @@ export const dateOnly = z
     const parsed = new Date(`${value}T00:00:00Z`);
     return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
   }, "Invalid calendar date");
-export const units = z.enum(["g", "kg", "ml", "l", "piece", "tbsp", "tsp", "cup", "serving"]);
-export const dietTypes = z.enum([
-  "vegan",
-  "vegetarian",
-  "lacto_vegetarian",
-  "ovo_vegetarian",
-  "lacto_ovo_vegetarian",
-  "pescatarian",
-  "flexitarian",
-  "other",
-]);
+export const units = z.enum(MEASUREMENT_UNITS.values());
+export const dietTypes = z.enum(DIET_TYPES.values());
 export const pagination = z.object({
   page: z.coerce.number().int().min(1).max(100000).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),

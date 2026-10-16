@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { text } from "../../common/validators/domain.schemas.js";
+import { POST_TYPES, POST_VISIBILITIES } from "../../common/constants/enums/content.enums.js";
 import {
   idParams,
   versionBody,
@@ -17,13 +18,13 @@ export const postInput = z
     mediaIds: ids.optional(),
     tags: tags.optional(),
     categoryIds: ids.optional(),
-    postType: z.enum(["community", "blog"]).optional(),
-    visibility: z.enum(["public", "private"]).optional(),
+    postType: z.enum(POST_TYPES.values()).optional(),
+    visibility: z.enum(POST_VISIBILITIES.values()).optional(),
   })
   .strict();
 export const createPostsValidation = () => ({
-  getPosts: { query: contentQuery.extend({ postType: z.enum(["community", "blog"]).optional() }) },
-  getMyPosts: { query: mineQuery.extend({ postType: z.enum(["community", "blog"]).optional() }) },
+  getPosts: { query: contentQuery.extend({ postType: z.enum(POST_TYPES.values()).optional() }) },
+  getMyPosts: { query: mineQuery.extend({ postType: z.enum(POST_TYPES.values()).optional() }) },
   getPost: { params: idParams },
   createPost: { body: postInput },
   updatePost: { params: idParams, body: contentPatch(postInput) },

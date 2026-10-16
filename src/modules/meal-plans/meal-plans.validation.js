@@ -9,9 +9,11 @@ import {
   patch,
   emptyBody,
 } from "../../common/validators/domain.schemas.js";
+import { MEAL_TYPES, MEAL_PLAN_STATUSES } from "../../common/constants/enums/planning.enums.js";
+
 export const mealInput = z
   .object({
-    type: z.enum(["breakfast", "lunch", "dinner", "snack"]),
+    type: z.enum(MEAL_TYPES.values()),
     recipeId: id,
     servings: positive(100).default(1),
     note: text(1000, 0).optional(),
@@ -44,7 +46,7 @@ export const createMealPlansValidation = () => ({
     query: pagination
       .extend({
         weekStartDate: dateOnly.optional(),
-        status: z.enum(["draft", "active", "completed", "archived"]).optional(),
+        status: z.enum(MEAL_PLAN_STATUSES.values()).optional(),
       })
       .strict(),
   },
@@ -53,7 +55,16 @@ export const createMealPlansValidation = () => ({
   createMealPlan: { body: mealPlanInput },
   updateMealPlan: {
     params,
-    body: patch(z.object({ title: text(200), status: z.enum(["draft", "completed", "archived"]) })),
+    body: patch(
+      z.object({
+        title: text(200),
+        status: z.enum([
+          MEAL_PLAN_STATUSES.DRAFT,
+          MEAL_PLAN_STATUSES.COMPLETED,
+          MEAL_PLAN_STATUSES.ARCHIVED,
+        ]),
+      }),
+    ),
   },
   deleteMealPlan: { params },
   addMealToPlan: { params, body: mealInput.extend({ date: dateOnly }).strict() },

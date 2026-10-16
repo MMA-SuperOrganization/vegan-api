@@ -1,4 +1,10 @@
 import mongoose from "mongoose";
+import {
+  NOTIFICATION_CHANNELS,
+  NOTIFICATION_STATUSES,
+  DISPATCH_STATUSES,
+} from "../../common/constants/enums/notification.enums.js";
+
 const { Schema } = mongoose;
 const schema = new Schema(
   {
@@ -7,8 +13,16 @@ const schema = new Schema(
     title: { type: String, required: true, maxlength: 200 },
     body: { type: String, required: true, maxlength: 4000 },
     data: Schema.Types.Mixed,
-    channel: { type: String, enum: ["in_app", "push"], default: "in_app" },
-    status: { type: String, enum: ["pending", "sent", "failed", "read"], default: "pending" },
+    channel: {
+      type: String,
+      enum: NOTIFICATION_CHANNELS.values(),
+      default: NOTIFICATION_CHANNELS.IN_APP,
+    },
+    status: {
+      type: String,
+      enum: NOTIFICATION_STATUSES.values(),
+      default: NOTIFICATION_STATUSES.PENDING,
+    },
     readAt: { type: Date, default: null },
     sentAt: Date,
     failureReason: String,
@@ -16,8 +30,8 @@ const schema = new Schema(
     deliveryKey: String,
     pushStatus: {
       type: String,
-      enum: ["pending", "sent", "failed", "skipped"],
-      default: "pending",
+      enum: DISPATCH_STATUSES.values(),
+      default: DISPATCH_STATUSES.PENDING,
     },
     pushLockedBy: String,
     pushLockExpiresAt: Date,

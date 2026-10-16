@@ -1,14 +1,23 @@
 import mongoose from "mongoose";
 import { registerModel, ref, shortText } from "../../common/persistence/content-model.js";
+import {
+  COMMENT_TARGET_TYPES,
+  COMMENT_STATUSES,
+} from "../../common/constants/enums/engagement.enums.js";
+
 export const CommentsModel = registerModel(
   "Comments",
   {
     authorId: { ...ref("User", true), index: true },
-    targetType: { type: String, enum: ["recipe", "post", "video"], required: true },
+    targetType: { type: String, enum: COMMENT_TARGET_TYPES.values(), required: true },
     targetId: { type: mongoose.Schema.Types.ObjectId, required: true },
     parentCommentId: { ...ref("Comments"), default: null },
     content: { ...shortText(5000), required: true },
-    status: { type: String, enum: ["visible", "hidden", "deleted"], default: "visible" },
+    status: {
+      type: String,
+      enum: COMMENT_STATUSES.values(),
+      default: COMMENT_STATUSES.VISIBLE,
+    },
     parentHidden: { type: Boolean, default: false },
     deletedAt: { type: Date, default: null },
     version: { type: Number, default: 0 },

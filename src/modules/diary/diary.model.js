@@ -1,6 +1,8 @@
 import mongoose from "mongoose";
 import { NUTRIENT_KEYS } from "../../common/utils/nutrition.js";
 import { UNITS } from "../../common/utils/units.js";
+import { MEAL_TYPES, DIARY_SOURCE_TYPES } from "../../common/constants/enums/planning.enums.js";
+
 const nutrition = new mongoose.Schema(
   Object.fromEntries(NUTRIENT_KEYS.map((key) => [key, { type: Number, default: 0, min: 0 }])),
   { _id: false },
@@ -9,8 +11,8 @@ const schema = new mongoose.Schema(
   {
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "Users", required: true },
     date: { type: Date, required: true },
-    mealType: { type: String, enum: ["breakfast", "lunch", "dinner", "snack"], required: true },
-    sourceType: { type: String, enum: ["recipe", "food", "custom"], required: true },
+    mealType: { type: String, enum: MEAL_TYPES.values(), required: true },
+    sourceType: { type: String, enum: DIARY_SOURCE_TYPES.values(), required: true },
     recipeId: { type: mongoose.Schema.Types.ObjectId, ref: "Recipes" },
     foodItemId: { type: mongoose.Schema.Types.ObjectId, ref: "FoodItems" },
     nameSnapshot: { type: String, required: true, trim: true, maxlength: 200 },

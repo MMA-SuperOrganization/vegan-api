@@ -6,6 +6,7 @@ import {
   timezone,
   emptyBody,
 } from "../../common/validators/domain.schemas.js";
+import { NUTRITION_GOALS, ACTIVITY_LEVELS } from "../../common/constants/enums/planning.enums.js";
 export const createOnboardingValidation = () => ({
   getOnboardingStatus: {},
   updateOnboarding: {
@@ -17,10 +18,8 @@ export const createOnboardingValidation = () => ({
           .max(50)
           .transform((v) => [...new Set(v)])
           .optional(),
-        goal: z.enum(["lose_weight", "maintain", "gain_weight", "improve_nutrition"]).optional(),
-        activityLevel: z
-          .enum(["sedentary", "light", "moderate", "active", "very_active"])
-          .optional(),
+        goal: z.enum(NUTRITION_GOALS.values()).optional(),
+        activityLevel: z.enum(ACTIVITY_LEVELS.values()).optional(),
         heightCm: positive(250).min(50).optional(),
         currentWeightKg: positive(500).min(10).optional(),
         timezone: timezone.optional(),

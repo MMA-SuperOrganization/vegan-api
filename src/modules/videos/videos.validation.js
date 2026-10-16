@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { id, text, positive, pagination } from "../../common/validators/domain.schemas.js";
 import {
+  RECIPE_DIFFICULTIES,
+  CONTENT_VISIBILITIES,
+} from "../../common/constants/enums/content.enums.js";
+import {
   idParams,
   slugParams,
   versionBody,
@@ -29,11 +33,11 @@ export const videoInput = z
     categoryIds: ids.optional(),
     tags: tags.optional(),
     durationSeconds: positive(86400),
-    difficulty: z.enum(["easy", "medium", "hard"]).optional(),
+    difficulty: z.enum(RECIPE_DIFFICULTIES.values()).optional(),
     recipeId: id.optional().nullable(),
     transcript: text(100000, 0).optional(),
     chapters: z.array(chapterInput).max(200).optional(),
-    visibility: z.enum(["public", "private", "unlisted"]).optional(),
+    visibility: z.enum(CONTENT_VISIBILITIES.values()).optional(),
   })
   .strict();
 export const createVideosValidation = () => ({

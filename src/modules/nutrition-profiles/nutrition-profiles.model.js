@@ -1,4 +1,10 @@
 import mongoose from "mongoose";
+import {
+  ACTIVITY_LEVELS,
+  NUTRITION_GOALS,
+  TDEE_SOURCES,
+} from "../../common/constants/enums/planning.enums.js";
+
 const { Schema } = mongoose;
 const schema = new Schema(
   {
@@ -7,9 +13,9 @@ const schema = new Schema(
     currentWeightKg: { type: Number, min: 10, max: 500 },
     activityLevel: {
       type: String,
-      enum: ["sedentary", "light", "moderate", "active", "very_active"],
+      enum: ACTIVITY_LEVELS.values(),
     },
-    goal: { type: String, enum: ["lose_weight", "maintain", "gain_weight", "improve_nutrition"] },
+    goal: { type: String, enum: NUTRITION_GOALS.values() },
     dailyCalorieTarget: Number,
     proteinTargetG: Number,
     carbTargetG: Number,
@@ -24,8 +30,8 @@ const schema = new Schema(
     calculatedAt: Date,
     targetSource: {
       type: String,
-      enum: ["user", "estimated", "insufficient_data"],
-      default: "insufficient_data",
+      enum: TDEE_SOURCES.values(),
+      default: TDEE_SOURCES.INSUFFICIENT_DATA,
     },
     version: { type: Number, default: 0 },
     manualTargetFields: { type: [String], default: [] },

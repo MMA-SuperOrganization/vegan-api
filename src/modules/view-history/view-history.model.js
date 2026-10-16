@@ -1,10 +1,12 @@
 import mongoose from "mongoose";
 import { registerModel, ref } from "../../common/persistence/content-model.js";
+import { VIEW_HISTORY_TARGET_TYPES } from "../../common/constants/enums/engagement.enums.js";
+
 export const ViewHistoryModel = registerModel(
   "ViewHistory",
   {
     userId: ref("User", true),
-    targetType: { type: String, enum: ["recipe", "post", "video"], required: true },
+    targetType: { type: String, enum: VIEW_HISTORY_TARGET_TYPES.values(), required: true },
     targetId: { type: mongoose.Schema.Types.ObjectId, required: true },
     lastViewedAt: Date,
     lastCountedAt: Date,

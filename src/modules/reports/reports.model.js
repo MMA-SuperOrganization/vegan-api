@@ -1,23 +1,29 @@
 import mongoose from "mongoose";
+import {
+  REPORT_TARGET_TYPES,
+  REPORT_REASONS,
+  REPORT_STATUSES,
+} from "../../common/constants/enums/moderation.enums.js";
+
 const schema = new mongoose.Schema(
   {
     reporterId: { type: mongoose.Schema.Types.ObjectId, ref: "Users", required: true },
     targetType: {
       type: String,
-      enum: ["recipe", "post", "video", "comment", "user"],
+      enum: REPORT_TARGET_TYPES.values(),
       required: true,
     },
     targetId: { type: mongoose.Schema.Types.ObjectId, required: true },
     reason: {
       type: String,
-      enum: ["spam", "harmful", "misinformation", "harassment", "copyright", "other"],
+      enum: REPORT_REASONS.values(),
       required: true,
     },
     description: { type: String, maxlength: 2000 },
     status: {
       type: String,
-      enum: ["open", "reviewing", "resolved", "dismissed"],
-      default: "open",
+      enum: REPORT_STATUSES.values(),
+      default: REPORT_STATUSES.OPEN,
       required: true,
     },
     assignedAdminId: { type: mongoose.Schema.Types.ObjectId, ref: "Users", default: null },

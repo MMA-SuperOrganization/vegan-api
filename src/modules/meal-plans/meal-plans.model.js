@@ -1,6 +1,8 @@
 import mongoose from "mongoose";
 import { NUTRIENT_KEYS } from "../../common/utils/nutrition.js";
 import { UNITS } from "../../common/utils/units.js";
+import { MEAL_TYPES, MEAL_PLAN_STATUSES } from "../../common/constants/enums/planning.enums.js";
+
 const nutrition = new mongoose.Schema(
   Object.fromEntries(NUTRIENT_KEYS.map((key) => [key, { type: Number, min: 0, default: 0 }])),
   { _id: false },
@@ -28,7 +30,7 @@ const recipeSnapshot = new mongoose.Schema(
 const meal = new mongoose.Schema(
   {
     mealId: { type: String, required: true },
-    type: { type: String, enum: ["breakfast", "lunch", "dinner", "snack"], required: true },
+    type: { type: String, enum: MEAL_TYPES.values(), required: true },
     recipeId: { type: mongoose.Schema.Types.ObjectId, ref: "Recipes", required: true },
     recipeSnapshot: { type: recipeSnapshot, required: true },
     servings: { type: Number, required: true, min: Number.EPSILON, max: 100 },
@@ -49,7 +51,11 @@ const schema = new mongoose.Schema(
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "Users", required: true, index: true },
     weekStartDate: { type: Date, required: true },
     title: { type: String, trim: true, required: true, maxlength: 200 },
-    status: { type: String, enum: ["draft", "active", "completed", "archived"], default: "draft" },
+    status: {
+      type: String,
+      enum: MEAL_PLAN_STATUSES.values(),
+      default: MEAL_PLAN_STATUSES.DRAFT,
+    },
     days: { type: [day], default: [], validate: (value) => value.length <= 7 },
     nutritionSummary: { type: nutrition, required: true },
     version: { type: Number, default: 0 },

@@ -16,7 +16,9 @@ import {
   audit,
   now,
 } from "../app-config/index.js";
-export const reportStatuses = ["open", "reviewing", "resolved", "dismissed"];
+import { REPORT_STATUSES, REPORT_REASONS } from "../../common/constants/enums/moderation.enums.js";
+
+export const reportStatuses = REPORT_STATUSES.values();
 const listQuery = rangeSchema({
   ...pagination,
   status: z.enum(reportStatuses).optional(),
@@ -29,7 +31,7 @@ export const reportsValidation = {
       .object({
         targetType: z.enum(targetTypes),
         targetId: id,
-        reason: z.enum(["spam", "harmful", "misinformation", "harassment", "copyright", "other"]),
+        reason: z.enum(REPORT_REASONS.values()),
         description: text(2000).optional(),
       })
       .strict(),

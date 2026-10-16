@@ -9,6 +9,7 @@ import {
   pagination,
   emptyBody,
 } from "../../common/validators/domain.schemas.js";
+import { MASTER_DATA_STATUSES } from "../../common/constants/enums/master-data.enums.js";
 const shape = {
   name: text(150),
   slug: text(180)
@@ -40,7 +41,7 @@ const shape = {
   isVegetarian: z.boolean(),
   containsEggs: z.boolean().optional(),
   containsDairy: z.boolean().optional(),
-  status: z.enum(["active", "inactive"]).optional(),
+  status: z.enum(MASTER_DATA_STATUSES.values()).optional(),
 };
 const consistent = (v) =>
   !v.isVegan || (v.isVegetarian !== false && !v.containsEggs && !v.containsDairy);
@@ -75,7 +76,7 @@ export const createFoodItemsValidation = () => ({
         excludeAllergenIds: idsQuery.optional(),
         allergenExclusion: idsQuery.optional(),
         isVegan: booleanQuery.optional(),
-        status: z.enum(["active", "inactive"]).optional(),
+        status: z.enum(MASTER_DATA_STATUSES.values()).optional(),
         isVegetarian: booleanQuery.optional(),
         sort: z
           .enum(["name", "-name", "createdAt", "-createdAt", "calories", "-calories"])

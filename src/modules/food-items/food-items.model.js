@@ -1,4 +1,9 @@
 import mongoose from "mongoose";
+import {
+  MEASUREMENT_UNITS,
+  MASTER_DATA_STATUSES,
+} from "../../common/constants/enums/master-data.enums.js";
+
 const { Schema } = mongoose;
 const nutritionSchema = new Schema(
   Object.fromEntries(
@@ -24,7 +29,7 @@ const servingSchema = new Schema(
     unit: {
       type: String,
       required: true,
-      enum: ["g", "kg", "ml", "l", "piece", "tbsp", "tsp", "cup", "serving"],
+      enum: MEASUREMENT_UNITS.values(),
     },
     gramEquivalent: { type: Number, required: true, min: 0.000001 },
   },
@@ -53,7 +58,11 @@ const schema = new Schema(
     isVegetarian: { type: Boolean, required: true },
     containsEggs: Boolean,
     containsDairy: Boolean,
-    status: { type: String, enum: ["active", "inactive"], default: "active" },
+    status: {
+      type: String,
+      enum: MASTER_DATA_STATUSES.values(),
+      default: MASTER_DATA_STATUSES.ACTIVE,
+    },
     createdBy: { type: Schema.Types.ObjectId, ref: "Users" },
     updatedBy: { type: Schema.Types.ObjectId, ref: "Users" },
   },

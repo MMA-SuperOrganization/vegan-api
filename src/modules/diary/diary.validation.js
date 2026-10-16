@@ -11,20 +11,27 @@ import {
   patch,
   timezone,
 } from "../../common/validators/domain.schemas.js";
+import { MEAL_TYPES, DIARY_SOURCE_TYPES } from "../../common/constants/enums/planning.enums.js";
+
 const common = {
   date: dateOnly,
-  mealType: z.enum(["breakfast", "lunch", "dinner", "snack"]),
+  mealType: z.enum(MEAL_TYPES.values()),
   note: text(1000, 0).optional(),
   consumedAt: dateTime.optional(),
 };
 export const diaryInput = z.discriminatedUnion("sourceType", [
   z
-    .object({ ...common, sourceType: z.literal("recipe"), recipeId: id, servings: positive(100) })
+    .object({
+      ...common,
+      sourceType: z.literal(DIARY_SOURCE_TYPES.RECIPE),
+      recipeId: id,
+      servings: positive(100),
+    })
     .strict(),
   z
     .object({
       ...common,
-      sourceType: z.literal("food"),
+      sourceType: z.literal(DIARY_SOURCE_TYPES.FOOD),
       foodItemId: id,
       quantity: positive(),
       unit: units,
@@ -33,7 +40,7 @@ export const diaryInput = z.discriminatedUnion("sourceType", [
   z
     .object({
       ...common,
-      sourceType: z.literal("custom"),
+      sourceType: z.literal(DIARY_SOURCE_TYPES.CUSTOM),
       nameSnapshot: text(200),
       servings: positive(100).default(1),
       nutritionSnapshot: nutrients,

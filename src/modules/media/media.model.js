@@ -1,8 +1,16 @@
 import mongoose from "mongoose";
 import { registerModel, ref, shortText } from "../../common/persistence/content-model.js";
+import {
+  MEDIA_ENTITY_TYPES,
+  MEDIA_KINDS,
+  MEDIA_PURPOSES,
+  MEDIA_MIME_TYPES,
+  MEDIA_STATUSES,
+} from "../../common/constants/enums/media.enums.js";
+
 const reference = new mongoose.Schema(
   {
-    entityType: { type: String, enum: ["recipe", "post", "video", "user"], required: true },
+    entityType: { type: String, enum: MEDIA_ENTITY_TYPES.values(), required: true },
     entityId: { type: mongoose.Schema.Types.ObjectId, required: true },
   },
   { _id: false },
@@ -13,32 +21,23 @@ export const MediaModel = registerModel(
     ownerId: { ...ref("Users", true), index: true },
     objectKey: { ...shortText(1024), required: true, unique: true },
     bucket: shortText(),
-    kind: { type: String, enum: ["image", "video"], required: true },
+    kind: { type: String, enum: MEDIA_KINDS.values(), required: true },
     purpose: {
       type: String,
-      enum: [
-        "avatar",
-        "recipe",
-        "recipe_step",
-        "post",
-        "video",
-        "video_thumbnail",
-        "ai_ingredient",
-        "other",
-      ],
+      enum: MEDIA_PURPOSES.values(),
       required: true,
     },
     mimeType: {
       type: String,
-      enum: ["image/jpeg", "image/png", "image/webp", "video/mp4", "video/webm"],
+      enum: MEDIA_MIME_TYPES.values(),
       required: true,
     },
     sizeBytes: { type: Number, min: 1, required: true },
     etag: shortText(200),
     status: {
       type: String,
-      enum: ["pending", "ready", "rejected", "deleting", "deleted"],
-      default: "pending",
+      enum: MEDIA_STATUSES.values(),
+      default: MEDIA_STATUSES.PENDING,
     },
     references: [reference],
     linkedEntityType: shortText(30),
