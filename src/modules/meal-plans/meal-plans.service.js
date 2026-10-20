@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { AppError } from "../../common/errors/app-error.js";
 import { normalizeNutrition, scaleNutrition, sumNutrition } from "../../common/utils/nutrition.js";
 import { mergeIngredients, subtractPantry } from "../../common/utils/units.js";
-import { mealPlanInput } from "./meal-plans.validation.js";
+import { groceryGenerationInput, mealPlanInput } from "./meal-plans.validation.js";
 const owner = (actor) => {
   if (!actor?.userId) throw AppError.unauthorized();
   return actor.userId;
@@ -194,19 +194,30 @@ export function createMealPlansService({
   }
   async function groceryIngredients(userId, id, options = {}) {
     const plan = await getOwned(userId, id, options);
-    const ingredients = plan.days.flatMap((day) =>
-      day.meals.flatMap((meal) => {
-        const factor = meal.servings / meal.recipeSnapshot.servings;
-        return meal.recipeSnapshot.ingredients
-          .filter((item) => !item.optional)
-          .map((item) => ({
-            ...item,
-            nameSnapshot: item.foodNameSnapshot,
-            quantity: item.quantity * factor,
-            ...(item.gramEquivalent ? { gramEquivalent: item.gramEquivalent * factor } : {}),
-          }));
-      }),
-    );
+    const weekStart = dateString(plan.weekStartDate);
+    const weekEnd = dateString(new Date(new Date(plan.weekStartDate).getTime() + 6 * 86400000));
+    const from = options.from ?? weekStart;
+    const to = options.to ?? weekEnd;
+    if (from < weekStart || to > weekEnd || from > to)
+      throw AppError.badRequest("Grocery dates must be within the plan week");
+    const ingredients = plan.days
+      .filter((day) => {
+        const date = dateString(day.date);
+        return date >= from && date <= to;
+      })
+      .flatMap((day) =>
+        day.meals.flatMap((meal) => {
+          const factor = meal.servings / meal.recipeSnapshot.servings;
+          return meal.recipeSnapshot.ingredients
+            .filter((item) => !item.optional)
+            .map((item) => ({
+              ...item,
+              nameSnapshot: item.foodNameSnapshot,
+              quantity: item.quantity * factor,
+              ...(item.gramEquivalent ? { gramEquivalent: item.gramEquivalent * factor } : {}),
+            }));
+        }),
+      );
     // Explicit defaultServing equivalents may resolve count-to-mass. No invented density.
     const resolved = [];
     for (const item of ingredients) {
@@ -228,8 +239,9 @@ export function createMealPlansService({
     return mergeIngredients(resolved);
   }
   async function generateGroceryList(userId, id, body = {}, options = {}) {
+    body = groceryGenerationInput.parse(body);
     const plan = await getOwned(userId, id, options);
-    let items = await groceryIngredients(userId, id, options);
+    let items = await groceryIngredients(userId, id, { ...options, from: body.from, to: body.to });
     if (body.subtractPantry) {
       if (!services.pantries?.getForUser)
         throw AppError.serviceUnavailable("Pantry service is unavailable");

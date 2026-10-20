@@ -89,6 +89,65 @@ const planBody = {
   days: [{ date: "2026-10-05", meals: [{ type: "lunch", recipeId, servings: 2 }] }],
 };
 
+describe("Sprint 2 grocery date selection", () => {
+  it("filters days before scaling and merging ingredients and persists check state", async () => {
+    const { services, modules } = setup();
+    const plan = await services.mealPlans.createForUser(userId, {
+      ...planBody,
+      days: [
+        ...planBody.days,
+        { date: "2026-10-06", meals: [{ type: "dinner", recipeId, servings: 1 }] },
+        { date: "2026-10-07", meals: [{ type: "lunch", recipeId, servings: 4 }] },
+      ],
+    });
+    const list = await services.mealPlans.generateGroceryList(userId, plan._id, {
+      from: "2026-10-05",
+      to: "2026-10-06",
+    });
+    expect(list.items).toHaveLength(1);
+    expect(list.items[0]).toMatchObject({
+      quantity: 750,
+      unit: "g",
+      categorySnapshot: "Protein",
+      checked: false,
+    });
+    await modules.groceryLists.operations.updateGroceryItem({
+      actor,
+      params: { id: list._id, itemId: list.items[0].itemId },
+      body: { checked: true },
+    });
+    const reloaded = await modules.groceryLists.operations.getGroceryList({
+      actor,
+      params: { id: list._id },
+    });
+    expect(reloaded.items[0].checked).toBe(true);
+    const whole = await services.mealPlans.generateGroceryList(userId, plan._id);
+    expect(whole.items[0].quantity).toBe(1750);
+    const empty = await services.mealPlans.generateGroceryList(userId, plan._id, {
+      from: "2026-10-08",
+      to: "2026-10-08",
+    });
+    expect(empty.items).toEqual([]);
+  });
+
+  it("rejects dates outside the owned plan week and refuses access by another owner", async () => {
+    const { services } = setup();
+    const plan = await services.mealPlans.createForUser(userId, planBody);
+    for (const range of [
+      { from: "2026-10-04" },
+      { to: "2026-10-12" },
+      { from: "2026-10-08", to: "2026-10-06" },
+    ]) {
+      await expect(
+        services.mealPlans.generateGroceryList(userId, plan._id, range),
+      ).rejects.toThrow();
+    }
+    await expect(services.mealPlans.generateGroceryList(otherId, plan._id)).rejects.toMatchObject({
+      statusCode: 404,
+    });
+  });
+});
+
 describe("planning pure calculations", () => {
   it("scales all nutrients and calculates explicit whole-quantity grams per serving", () => {
     const nutrients = calculateRecipeNutrition(

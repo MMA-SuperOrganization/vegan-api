@@ -388,7 +388,7 @@ export const operationNotes = {
   cloneMealPlan:
     "Sao chép kế hoạch owner sang tuần mới tại weekStartDate; ID kế hoạch/bữa ăn mới do backend tạo.",
   generateGroceryListFromPlan:
-    "Tổng hợp nguyên liệu từ kế hoạch và số servings. subtractPantry=true yêu cầu trừ lượng nguyên liệu có trong kho theo đơn vị mà service chuyển đổi được.",
+    "Tổng hợp và gộp nguyên liệu từ kế hoạch theo số servings. from/to tùy chọn (YYYY-MM-DD, bao gồm hai đầu), phải nằm trong tuần của kế hoạch; bỏ trống lấy cả tuần. subtractPantry=true trừ lượng nguyên liệu có trong kho theo đơn vị mà service chuyển đổi được.",
   createDiaryEntry:
     "Chọn đúng nhánh sourceType: recipe cần recipeId+servings; food cần foodItemId+quantity+unit; custom cần nameSnapshot+nutritionSnapshot. Không trộn trường giữa các nhánh.",
   getDiarySummary:

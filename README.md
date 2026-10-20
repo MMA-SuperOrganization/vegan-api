@@ -1,5 +1,7 @@
 # Vegan Support API — MMA302
 
+Manual pantry mobile integration: see [API contract and verification](docs/manual-pantry.md).
+
 Playwright tests mapped to all 841 Excel case IDs: see [running tests, staging prerequisites and contract differences](docs/playwright-testing.md). Run `npm run test:playwright:coverage` and `npm run test:playwright` with Node 24+.
 
 Frontend developers can browse the [complete backend test case guideline](guideline/BACKEND_TEST_CASES.md) for all 841 case IDs, test data, steps, expected outcomes and recorded Playwright results. See the [FE guideline index](guideline/README.md) for authentication guidance.

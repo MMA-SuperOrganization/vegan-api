@@ -39,6 +39,18 @@ export const mealPlanInput = z
       ),
     "Plan dates must be unique and within its week",
   );
+export const groceryGenerationInput = z
+  .object({
+    name: text(200).optional(),
+    subtractPantry: z.boolean().default(false),
+    from: dateOnly.optional(),
+    to: dateOnly.optional(),
+  })
+  .strict()
+  .refine((body) => !body.from || !body.to || body.from <= body.to, {
+    message: "Start date must not be after end date",
+    path: ["to"],
+  });
 const params = z.object({ id }).strict();
 const mealParams = params.extend({ mealId: uuid });
 export const createMealPlansValidation = () => ({
@@ -80,8 +92,6 @@ export const createMealPlansValidation = () => ({
   },
   generateGroceryListFromPlan: {
     params,
-    body: z
-      .object({ name: text(200).optional(), subtractPantry: z.boolean().default(false) })
-      .strict(),
+    body: groceryGenerationInput,
   },
 });

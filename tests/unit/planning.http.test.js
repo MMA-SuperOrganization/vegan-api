@@ -74,6 +74,39 @@ function fixture() {
 }
 
 describe("planning HTTP routes through injected full application", () => {
+  it("validates grocery generation dates and filters the selected days over HTTP", async () => {
+    const { call } = fixture();
+    const plan = await call("createMealPlan", {
+      body: {
+        weekStartDate: "2026-10-05",
+        days: [
+          { date: "2026-10-05", meals: [{ type: "lunch", recipeId: RECIPE, servings: 1 }] },
+          { date: "2026-10-06", meals: [{ type: "dinner", recipeId: RECIPE, servings: 3 }] },
+        ],
+      },
+    });
+    const params = { id: plan.data._id };
+    const list = await call("generateGroceryListFromPlan", {
+      params,
+      body: { from: "2026-10-06", to: "2026-10-06" },
+    });
+    expect(list.data.items).toHaveLength(1);
+    expect(list.data.items[0].quantity).toBe(600);
+    for (const body of [
+      { from: "2026-02-30" },
+      { from: "2026-10-07", to: "2026-10-06" },
+      { to: "2026-10-12" },
+    ]) {
+      await call("generateGroceryListFromPlan", { params, body, expected: 400 });
+    }
+    await call("generateGroceryListFromPlan", {
+      params,
+      body: {},
+      token: TEST_TOKENS.other,
+      expected: 404,
+    });
+    await call("generateGroceryListFromPlan", { params, body: {}, token: null, expected: 401 });
+  });
   it("exercises every owned manifest operation with real validation and owner CRUD flows", async () => {
     const { call, exercised } = fixture();
     await call("getPantry");

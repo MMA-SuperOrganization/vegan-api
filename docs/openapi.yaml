@@ -20882,7 +20882,7 @@ paths:
 
         **Nghiệp vụ:** Kế hoạch ăn gồm các ngày và bữa ăn tham chiếu công thức. Ngày phải duy nhất trong tuần bắt đầu tại weekStartDate; mỗi bữa có ID riêng.
 
-        Tổng hợp nguyên liệu từ kế hoạch và số servings. subtractPantry=true yêu cầu trừ lượng nguyên liệu có trong kho theo đơn vị mà service chuyển đổi được.
+        Tổng hợp và gộp nguyên liệu từ kế hoạch theo số servings. from/to tùy chọn (YYYY-MM-DD, bao gồm hai đầu), phải nằm trong tuần của kế hoạch; bỏ trống lấy cả tuần. subtractPantry=true trừ lượng nguyên liệu có trong kho theo đơn vị mà service chuyển đổi được.
 
         **Request:** application/json; có thể bỏ body hoặc gửi {} để dùng hành vi/default theo schema. Không gửi trường ngoài schema khi additionalProperties=false.
 
@@ -69273,6 +69273,14 @@ components:
           default: false
           type: boolean
           description: "Nếu true, tạo danh sách mua sắm có trừ nguyên liệu trong kho khi chuyển đổi được đơn vị. Mặc định: false."
+        from:
+          type: string
+          pattern: ^\d{4}-\d{2}-\d{2}$
+          description: Mốc bắt đầu phạm vi, YYYY-MM-DD hoặc ISO datetime khi schema nhánh cho phép; dùng theo quy tắc từng API.
+        to:
+          type: string
+          pattern: ^\d{4}-\d{2}-\d{2}$
+          description: Mốc kết thúc phạm vi, phải từ from trở đi. YYYY-MM-DD hoặc ISO datetime khi schema cho phép; với dashboard/monitoring, ngày to gồm đến 23:59:59.999 UTC.
       additionalProperties: false
       description: Dữ liệu Body của generateGroceryListFromPlan; required/default/enum/giới hạn theo validator thật, các quy tắc kiểm tra chéo xem description của operation.
     generateGroceryListFromPlanResponse:

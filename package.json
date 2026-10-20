@@ -16,6 +16,8 @@
     "test:run": "vitest run",
     "test:contract": "vitest run tests/contract",
     "test:database": "vitest run tests/database",
+    "test:sprint2": "node tests/browser/sprint2-mobile.mjs",
+    "verify:seed": "node --env-file=.env scripts/verify-sprint2-seed.js",
     "test:playwright": "playwright test",
     "test:playwright:list": "playwright test --list",
     "test:playwright:coverage": "node scripts/check-playwright-coverage.js",
