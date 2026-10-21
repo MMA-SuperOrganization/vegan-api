@@ -64,6 +64,7 @@ await repositories.nutritionProfiles.create({
   proteinTargetG: 100,
   carbTargetG: 250,
   fatTargetG: 60,
+  manualTargetFields: ["dailyCalorieTarget", "proteinTargetG", "carbTargetG", "fatTargetG"],
   allergenIds: [],
 });
 await repositories.weightLogs.create({
@@ -137,6 +138,24 @@ try {
   await page.getByRole("textbox", { name: "Password", exact: true }).fill("test-password");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect.poll(() => mutations.some((m) => m.path.endsWith("/auth/sync"))).toBe(true);
+  await page.goto(`${frontendUrl}/edit-profile`);
+  await page.getByRole("textbox", { name: "Display name", exact: true }).fill("Sprint2 User");
+  await page.getByRole("textbox", { name: "Date of birth", exact: true }).fill("05/04/1998");
+  await page.getByRole("button", { name: "Gender", exact: true }).click();
+  await page.getByRole("radio", { name: "Female", exact: true }).click();
+  await page.screenshot({
+    path: fileURLToPath(new URL("edit-profile.png", output)),
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect
+    .poll(async () => (await repositories.userProfiles.findOne({ userId: TEST_IDS.user }))?.gender)
+    .toBe("female");
+  await page.goto(`${frontendUrl}/edit-profile`);
+  await expect(page.getByRole("textbox", { name: "Display name", exact: true })).toHaveValue(
+    "Sprint2 User",
+  );
+  await expect(page.getByRole("button", { name: "Gender", exact: true })).toContainText("Female");
   await page.goto(`${frontendUrl}/nutrition-profile`);
   await page.getByRole("textbox", { name: "Daily protein target (g)", exact: true }).fill("110");
   await page.getByRole("button", { name: "Save nutrition details", exact: true }).click();

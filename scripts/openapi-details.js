@@ -347,7 +347,7 @@ export const operationNotes = {
   getAppConfig:
     "minimum/latest/forceUpdate lấy từ cấu hình backend. Client sử dụng feature flags để hiển thị tính năng phù hợp.",
   syncAuth:
-    "Tạo hoặc đồng bộ tài khoản theo UID/email do Firebase đã xác minh; không cho client tự cấp role=admin.",
+    "Tạo hoặc đồng bộ tài khoản theo UID/email do Firebase đã xác minh; không cho client tự cấp role=admin. Tên Firebase chỉ khởi tạo khi tạo tài khoản, đồng bộ lại giữ nguyên tên người dùng đã chỉnh trong hồ sơ.",
   addFcmToken:
     "Đăng ký token thiết bị cho người dùng hiện tại; deviceName/platform mô tả thiết bị. Không đặt Firebase ID token vào trường token của FCM.",
   removeFcmToken: "tokenId là ID bản ghi thiết bị, không phải chuỗi FCM token.",

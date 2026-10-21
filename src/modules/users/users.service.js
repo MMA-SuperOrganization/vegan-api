@@ -148,7 +148,8 @@ export const createUsersService = ({ deps, users, profiles, guards }) => {
       set.email = z.email().max(320).parse(String(identity.email).trim().toLowerCase());
     const displayName = identity.displayName ?? identity.name;
     const avatarUrl = identity.avatarUrl ?? identity.picture;
-    if (displayName) set.displayName = text(100).parse(displayName);
+    // Identity seeds the initial name; subsequent syncs must preserve profile edits.
+    const initialName = displayName ? text(100).parse(displayName) : undefined;
     if (avatarUrl && !user?.avatarMediaId) set.avatarUrl = url.max(2048).parse(avatarUrl);
     try {
       user = await users.updateOne(
@@ -157,6 +158,7 @@ export const createUsersService = ({ deps, users, profiles, guards }) => {
           $set: set,
           $setOnInsert: {
             firebaseUid,
+            ...(initialName ? { displayName: initialName } : {}),
             role: "user",
             status: "active",
             onboardingCompleted: false,

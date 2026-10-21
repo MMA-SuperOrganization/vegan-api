@@ -1,6 +1,6 @@
 # Manual pantry flow
 
-The mobile app exposes **Grocery → Open pantry** (Vietnamese: **Mua sắm → Mở kho nguyên liệu**). The frontend routes are `/pantry` and `/pantry/item?itemId=<uuid>`; omitting `itemId` opens the add form.
+The mobile **Profile** screen exposes a **Pantry** section, with **Open pantry** and **Add ingredient** actions. **Grocery → Open pantry** remains available. The frontend routes are `/pantry` and `/pantry/item?itemId=<uuid>`; omitting `itemId` opens the add form.
 
 The existing `pantries` module supplies the complete manual CRUD API. This integration reuses that service, validation, owner checks, repositories, canonical model and optimistic version checks. No database migration, provider setup or new runtime configuration is required.
 

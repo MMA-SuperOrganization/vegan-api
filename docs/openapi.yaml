@@ -2126,7 +2126,7 @@ paths:
 
         **Nghiệp vụ:** Backend xác minh Firebase ID token. Đăng nhập và cấp token thực hiện ở Firebase; API sync đồng bộ tài khoản backend trước khi dùng API cá nhân.
 
-        Tạo hoặc đồng bộ tài khoản theo UID/email do Firebase đã xác minh; không cho client tự cấp role=admin.
+        Tạo hoặc đồng bộ tài khoản theo UID/email do Firebase đã xác minh; không cho client tự cấp role=admin. Tên Firebase chỉ khởi tạo khi tạo tài khoản, đồng bộ lại giữ nguyên tên người dùng đã chỉnh trong hồ sơ.
 
         **Request:** application/json; có thể bỏ body hoặc gửi {} để dùng hành vi/default theo schema. Không gửi trường ngoài schema khi additionalProperties=false.
 

@@ -101,6 +101,17 @@ try {
   });
   page = await context.newPage();
   page.on("pageerror", (error) => browserErrors.push(error.message));
+  await page.goto(`${frontendUrl}/profile`, { waitUntil: "domcontentloaded", timeout: 120_000 });
+  await expect(page.getByRole("button", { name: /^Add ingredient/ })).toBeVisible({
+    timeout: 120_000,
+  });
+  await page.screenshot({ path: fileURLToPath(new URL("profile-en.png", output)) });
+  await page.getByRole("button", { name: /^Add ingredient/ }).click();
+  await expect(page.getByRole("button", { name: "Save", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Back", exact: true }).click();
+  await page.getByRole("button", { name: /^Open pantry/ }).click();
+  await expect(page.getByText("No ingredients found", { exact: true })).toBeVisible();
+  await page.screenshot({ path: fileURLToPath(new URL("profile-entry-pantry.png", output)) });
   await page.goto(`${frontendUrl}/grocery`, { waitUntil: "domcontentloaded", timeout: 120_000 });
   await page.getByRole("button", { name: "Open pantry", exact: true }).click({ timeout: 120_000 });
   await expect(page.getByText("No ingredients found", { exact: true })).toBeVisible({
