@@ -482,6 +482,33 @@ describe("OpenAI-compatible native provider, offline", () => {
     });
     expect(fetchImpl).toHaveBeenCalledTimes(2);
   });
+  it("logs upstream status for operators without logging credentials or user content", async () => {
+    const logger = { warn: vi.fn() };
+    const fetchImpl = vi.fn(async () => ({ ok: false, status: 401 }));
+    const provider = createAiProvider({ env, fetchImpl, logger });
+    await expect(
+      provider.generate({
+        feature: "chat",
+        requestId: "qa-request",
+        messages: [{ role: "user", content: "private meal preferences" }],
+        schema,
+      }),
+    ).rejects.toMatchObject({ code: "AI_PROVIDER_ERROR" });
+    expect(logger.warn).toHaveBeenCalledWith(
+      {
+        feature: "chat",
+        requestId: "qa-request",
+        attempt: 1,
+        code: "AI_PROVIDER_ERROR",
+        upstreamStatus: 401,
+      },
+      "AI provider request failed",
+    );
+    const logs = JSON.stringify(logger.warn.mock.calls);
+    expect(logs).not.toContain(env.ai.apiKey);
+    expect(logs).not.toContain("private meal preferences");
+    expect(logs).not.toContain(env.ai.baseUrl);
+  });
   it("timeout aborts even an injected fetch that does not observe AbortSignal", async () => {
     const fetchImpl = vi.fn(() => new Promise(() => {}));
     const p = createAiProvider({ env: { ai: { ...env.ai, maxRetries: 0 } }, fetchImpl });

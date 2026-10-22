@@ -68,6 +68,7 @@ export function createAiProvider({
         const controller = new AbortController();
         let timeout;
         let retryable = false;
+        let upstreamStatus;
         try {
           const timedOut = new Promise((_, reject) => {
             timeout = setTimeout(() => {
@@ -91,6 +92,7 @@ export function createAiProvider({
             timedOut,
           ]);
           if (!response.ok) {
+            upstreamStatus = response.status;
             retryable = transient.has(response.status);
             throw unavailable("AI_PROVIDER_ERROR", "AI provider could not complete this request");
           }
@@ -126,7 +128,14 @@ export function createAiProvider({
               "AI provider could not complete this request",
             );
           }
-          if (!retryable || attempt === maxRetries) throw error;
+          if (!retryable || attempt === maxRetries) {
+            // Do not log provider bodies, credentials, prompts or signed media URLs.
+            logger?.warn?.(
+              { feature, requestId, attempt: attempt + 1, code: error.code, upstreamStatus },
+              "AI provider request failed",
+            );
+            throw error;
+          }
           logger?.warn?.(
             { feature, attempt: attempt + 1, code: error.code },
             "Retrying transient AI provider failure",
