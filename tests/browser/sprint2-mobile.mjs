@@ -181,6 +181,17 @@ try {
   await page.screenshot({ path: fileURLToPath(new URL("meal-plan.png", output)), fullPage: true });
   await page.goto(`${frontendUrl}/generate`);
   console.log("Checking grocery generation and checklist");
+  const originalPlan = (await repositories.mealPlans.findMany({ userId: TEST_IDS.user })).data[0];
+  await repositories.mealPlans.create({
+    ...originalPlan,
+    _id: "400000000000000000000099",
+    title: "Alternative empty plan",
+    days: [],
+    status: "draft",
+  });
+  await page.reload();
+  await page.getByRole("button", { name: "Choose meal plan", exact: true }).click();
+  await page.getByRole("radio", { name: originalPlan.title + " · draft", exact: true }).click();
   const fromField = page.getByRole("textbox", { name: "From date (DD/MM/YYYY)", exact: true });
   const validFrom = await fromField.inputValue();
   await fromField.fill("31/02/2026");
