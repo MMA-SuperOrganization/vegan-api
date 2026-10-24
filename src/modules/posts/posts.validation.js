@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { text } from "../../common/validators/domain.schemas.js";
+import { id, text } from "../../common/validators/domain.schemas.js";
 import { POST_TYPES, POST_VISIBILITIES } from "../../common/constants/enums/content.enums.js";
 import {
   idParams,
@@ -18,6 +18,7 @@ export const postInput = z
     mediaIds: ids.optional(),
     tags: tags.optional(),
     categoryIds: ids.optional(),
+    recipeId: id.optional().nullable(),
     postType: z.enum(POST_TYPES.values()).optional(),
     visibility: z.enum(POST_VISIBILITIES.values()).optional(),
   })

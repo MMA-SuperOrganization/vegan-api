@@ -137,6 +137,8 @@ export const createVideosService = (deps) => {
         const { version, ...changes } = body;
         if (before.status === "rejected")
           Object.assign(changes, { status: "draft", rejectionReason: null });
+        if (before.status === "published" && actor.role !== "admin")
+          Object.assign(changes, { status: "draft", publishedAt: null });
         const candidate = { ...before, ...changes };
         await validateReferences(candidate, actor, session);
         if (before.status === "published") await validatePublication(candidate, actor, session);

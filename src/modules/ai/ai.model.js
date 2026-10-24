@@ -69,6 +69,7 @@ const proposal = new Schema(
     status: { type: String, enum: ["pending", "confirmed"], default: "pending" },
     structuredData: { type: Schema.Types.Mixed, required: true },
     startDate: String,
+    usesProfile: { type: Boolean, default: false },
     expiresAt: { type: Date, required: true },
     confirmedAt: Date,
     result: Schema.Types.Mixed,

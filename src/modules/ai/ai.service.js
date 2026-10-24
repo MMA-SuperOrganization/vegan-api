@@ -1,5 +1,6 @@
 import { fitsDiet } from "../../common/utils/diet.js";
 import { AppError } from "../../common/errors/app-error.js";
+import { scaleNutrition, sumNutrition } from "../../common/utils/nutrition.js";
 import { AI_DISCLAIMER } from "../../providers/ai/ai.provider.js";
 import { chatOutput, mealPlanOutput, pantryOutput, summaryOutput } from "./ai.validation.js";
 const own = (actor) => {
@@ -35,6 +36,14 @@ const safeProfile = (profile) =>
   );
 const resultData = (result) => result?.data ?? result;
 const dateString = (value) => new Date(value).toISOString().slice(0, 10);
+const TARGET_NUTRIENTS = Object.freeze({
+  dailyCalorieTarget: "caloriesKcal",
+  proteinTargetG: "proteinG",
+  carbTargetG: "carbsG",
+  fatTargetG: "fatG",
+  fiberTargetG: "fiberG",
+});
+const TARGET_TOLERANCE = 0.2;
 
 export function createAiService({
   aiRepository: repos,
@@ -125,6 +134,13 @@ export function createAiService({
     ]);
     return { profile: safeProfile(profile), nutrition: safeProfile(nutrition) };
   }
+  async function nutritionTargets(userId, session) {
+    const [profile, nutrition] = await Promise.all([
+      services.users?.getProfile?.(userId, { session }),
+      services.users?.getNutrition?.(userId, { session }),
+    ]);
+    return { ...safeProfile(profile), ...safeProfile(nutrition) };
+  }
   async function dietarySafety(userId, session) {
     // Sequential reads when confirming inside a Mongo session.
     const profile = await services.users?.getProfile?.(userId, { session });
@@ -159,8 +175,9 @@ export function createAiService({
       if (resolveNames && food.name) item.name = food.name;
     }
   }
-  async function verifyRecipes(data, userId, session) {
+  async function verifyRecipes(data, userId, session, { enforceTargets = false } = {}) {
     const safety = await dietarySafety(userId, session);
+    const recipes = new Map();
     for (const id of new Set(data.days.flatMap((day) => day.meals.map((m) => m.recipeId)))) {
       if (!services.recipes?.getById)
         throw AppError.serviceUnavailable("Recipe service is unavailable");
@@ -183,7 +200,75 @@ export function createAiService({
         if (!ingredient.foodItemId) throw invalidOutput();
         await verifyFood(ingredient.foodItemId, safety, session);
       }
+      recipes.set(String(id), recipe);
     }
+    if (!enforceTargets) return;
+    const targets = await nutritionTargets(userId, session);
+    const configuredTargets = Object.entries(TARGET_NUTRIENTS).filter(
+      ([target]) => Number.isFinite(targets[target]) && targets[target] > 0,
+    );
+    if (!configuredTargets.length) return;
+    for (const day of data.days) {
+      let total;
+      try {
+        total = sumNutrition(
+          day.meals.map((meal) => {
+            const recipe = recipes.get(String(meal.recipeId));
+            if (!recipe?.nutritionPerServing) throw invalidOutput();
+            return scaleNutrition(recipe.nutritionPerServing, meal.servings);
+          }),
+        );
+      } catch (error) {
+        if (error instanceof AppError) throw error;
+        throw invalidOutput();
+      }
+      for (const [target, nutrient] of configuredTargets) {
+        const minimum = targets[target] * (1 - TARGET_TOLERANCE);
+        const maximum = nutrient === "fiberG" ? Number.POSITIVE_INFINITY : targets[target] * 1.2;
+        if (total[nutrient] < minimum || total[nutrient] > maximum) throw invalidOutput();
+      }
+    }
+  }
+  async function groundingCatalog(userId) {
+    const safety = await dietarySafety(userId);
+    const [foods, recipes] = await Promise.all([
+      repositories.foodItems?.findMany?.(
+        { status: "active" },
+        {
+          page: 1,
+          limit: 40,
+          projection: { _id: 1, name: 1, allergenIds: 1, isVegan: 1, isVegetarian: 1 },
+        },
+      ) ?? { data: [] },
+      repositories.recipes?.findMany?.(
+        { status: "published", visibility: "public" },
+        {
+          page: 1,
+          limit: 30,
+          projection: { _id: 1, title: 1, allergenIds: 1, ingredients: 1 },
+        },
+      ) ?? { data: [] },
+    ]);
+    const safeFoods = (foods.data ?? []).filter(
+      (food) =>
+        fitsDiet(food, safety.dietType) &&
+        !safety.excludedFoodItemIds.has(String(food._id)) &&
+        !(food.allergenIds ?? []).some((id) => safety.allergenIds.has(String(id))),
+    );
+    const safeFoodIds = new Set(safeFoods.map((food) => String(food._id)));
+    const safeRecipes = (recipes.data ?? []).filter(
+      (recipe) =>
+        !(recipe.allergenIds ?? []).some((id) => safety.allergenIds.has(String(id))) &&
+        (recipe.ingredients ?? []).every((ingredient) =>
+          safeFoodIds.has(String(ingredient.foodItemId)),
+        ),
+    );
+    return {
+      instruction:
+        "Prefer these authoritative catalog records. Do not invent IDs or recommend ingredients outside the supplied safe catalog.",
+      foods: safeFoods.map(({ _id, name }) => ({ id: _id, name })),
+      recipes: safeRecipes.map(({ _id, title }) => ({ id: _id, title })),
+    };
   }
   async function readyMedia(userId, id, type) {
     if (!services.media?.getOwnedReady)
@@ -261,7 +346,9 @@ export function createAiService({
         const selectedDates = parsed.data.days.map((day) => day.date).sort();
         if (JSON.stringify(originalDates) !== JSON.stringify(selectedDates))
           throw AppError.badRequest("Selected meals must keep the proposal dates");
-        await verifyRecipes(parsed.data, userId, session);
+        await verifyRecipes(parsed.data, userId, session, {
+          enforceTargets: current.usesProfile === true,
+        });
         confirmedData = parsed.data;
         if (!services.mealPlans?.createForUser)
           throw AppError.serviceUnavailable("Meal plan service is unavailable");
@@ -329,7 +416,6 @@ export function createAiService({
   }
   const service = {
     async getAiConversations({ actor, query = {} }) {
-      enabled();
       return repos.aiConversations.findMany(
         { userId: own(actor) },
         { ...query, sort: { lastMessageAt: -1, _id: -1 } },
@@ -344,7 +430,6 @@ export function createAiService({
       });
     },
     async getAiMessages({ actor, params, query = {} }) {
-      enabled();
       const userId = own(actor);
       await conversation(userId, params.id);
       return repos.aiMessages.findMany(
@@ -399,7 +484,10 @@ export function createAiService({
           [
             {
               role: "user",
-              content: JSON.stringify(body.useProfile === true ? await context(userId) : {}),
+              content: JSON.stringify({
+                ...(body.useProfile === true ? { userContext: await context(userId) } : {}),
+                catalog: await groundingCatalog(userId),
+              }),
             },
             ...history.data.reverse().map((m) => ({ role: m.role, content: m.content })),
             { role: "user", content },
@@ -462,11 +550,16 @@ export function createAiService({
               data.days.some((d) => !expected.includes(d.date))
             )
               throw invalidOutput();
-            await verifyRecipes(data, userId);
+            await verifyRecipes(data, userId, undefined, {
+              enforceTargets: body.useProfile === true,
+            });
           },
         },
       );
-      return storeProposal(userId, "meal_plan", output, { startDate: body.startDate });
+      return storeProposal(userId, "meal_plan", output, {
+        startDate: body.startDate,
+        usesProfile: body.useProfile === true,
+      });
     },
     confirmMealPlanProposal: (input) => confirm(input, "meal_plan"),
     async recognizeIngredients({ actor, body, requestId }) {
@@ -548,7 +641,6 @@ export function createAiService({
       return { ...output.data, runId: output.runId, disclaimer: AI_DISCLAIMER };
     },
     async submitAiFeedback({ actor, params, body }) {
-      enabled();
       const userId = own(actor);
       if (!(await repos.aiRuns.findOne({ _id: params.runId, userId })))
         throw AppError.notFound("AI run not found");

@@ -432,6 +432,29 @@ describe("Complete content modules", () => {
     await h.call("posts", "deletePost", { params: { id: draft._id } });
     expect((await h.call("posts", "getPosts", { actor: null })).data).toHaveLength(0);
   });
+  it("moves owner edits of published content back through review", async () => {
+    const post = published({ content: "Original", publishedAt: new Date("2026-10-01") });
+    const h = createHarness({ posts: [post] });
+
+    const edited = await h.call("posts", "updatePost", {
+      params: { id: post._id },
+      body: { content: "Updated", version: 0 },
+    });
+
+    expect(edited).toMatchObject({
+      content: "Updated",
+      status: "draft",
+      publishedAt: null,
+      version: 1,
+    });
+    expect((await h.call("posts", "getPosts", { actor: null })).data).toHaveLength(0);
+
+    const submitted = await h.call("posts", "submitPost", {
+      params: { id: post._id },
+      body: { version: 1 },
+    });
+    expect(submitted.status).toBe("pending_review");
+  });
   it("never overlaps repository calls on the same transaction session", async () => {
     const foods = [newId(), newId()];
     const assets = [ready(), ready()];

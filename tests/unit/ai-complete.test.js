@@ -197,6 +197,34 @@ describe("AI complete domain", () => {
     expect(f.provider.generate).not.toHaveBeenCalled();
     expect(f.repos.aiConversations.records).toHaveLength(0);
   });
+  it("keeps owned AI history and feedback available while generation is disabled", async () => {
+    const f = fixture();
+    const conversation = await f.repos.aiConversations.create({
+      userId,
+      title: "Saved history",
+      status: "active",
+    });
+    await f.repos.aiMessages.create({
+      userId,
+      conversationId: conversation._id,
+      role: "assistant",
+      content: "Saved answer",
+      status: "completed",
+    });
+    const run = await f.repos.aiRuns.create({ userId, feature: "chat", status: "completed" });
+    f.deps.env.ai.enabled = false;
+    expect((await f.operations.getAiConversations({ actor })).data).toHaveLength(1);
+    expect(
+      (await f.operations.getAiMessages({ actor, params: { id: conversation._id } })).data,
+    ).toHaveLength(1);
+    await expect(
+      f.operations.submitAiFeedback({
+        actor,
+        params: { runId: run._id },
+        body: { rating: "helpful" },
+      }),
+    ).resolves.toMatchObject({ rating: "helpful" });
+  });
   it("persists owned chat, bounded context and privacy-safe run metadata", async () => {
     const f = fixture();
     const c = await f.operations.createAiConversation({ actor, body: { title: "Cooking" } });
@@ -254,6 +282,44 @@ describe("AI complete domain", () => {
     });
     f.repos.aiProposals.records[0].expiresAt = new Date("2020-01-01");
     expect(await f.operations.confirmMealPlanProposal(request)).toEqual(a);
+  });
+  it("validates AI meal plans against authoritative nutrition targets when profile use is enabled", async () => {
+    const f = fixture();
+    f.deps.services.users.getNutrition.mockResolvedValue({
+      dailyCalorieTarget: 500,
+      proteinTargetG: 25,
+      carbTargetG: 60,
+      fatTargetG: 15,
+      fiberTargetG: 10,
+    });
+    f.deps.services.recipes.getById.mockResolvedValue({
+      _id: recipeId,
+      status: "published",
+      visibility: "public",
+      isVegan: true,
+      ingredients: [{ foodItemId: foodId }],
+      allergenIds: [],
+      nutritionPerServing: {
+        caloriesKcal: 500,
+        proteinG: 25,
+        carbsG: 60,
+        fatG: 15,
+        fiberG: 10,
+      },
+    });
+    await expect(
+      f.operations.createMealPlanProposal({
+        actor,
+        body: { startDate: "2026-10-05", days: 1, useProfile: true },
+      }),
+    ).resolves.toMatchObject({ status: "pending" });
+    f.outputs.meal_plan.days[0].meals[0].servings = 2;
+    await expect(
+      f.operations.createMealPlanProposal({
+        actor,
+        body: { startDate: "2026-10-05", days: 1, useProfile: true },
+      }),
+    ).rejects.toMatchObject({ code: "AI_INVALID_OUTPUT" });
   });
   it("rejects foreign/expired proposals and rolls back failed resource writes", async () => {
     const f = fixture();

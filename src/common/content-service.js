@@ -107,8 +107,8 @@ export const assertEditable = (resource, actor) => {
   requireActor(actor);
   assertOwner(resource, actor, { field: "authorId", allowAdmin: true });
   if (resource.deletedAt || resource.status === "deleted") throw AppError.notFound();
-  if (actor.role !== "admin" && !["draft", "rejected"].includes(resource.status))
-    throw AppError.conflict("Only draft or rejected content can be edited");
+  if (actor.role !== "admin" && !["draft", "rejected", "published"].includes(resource.status))
+    throw AppError.conflict("Only draft, rejected or published content can be edited");
   if (actor.role === "admin" && ["hidden", "processing"].includes(resource.status))
     throw AppError.conflict("Content cannot be edited in this state");
 };
@@ -210,7 +210,10 @@ export const lifecycle = async (deps, repo, type, context, action, validate) =>
       if (!body.reason?.trim()) throw AppError.badRequest("A rejection reason is required");
       changes = { status: "rejected", rejectionReason: body.reason };
     } else if (action === "delete") {
-      changes = { status: "deleted", deletedAt: now(deps) };
+      changes = {
+        status: "deleted",
+        deletedAt: now(deps),
+      };
       await syncMedia(deps, type, existing, null, actor, session);
     }
     const result = await casUpdate(repo, existing, changes, { version: body.version, session });
@@ -263,7 +266,13 @@ export const createContentFacade = (deps) => {
     }
     const repo = repoFor(type);
     if (!repo) throw AppError.badRequest("Unsupported content target");
-    if (type !== "comment") return getReadable(repo, id, { publicOnly: true, ...options });
+    if (type !== "comment") {
+      if (options.includeDeleted) {
+        requireAdmin(options.actor);
+        return requireFound(await repo.findById(id, { session: options.session }));
+      }
+      return getReadable(repo, id, { publicOnly: true, ...options });
+    }
     const comment = requireFound(await repo.findById(id, { session: options.session }));
     if (comment.status === "deleted" || comment.deletedAt) throw AppError.notFound();
     if (options.actor?.role === "admin" && options.publicOnly === false) return comment;
@@ -320,21 +329,28 @@ export const createContentFacade = (deps) => {
         const repo = repoFor(type);
         if (!repo) throw AppError.badRequest("Unsupported content target");
         const before = requireFound(await repo.findById(id, { session }));
-        if (before.deletedAt || before.status === "deleted") throw AppError.notFound();
+        const restoringDeleted =
+          !options.hidden && (before.deletedAt || before.status === "deleted");
+        if (options.hidden && (before.deletedAt || before.status === "deleted"))
+          throw AppError.notFound();
         const visible = type === "comment" ? "visible" : "published";
         if (options.hidden && before.status !== visible)
           throw AppError.conflict("Only visible published content can be hidden");
-        if (!options.hidden && before.status !== "hidden")
+        if (!options.hidden && before.status !== "hidden" && !restoringDeleted)
           throw AppError.conflict("Only hidden content can be restored");
-        if (!options.hidden && type !== "comment") {
+        const restoredStatus = visible;
+        if (!options.hidden && type !== "comment" && restoredStatus === "published") {
           const domain = deps.services[`${type}s`];
           await domain.validatePublication(before, options.actor, session);
         }
+        if (restoringDeleted && type !== "comment")
+          await syncMedia(deps, type, null, before, options.actor, session);
         const after = await casUpdate(
           repo,
           before,
           {
-            status: options.hidden ? "hidden" : visible,
+            status: options.hidden ? "hidden" : restoredStatus,
+            ...(restoringDeleted ? { deletedAt: null } : {}),
             ...(type === "comment" ? { parentHidden: false } : {}),
           },
           { session },

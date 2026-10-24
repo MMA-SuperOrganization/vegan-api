@@ -56717,6 +56717,12 @@ components:
             pattern: ^[A-Fa-f0-9]{24}$
             description: Trường media Ids item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. ObjectId gồm 24 ký tự hexadecimal.
           description: Danh sách media liên kết với nội dung.
+        recipeId:
+          type:
+            - string
+            - "null"
+          pattern: ^[A-Fa-f0-9]{24}$
+          description: ID công thức; quyền truy cập và trạng thái được kiểm tra trước khi dùng. ObjectId gồm 24 ký tự hexadecimal.
         postType:
           type:
             - string
@@ -58548,6 +58554,11 @@ components:
             - string
             - "null"
           description: Ngày bắt đầu đề xuất, YYYY-MM-DD.
+        usesProfile:
+          type:
+            - boolean
+            - "null"
+          description: Trường uses Profile trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
         expiresAt:
           type: string
           format: date-time
@@ -62660,6 +62671,12 @@ components:
             pattern: ^[A-Fa-f0-9]{24}$
             description: Trường media Ids item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. ObjectId gồm 24 ký tự hexadecimal.
           description: Danh sách media liên kết với nội dung.
+        recipeId:
+          type:
+            - string
+            - "null"
+          pattern: ^[A-Fa-f0-9]{24}$
+          description: ID công thức; quyền truy cập và trạng thái được kiểm tra trước khi dùng. ObjectId gồm 24 ký tự hexadecimal.
         postType:
           type:
             - string
@@ -62823,6 +62840,12 @@ components:
             pattern: ^[A-Fa-f0-9]{24}$
             description: Trường media Ids item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. ObjectId gồm 24 ký tự hexadecimal.
           description: Danh sách media liên kết với nội dung.
+        recipeId:
+          type:
+            - string
+            - "null"
+          pattern: ^[A-Fa-f0-9]{24}$
+          description: ID công thức; quyền truy cập và trạng thái được kiểm tra trước khi dùng. ObjectId gồm 24 ký tự hexadecimal.
         postType:
           type:
             - string
@@ -71894,6 +71917,14 @@ components:
             pattern: ^[a-f\d]{24}$
             description: Trường category Ids item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. ObjectId gồm 24 ký tự hexadecimal.
           description: Danh sách ID danh mục master data.
+        recipeId:
+          anyOf:
+            - type: string
+              pattern: ^[a-f\d]{24}$
+              description: ID công thức; quyền truy cập và trạng thái được kiểm tra trước khi dùng. ObjectId gồm 24 ký tự hexadecimal.
+            - type: "null"
+              description: ID công thức; quyền truy cập và trạng thái được kiểm tra trước khi dùng.
+          description: ID công thức; quyền truy cập và trạng thái được kiểm tra trước khi dùng.
         postType:
           type: string
           enum:
@@ -71979,6 +72010,14 @@ components:
             pattern: ^[a-f\d]{24}$
             description: Trường category Ids item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. ObjectId gồm 24 ký tự hexadecimal.
           description: Danh sách ID danh mục master data.
+        recipeId:
+          anyOf:
+            - type: string
+              pattern: ^[a-f\d]{24}$
+              description: ID công thức; quyền truy cập và trạng thái được kiểm tra trước khi dùng. ObjectId gồm 24 ký tự hexadecimal.
+            - type: "null"
+              description: ID công thức; quyền truy cập và trạng thái được kiểm tra trước khi dùng.
+          description: ID công thức; quyền truy cập và trạng thái được kiểm tra trước khi dùng.
         postType:
           type: string
           enum:

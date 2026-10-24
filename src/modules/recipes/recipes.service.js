@@ -175,6 +175,8 @@ export const createRecipesService = (deps) => {
             (changes.cookMinutes ?? before.cookMinutes ?? 0);
         if (before.status === "rejected")
           Object.assign(changes, { status: "draft", rejectionReason: null });
+        if (before.status === "published" && actor.role !== "admin")
+          Object.assign(changes, { status: "draft", publishedAt: null });
         const candidate = { ...before, ...changes };
         await syncMedia(deps, "recipe", before, candidate, actor, session);
         if (before.status === "published") await validatePublication(candidate, actor, session);

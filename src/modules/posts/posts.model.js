@@ -13,6 +13,7 @@ export const PostsModel = registerModel(
     ...contentFields,
     content: { ...shortText(30000), required: true },
     mediaIds: [ref("Media")],
+    recipeId: ref("Recipes"),
     postType: { type: String, enum: POST_TYPES.values(), default: POST_TYPES.COMMUNITY },
     visibility: {
       type: String,

@@ -73,7 +73,7 @@ const assertReportLimit = (existing = [], additions = []) => {
     throw AppError.badRequest("A moderation case can contain at most 50 reports");
 };
 export const createModerationService = (deps, cases) => {
-  const target = async (type, id, actor, session) => {
+  const target = async (type, id, actor, session, includeDeleted = false) => {
     if (type === "user") {
       const account = found(
         await service(deps, "users", "getById")(id, { allowInactive: true, session }),
@@ -83,7 +83,12 @@ export const createModerationService = (deps, cases) => {
         throw AppError.notFound("Target not found");
       return account;
     }
-    return service(deps, "content", "getTarget")(type, id, { actor, publicOnly: false, session });
+    return service(deps, "content", "getTarget")(type, id, {
+      actor,
+      publicOnly: false,
+      session,
+      includeDeleted,
+    });
   };
   const linkReports = async (ids, moderationCase, session, context) => {
     const reports = repository(deps, "reports");
@@ -142,7 +147,7 @@ export const createModerationService = (deps, cases) => {
     const { actor, params, body } = context;
     admin(actor);
     return atomic(deps, async (session) => {
-      const before = await target(params.targetType, params.targetId, actor, session);
+      const before = await target(params.targetType, params.targetId, actor, session, !hidden);
       let moderationCase = body.caseId
         ? found(await cases.findById(body.caseId, { session }), "Moderation case not found")
         : await cases.findOne(

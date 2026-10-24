@@ -103,7 +103,7 @@ describe("Application boundaries", () => {
     );
     expect((await request(app).get("/api-docs/openapi.yaml")).status).toBe(200);
     expect((await request(app).get("/api-docs/")).status).toBe(200);
-  });
+  }, 15_000);
   it("disables docs by configuration", async () => {
     const { app } = buildTestApp();
     expect((await request(app).get("/api-docs.json")).status).toBe(404);

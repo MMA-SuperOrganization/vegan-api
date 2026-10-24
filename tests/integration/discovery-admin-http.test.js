@@ -407,6 +407,27 @@ describe("Discovery privacy, validation and ownership API regressions", () => {
       400,
     );
   });
+  it("restores soft-deleted content to its previous publish state", async () => {
+    const { app, repositories } = discoveryApp();
+
+    assertEnvelope(await api(app, "delete", `/posts/${IDS.post}`, TEST_TOKENS.user), 200);
+    expect(await repositories.posts.findById(IDS.post)).toMatchObject({
+      status: "deleted",
+    });
+    assertEnvelope(await api(app, "get", `/posts/${IDS.post}`, null), 404);
+
+    assertEnvelope(
+      await api(app, "post", `/admin/moderation/post/${IDS.post}/restore`, TEST_TOKENS.admin, {
+        body: { reason: "Deletion reversed after review" },
+      }),
+      200,
+    );
+    expect(await repositories.posts.findById(IDS.post)).toMatchObject({
+      status: "published",
+      deletedAt: null,
+    });
+    assertEnvelope(await api(app, "get", `/posts/${IDS.post}`, null), 200);
+  });
   it("hides and restores visible comments using the content public contract", async () => {
     const { app, repositories } = discoveryApp();
     await repositories.posts.updateOne({ _id: IDS.post }, { $set: { commentCount: 1 } });

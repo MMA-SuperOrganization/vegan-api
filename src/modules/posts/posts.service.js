@@ -16,6 +16,9 @@ import {
 } from "../../common/content-service.js";
 export const createPostsService = (deps) => {
   const repo = deps.repositories.posts;
+  const assertRecipeExists = async (recipeId, session) => {
+    if (recipeId) requireFound(await deps.repositories.recipes.findById(recipeId, { session }));
+  };
   const validatePublication = async (post, actor, session) => {
     if (!post.title?.trim() || !post.content?.trim())
       throw AppError.badRequest("A post requires a title and content");
@@ -66,6 +69,7 @@ export const createPostsService = (deps) => {
         requireActor(actor);
         if (body.postType === "blog" && actor.role !== "admin")
           throw AppError.forbidden("Only administrators can create blogs");
+        await assertRecipeExists(body.recipeId, session);
         const post = await repo.create(
           {
             ...body,
@@ -90,8 +94,11 @@ export const createPostsService = (deps) => {
         const { version, ...changes } = body;
         if (changes.postType === "blog" && actor.role !== "admin")
           throw AppError.forbidden("Only administrators can create blogs");
+        await assertRecipeExists(changes.recipeId, session);
         if (before.status === "rejected")
           Object.assign(changes, { status: "draft", rejectionReason: null });
+        if (before.status === "published" && actor.role !== "admin")
+          Object.assign(changes, { status: "draft", publishedAt: null });
         const candidate = { ...before, ...changes };
         await syncMedia(deps, "post", before, candidate, actor, session);
         if (before.status === "published") await validatePublication(candidate, actor, session);
