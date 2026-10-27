@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { z } from "zod";
 import { createAiModule } from "../../src/modules/ai/index.js";
 import { createAiProvider, AI_SAFETY_PROMPT } from "../../src/providers/ai/ai.provider.js";
+import { linkAiCatalogReferences } from "../../src/modules/ai/ai.references.js";
 import { fakeRepository, fakeTransaction, objectId } from "./ai-reminders-fakes.js";
 const userId = objectId(),
   other = objectId(),
@@ -100,6 +101,22 @@ function fixture(overrides = {}) {
   return { ...createAiModule(deps), deps, outputs, provider: aiProvider, repos: repositories };
 }
 describe("AI complete domain", () => {
+  it("turns catalog IDs into tappable app links without exposing ID labels", () => {
+    const content = [
+      `- **Avocado Chickpea Salad** (ID: \`${recipeId}\`) - Rich in healthy fats`,
+      `- Tofu (ID: ${foodId})`,
+    ].join("\n");
+    const linked = linkAiCatalogReferences(content, {
+      recipes: [{ id: recipeId, title: "Avocado Chickpea Salad" }],
+      foods: [{ id: foodId, name: "Tofu" }],
+    });
+
+    expect(linked).toContain(
+      `**[Avocado Chickpea Salad](veganapp://recipe/${recipeId})** - Rich in healthy fats`,
+    );
+    expect(linked).toContain(`[Tofu](veganapp://food/${foodId})`);
+    expect(linked).not.toMatch(/\bID\s*:/i);
+  });
   it("confirms selected pantry items, resolving unknown recognition without another provider call", async () => {
     const f = fixture();
     f.outputs.ingredient_recognition = {
@@ -239,6 +256,8 @@ describe("AI complete domain", () => {
     expect(f.repos.aiRuns.records[0]).toMatchObject({ feature: "chat", status: "completed" });
     const prompt = JSON.stringify(f.provider.generate.mock.calls[0][0]);
     expect(prompt).not.toContain("SECRET_");
+    expect(prompt).toContain("veganapp://recipe/ID");
+    expect(prompt).toContain("Never display an ID as visible text");
     await expect(
       f.operations.getAiMessages({ actor: { userId: other }, params: { id: c._id } }),
     ).rejects.toMatchObject({ statusCode: 404 });

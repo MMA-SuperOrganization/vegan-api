@@ -3,6 +3,7 @@ import { AppError } from "../../common/errors/app-error.js";
 import { scaleNutrition, sumNutrition } from "../../common/utils/nutrition.js";
 import { AI_DISCLAIMER } from "../../providers/ai/ai.provider.js";
 import { chatOutput, mealPlanOutput, pantryOutput, summaryOutput } from "./ai.validation.js";
+import { linkAiCatalogReferences } from "./ai.references.js";
 const own = (actor) => {
   if (!actor?.userId) throw AppError.unauthorized();
   if (actor.status && actor.status !== "active") throw AppError.forbidden("Account is not active");
@@ -265,7 +266,7 @@ export function createAiService({
     );
     return {
       instruction:
-        "Prefer these authoritative catalog records. Do not invent IDs or recommend ingredients outside the supplied safe catalog.",
+        "Prefer these authoritative catalog records. Do not invent IDs or recommend ingredients outside the supplied safe catalog. When mentioning a supplied recipe, render its title exactly as [Recipe title](veganapp://recipe/ID). When mentioning a supplied food, render its name exactly as [Food name](veganapp://food/ID). Never display an ID as visible text, code, parentheses, or an ID label.",
       foods: safeFoods.map(({ _id, name }) => ({ id: _id, name })),
       recipes: safeRecipes.map(({ _id, title }) => ({ id: _id, title })),
     };
@@ -470,6 +471,7 @@ export function createAiService({
           usage: {},
         };
       } else {
+        const catalog = await groundingCatalog(userId);
         output = await execute(
           userId,
           "chat",
@@ -479,7 +481,7 @@ export function createAiService({
               role: "user",
               content: JSON.stringify({
                 ...(body.useProfile === true ? { userContext: await context(userId) } : {}),
-                catalog: await groundingCatalog(userId),
+                catalog,
               }),
             },
             ...history.data.reverse().map((m) => ({ role: m.role, content: m.content })),
@@ -490,6 +492,7 @@ export function createAiService({
             inputMetadata: { conversationId: String(params.id), messageLength: content.length },
           },
         );
+        output.data.content = linkAiCatalogReferences(output.data.content, catalog);
       }
       // Do not persist a user turn until generation succeeds. Otherwise a
       // provider failure followed by retry leaves duplicate orphaned prompts.
