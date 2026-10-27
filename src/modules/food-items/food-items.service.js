@@ -14,6 +14,8 @@ const publicFields = [
   "seasons",
   "defaultServing",
   "nutritionPer100g",
+  "nutritionDataQuality",
+  "sourceAttribution",
   "allergenIds",
   "isVegan",
   "isVegetarian",

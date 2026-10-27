@@ -3,6 +3,10 @@ import {
   MEASUREMENT_UNITS,
   MASTER_DATA_STATUSES,
 } from "../../common/constants/enums/master-data.enums.js";
+import {
+  catalogSourceSchema,
+  nutritionDataQualityField,
+} from "../../common/persistence/catalog-source.js";
 
 const { Schema } = mongoose;
 const nutritionSchema = new Schema(
@@ -53,6 +57,8 @@ const schema = new Schema(
     },
     defaultServing: { type: servingSchema, required: true },
     nutritionPer100g: { type: nutritionSchema, required: true },
+    nutritionDataQuality: nutritionDataQualityField,
+    sourceAttribution: { type: catalogSourceSchema },
     allergenIds: [{ type: Schema.Types.ObjectId, ref: "Allergens", index: true }],
     isVegan: { type: Boolean, required: true },
     isVegetarian: { type: Boolean, required: true },
@@ -70,4 +76,8 @@ const schema = new Schema(
 );
 schema.index({ status: 1, normalizedName: 1 });
 schema.index({ status: 1, isVegan: 1, categoryId: 1 });
+schema.index(
+  { "sourceAttribution.provider": 1, "sourceAttribution.sourceId": 1 },
+  { sparse: true },
+);
 export const FoodItemsModel = mongoose.models.FoodItems || mongoose.model("FoodItems", schema);

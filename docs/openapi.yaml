@@ -55770,6 +55770,50 @@ components:
               description: "vitaminDMcg: giá trị tính bằng microgram."
           additionalProperties: false
           description: Dinh dưỡng tính trên 100 gram thực phẩm.
+        nutritionDataQuality:
+          type:
+            - string
+            - "null"
+          enum:
+            - verified
+            - estimated
+            - unavailable
+            - null
+          description: "Trường nutrition Data Quality trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. Giá trị cho phép: verified, estimated, unavailable, ."
+        sourceAttribution:
+          type:
+            - object
+            - "null"
+          required:
+            - provider
+            - sourceId
+            - license
+            - importedAt
+          properties:
+            provider:
+              type: string
+              maxLength: 80
+              description: Tên adapter/provider AI.
+            sourceId:
+              type: string
+              maxLength: 200
+              description: ID tham chiếu sourceId; xem resource tương ứng và kiểm tra quyền ở service.
+            url:
+              type:
+                - string
+                - "null"
+              maxLength: 2048
+              description: URL media có quyền truy cập khi do media service trả; có thể có hạn.
+            license:
+              type: string
+              maxLength: 100
+              description: Trường license trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            importedAt:
+              type: string
+              format: date-time
+              description: Timestamp importedAt, ISO 8601 khi schema khai báo date-time.
+          additionalProperties: false
+          description: Trường source Attribution trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
         allergenIds:
           type:
             - array
@@ -56495,6 +56539,50 @@ components:
               description: "vitaminDMcg: giá trị tính bằng microgram."
           additionalProperties: false
           description: Dinh dưỡng của một khẩu phần công thức.
+        nutritionDataQuality:
+          type:
+            - string
+            - "null"
+          enum:
+            - verified
+            - estimated
+            - unavailable
+            - null
+          description: "Trường nutrition Data Quality trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. Giá trị cho phép: verified, estimated, unavailable, ."
+        sourceAttribution:
+          type:
+            - object
+            - "null"
+          required:
+            - provider
+            - sourceId
+            - license
+            - importedAt
+          properties:
+            provider:
+              type: string
+              maxLength: 80
+              description: Tên adapter/provider AI.
+            sourceId:
+              type: string
+              maxLength: 200
+              description: ID tham chiếu sourceId; xem resource tương ứng và kiểm tra quyền ở service.
+            url:
+              type:
+                - string
+                - "null"
+              maxLength: 2048
+              description: URL media có quyền truy cập khi do media service trả; có thể có hạn.
+            license:
+              type: string
+              maxLength: 100
+              description: Trường license trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            importedAt:
+              type: string
+              format: date-time
+              description: Timestamp importedAt, ISO 8601 khi schema khai báo date-time.
+          additionalProperties: false
+          description: Trường source Attribution trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
         allergenIds:
           type:
             - array
@@ -59370,6 +59458,50 @@ components:
               description: "vitaminDMcg: giá trị tính bằng microgram."
           additionalProperties: false
           description: Dinh dưỡng tính trên 100 gram thực phẩm.
+        nutritionDataQuality:
+          type:
+            - string
+            - "null"
+          enum:
+            - verified
+            - estimated
+            - unavailable
+            - null
+          description: "Trường nutrition Data Quality trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. Giá trị cho phép: verified, estimated, unavailable, ."
+        sourceAttribution:
+          type:
+            - object
+            - "null"
+          required:
+            - provider
+            - sourceId
+            - license
+            - importedAt
+          properties:
+            provider:
+              type: string
+              maxLength: 80
+              description: Tên adapter/provider AI.
+            sourceId:
+              type: string
+              maxLength: 200
+              description: ID tham chiếu sourceId; xem resource tương ứng và kiểm tra quyền ở service.
+            url:
+              type:
+                - string
+                - "null"
+              maxLength: 2048
+              description: URL media có quyền truy cập khi do media service trả; có thể có hạn.
+            license:
+              type: string
+              maxLength: 100
+              description: Trường license trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            importedAt:
+              type: string
+              format: date-time
+              description: Timestamp importedAt, ISO 8601 khi schema khai báo date-time.
+          additionalProperties: false
+          description: Trường source Attribution trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
         allergenIds:
           type:
             - array
@@ -61910,6 +62042,50 @@ components:
               description: "vitaminDMcg: giá trị tính bằng microgram."
           additionalProperties: false
           description: Dinh dưỡng của một khẩu phần công thức.
+        nutritionDataQuality:
+          type:
+            - string
+            - "null"
+          enum:
+            - verified
+            - estimated
+            - unavailable
+            - null
+          description: "Trường nutrition Data Quality trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. Giá trị cho phép: verified, estimated, unavailable, ."
+        sourceAttribution:
+          type:
+            - object
+            - "null"
+          required:
+            - provider
+            - sourceId
+            - license
+            - importedAt
+          properties:
+            provider:
+              type: string
+              maxLength: 80
+              description: Tên adapter/provider AI.
+            sourceId:
+              type: string
+              maxLength: 200
+              description: ID tham chiếu sourceId; xem resource tương ứng và kiểm tra quyền ở service.
+            url:
+              type:
+                - string
+                - "null"
+              maxLength: 2048
+              description: URL media có quyền truy cập khi do media service trả; có thể có hạn.
+            license:
+              type: string
+              maxLength: 100
+              description: Trường license trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            importedAt:
+              type: string
+              format: date-time
+              description: Timestamp importedAt, ISO 8601 khi schema khai báo date-time.
+          additionalProperties: false
+          description: Trường source Attribution trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
         allergenIds:
           type:
             - array
@@ -62443,6 +62619,50 @@ components:
               description: "vitaminDMcg: giá trị tính bằng microgram."
           additionalProperties: false
           description: Dinh dưỡng của một khẩu phần công thức.
+        nutritionDataQuality:
+          type:
+            - string
+            - "null"
+          enum:
+            - verified
+            - estimated
+            - unavailable
+            - null
+          description: "Trường nutrition Data Quality trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. Giá trị cho phép: verified, estimated, unavailable, ."
+        sourceAttribution:
+          type:
+            - object
+            - "null"
+          required:
+            - provider
+            - sourceId
+            - license
+            - importedAt
+          properties:
+            provider:
+              type: string
+              maxLength: 80
+              description: Tên adapter/provider AI.
+            sourceId:
+              type: string
+              maxLength: 200
+              description: ID tham chiếu sourceId; xem resource tương ứng và kiểm tra quyền ở service.
+            url:
+              type:
+                - string
+                - "null"
+              maxLength: 2048
+              description: URL media có quyền truy cập khi do media service trả; có thể có hạn.
+            license:
+              type: string
+              maxLength: 100
+              description: Trường license trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            importedAt:
+              type: string
+              format: date-time
+              description: Timestamp importedAt, ISO 8601 khi schema khai báo date-time.
+          additionalProperties: false
+          description: Trường source Attribution trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
         allergenIds:
           type:
             - array

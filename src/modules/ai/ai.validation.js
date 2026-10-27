@@ -51,6 +51,21 @@ export const pantryOutput = z.strictObject({
   notes: z.string().max(2000).optional(),
 });
 export const chatOutput = z.strictObject({ content: text(8000) });
+export const chatRetrievalOutput = z.strictObject({
+  mode: z.enum(["direct", "catalog"]),
+  searchText: z.string().trim().max(160).default(""),
+  recipeTerms: z.array(text(80)).max(8).default([]),
+  foodTerms: z.array(text(80)).max(8).default([]),
+  filters: z
+    .strictObject({
+      maxTotalMinutes: z.number().int().min(1).max(1440).optional(),
+      maxCaloriesKcal: z.number().min(1).max(10000).optional(),
+      minProteinG: z.number().min(0).max(1000).optional(),
+      cuisine: text(80).optional(),
+      difficulty: z.enum(["easy", "medium", "hard"]).optional(),
+    })
+    .default({}),
+});
 export const summaryOutput = z.strictObject({
   summary: text(8000),
   keyPoints: z.array(text(500)).max(20),

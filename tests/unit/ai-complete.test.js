@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { z } from "zod";
-import { createAiModule } from "../../src/modules/ai/index.js";
+import { chatRetrievalOutput, createAiModule } from "../../src/modules/ai/index.js";
 import { createAiProvider, AI_SAFETY_PROMPT } from "../../src/providers/ai/ai.provider.js";
 import { linkAiCatalogReferences } from "../../src/modules/ai/ai.references.js";
 import { fakeRepository, fakeTransaction, objectId } from "./ai-reminders-fakes.js";
@@ -264,6 +264,67 @@ describe("AI complete domain", () => {
     expect((await f.operations.getAiConversations({ actor: { userId: other } })).data).toHaveLength(
       0,
     );
+  });
+  it("uses an AI retrieval plan, filters DB candidates and returns tappable verified recipes", async () => {
+    const f = fixture();
+    f.provider.planRetrieval = vi.fn(async () => ({
+      data: {
+        mode: "catalog",
+        searchText: "",
+        recipeTerms: [],
+        foodTerms: [],
+        filters: { maxCaloriesKcal: 500, minProteinG: 15 },
+      },
+    }));
+    await f.repos.foodItems.create({
+      _id: foodId,
+      name: "Tofu",
+      status: "active",
+      isVegan: true,
+      isVegetarian: true,
+      allergenIds: [],
+      nutritionDataQuality: "verified",
+      nutritionPer100g: { caloriesKcal: 76, proteinG: 8.1 },
+    });
+    await f.repos.recipes.create({
+      _id: recipeId,
+      title: "Protein Tofu Bowl",
+      status: "published",
+      visibility: "public",
+      isVegan: true,
+      isVegetarian: true,
+      allergenIds: [],
+      nutritionDataQuality: "verified",
+      nutritionPerServing: { caloriesKcal: 420, proteinG: 24 },
+      ingredients: [{ foodItemId: foodId, foodNameSnapshot: "Tofu", quantity: 200, unit: "g" }],
+    });
+    f.outputs.chat = {
+      content: `Try **Protein Tofu Bowl** (ID: \`${recipeId}\`) for dinner.`,
+    };
+    const conversation = await f.operations.createAiConversation({
+      actor,
+      body: { title: "Protein dinner" },
+    });
+
+    const answer = await f.operations.sendAiMessage({
+      actor,
+      params: { id: conversation._id },
+      body: { content: "Suggest a high-protein dinner under 500 kcal" },
+      requestId: "retrieval-request",
+    });
+
+    expect(f.provider.planRetrieval).toHaveBeenCalledWith(
+      expect.objectContaining({
+        question: expect.stringContaining("high-protein"),
+        requestId: "retrieval-request",
+      }),
+    );
+    expect(answer.content).toContain(`[Protein Tofu Bowl](veganapp://recipe/${recipeId})`);
+    expect(f.repos.aiRuns.records[0].inputMetadata).toMatchObject({
+      retrievalMode: "catalog",
+      recipeCount: 1,
+      foodCount: 1,
+    });
   });
   it("does not persist an orphaned user message when generation fails", async () => {
     const f = fixture();
@@ -595,6 +656,41 @@ describe("OpenAI-compatible native provider, offline", () => {
     const payload = JSON.parse(fetchImpl.mock.calls[0][1].body);
     expect(payload.response_format.json_schema.strict).toBe(true);
     expect(payload.thinking).toEqual({ type: "disabled" });
+  });
+  it("builds a structured retrieval plan before catalog-grounded chat", async () => {
+    const fetchImpl = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                mode: "catalog",
+                searchText: "protein dinner",
+                recipeTerms: ["tofu bowl"],
+                foodTerms: ["tofu"],
+                filters: { maxCaloriesKcal: 500 },
+              }),
+            },
+          },
+        ],
+      }),
+    }));
+    const provider = createAiProvider({ env, fetchImpl });
+
+    await expect(
+      provider.planRetrieval({
+        question: "Món tối giàu đạm dưới 500 kcal",
+        schema: chatRetrievalOutput,
+        requestId: "plan-1",
+      }),
+    ).resolves.toMatchObject({
+      data: { mode: "catalog", filters: { maxCaloriesKcal: 500 } },
+    });
+    const payload = JSON.parse(fetchImpl.mock.calls[0][1].body);
+    expect(payload.response_format.json_schema.name).toBe("chat_retrieval");
+    expect(payload.max_tokens).toBe(768);
+    expect(payload.messages.at(-1).content).toContain("database retrieval plan");
   });
   it("does not retry auth errors or malformed structured JSON", async () => {
     const fetchImpl = vi.fn(async () => ({ ok: false, status: 401 }));

@@ -32,6 +32,8 @@
     "format:check": "prettier --check .",
     "seed": "node --env-file=.env scripts/seed.js",
     "db:seed": "node --env-file=.env scripts/seed.js",
+    "catalog:build": "node scripts/build-open-catalog.js",
+    "catalog:import": "node --env-file=.env scripts/import-open-catalog.js",
     "media:cleanup": "node --env-file=.env scripts/cleanup-media.js",
     "migrate": "node --env-file=.env scripts/migrate.js",
     "db:indexes": "node --env-file=.env scripts/provision-indexes.js",

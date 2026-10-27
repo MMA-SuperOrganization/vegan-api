@@ -12,6 +12,10 @@ import {
   RECIPE_DIFFICULTIES,
   CONTENT_SOURCE_TYPES,
 } from "../../common/constants/enums/content.enums.js";
+import {
+  catalogSourceSchema,
+  nutritionDataQualityField,
+} from "../../common/persistence/catalog-source.js";
 
 const ingredient = new mongoose.Schema(
   {
@@ -71,6 +75,8 @@ export const RecipesModel = registerModel(
       type: new mongoose.Schema(nutritionFields, { _id: false }),
       default: () => ({}),
     },
+    nutritionDataQuality: nutritionDataQualityField,
+    sourceAttribution: { type: catalogSourceSchema },
     allergenIds: [ref("Allergens")],
     isVegan: Boolean,
     isVegetarian: Boolean,
