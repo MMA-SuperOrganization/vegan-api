@@ -6,7 +6,7 @@ The existing `.github/workflows/verify.yml` now runs **Build & Deploy**:
 
 1. Verify: clean install on Node 24, formatting, `npm run build`, offline tests, production dependency audit, isolated MongoDB replica-set tests and Docker build.
 2. Build & Push: publish AMD64/ARM64 images to `ghcr.io/mma-superorganization/vegan-api` with `latest` and `sha-<full commit SHA>` tags.
-3. Deploy: send an authenticated GET request to the Coolify resource webhook after the image push succeeds. Missing secrets, HTTP errors and connection timeouts fail this job.
+3. Deploy: send an authenticated POST request to the Coolify resource webhook after the image push succeeds. Missing secrets, HTTP errors and connection timeouts fail this job.
 
 Pull requests and pushes to other branches only verify. Pushes to `main` publish and deploy. You can also select **Actions → Build & Deploy → Run workflow → main** to rerun a release after configuring secrets. Main releases are serialized. A successful webhook call means Coolify accepted the request; confirm the deployment and readiness in Coolify separately.
 

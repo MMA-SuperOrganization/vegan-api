@@ -125,7 +125,7 @@ jobs:
           fi
           curl --fail --silent --show-error \
             --connect-timeout 10 --max-time 60 \
-            --proto '=https' --request GET \
+            --proto '=https' --request POST \
             --header "Authorization: Bearer $COOLIFY_TOKEN" \
             --output /dev/null \
             "$COOLIFY_WEBHOOK_URL"
