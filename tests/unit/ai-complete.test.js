@@ -548,7 +548,34 @@ describe("OpenAI-compatible native provider, offline", () => {
     const payload = JSON.parse(fetchImpl.mock.calls[0][1].body);
     expect(payload.messages[0].content).toBe(AI_SAFETY_PROMPT);
     expect(payload.response_format.type).toBe("json_schema");
+    expect(payload.response_format.json_schema.strict).toBe(false);
+    expect(payload).not.toHaveProperty("thinking");
     expect(result.usage).toEqual({ total_tokens: 9 });
+  });
+  it("uses Kimi structured-output settings and accepts a fenced JSON response", async () => {
+    const fetchImpl = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        choices: [{ message: { content: '```json\n{"content":"xin chao"}\n```' } }],
+      }),
+    }));
+    const provider = createAiProvider({
+      env: {
+        ai: {
+          ...env.ai,
+          baseUrl: "https://api.moonshot.ai/v1",
+          chatModel: "kimi-k2.6",
+        },
+      },
+      fetchImpl,
+    });
+
+    await expect(
+      provider.generate({ feature: "chat", messages: [], schema }),
+    ).resolves.toMatchObject({ data: { content: "xin chao" }, model: "kimi-k2.6" });
+    const payload = JSON.parse(fetchImpl.mock.calls[0][1].body);
+    expect(payload.response_format.json_schema.strict).toBe(true);
+    expect(payload.thinking).toEqual({ type: "disabled" });
   });
   it("does not retry auth errors or malformed structured JSON", async () => {
     const fetchImpl = vi.fn(async () => ({ ok: false, status: 401 }));
