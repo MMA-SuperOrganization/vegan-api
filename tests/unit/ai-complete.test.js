@@ -246,6 +246,24 @@ describe("AI complete domain", () => {
       0,
     );
   });
+  it("does not persist an orphaned user message when generation fails", async () => {
+    const f = fixture();
+    const c = await f.operations.createAiConversation({ actor, body: { title: "Cooking" } });
+    f.provider.generate.mockRejectedValueOnce(new Error("provider rejected the request"));
+    await expect(
+      f.operations.sendAiMessage({
+        actor,
+        params: { id: c._id },
+        body: { content: "What can I cook?" },
+      }),
+    ).rejects.toMatchObject({ code: "AI_PROVIDER_ERROR" });
+    expect(f.repos.aiMessages.records).toHaveLength(0);
+    expect(f.repos.aiRuns.records[0]).toMatchObject({
+      feature: "chat",
+      status: "failed",
+      errorCode: "AI_PROVIDER_ERROR",
+    });
+  });
   it("blocks diagnosis and emergency requests without invoking provider", async () => {
     const f = fixture();
     const c = await f.operations.createAiConversation({ actor, body: { title: "Health" } });
@@ -536,7 +554,8 @@ describe("OpenAI-compatible native provider, offline", () => {
     const fetchImpl = vi.fn(async () => ({ ok: false, status: 401 }));
     const p = createAiProvider({ env, fetchImpl, sleep: vi.fn() });
     await expect(p.generate({ feature: "chat", messages: [], schema })).rejects.toMatchObject({
-      code: "AI_PROVIDER_ERROR",
+      code: "AI_AUTHENTICATION_ERROR",
+      statusCode: 503,
     });
     expect(fetchImpl).toHaveBeenCalledTimes(1);
     fetchImpl.mockResolvedValue({
@@ -559,13 +578,13 @@ describe("OpenAI-compatible native provider, offline", () => {
         messages: [{ role: "user", content: "private meal preferences" }],
         schema,
       }),
-    ).rejects.toMatchObject({ code: "AI_PROVIDER_ERROR" });
+    ).rejects.toMatchObject({ code: "AI_AUTHENTICATION_ERROR" });
     expect(logger.warn).toHaveBeenCalledWith(
       {
         feature: "chat",
         requestId: "qa-request",
         attempt: 1,
-        code: "AI_PROVIDER_ERROR",
+        code: "AI_AUTHENTICATION_ERROR",
         upstreamStatus: 401,
       },
       "AI provider request failed",

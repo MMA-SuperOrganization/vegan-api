@@ -447,13 +447,6 @@ export function createAiService({
         { userId, conversationId: params.id, status: "completed" },
         { page: 1, limit: 12, sort: { createdAt: -1, _id: -1 } },
       );
-      await repos.aiMessages.create({
-        userId,
-        conversationId: params.id,
-        role: "user",
-        content,
-        status: "completed",
-      });
       let output;
       if (
         /chest pain|can'?t breathe|suicid|overdos|diagnos|prescrib|treat my|stop .*medication|đau ngực|khó thở|tự tử|chẩn đoán/i.test(
@@ -498,6 +491,15 @@ export function createAiService({
           },
         );
       }
+      // Do not persist a user turn until generation succeeds. Otherwise a
+      // provider failure followed by retry leaves duplicate orphaned prompts.
+      await repos.aiMessages.create({
+        userId,
+        conversationId: params.id,
+        role: "user",
+        content,
+        status: "completed",
+      });
       const message = await repos.aiMessages.create({
         userId,
         conversationId: params.id,
