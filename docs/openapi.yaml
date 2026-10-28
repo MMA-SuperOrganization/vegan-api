@@ -58532,6 +58532,34 @@ components:
         usage:
           $ref: "#/components/schemas/JsonValue"
           description: Thông tin sử dụng token/tài nguyên theo schema.
+        safetyNotices:
+          type:
+            - array
+            - "null"
+          items:
+            type: object
+            required:
+              - code
+              - severity
+              - message
+            properties:
+              code:
+                type: string
+                enum:
+                  - ALLERGEN_CAUTION
+                description: "Mã lỗi ổn định hoặc mã phân loại theo resource. Giá trị cho phép: ALLERGEN_CAUTION."
+              severity:
+                type: string
+                enum:
+                  - warning
+                description: "Trường severity trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. Giá trị cho phép: warning."
+              message:
+                type: string
+                maxLength: 1000
+                description: Thông báo đọc được bởi người dùng; phân loại xử lý bằng code thay vì so sánh message.
+            additionalProperties: false
+            description: Trường safety Notices item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+          description: Trường safety Notices trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
         status:
           type:
             - string
@@ -65072,6 +65100,34 @@ components:
         usage:
           $ref: "#/components/schemas/JsonValue"
           description: Thông tin sử dụng token/tài nguyên theo schema.
+        safetyNotices:
+          type:
+            - array
+            - "null"
+          items:
+            type: object
+            required:
+              - code
+              - severity
+              - message
+            properties:
+              code:
+                type: string
+                enum:
+                  - ALLERGEN_CAUTION
+                description: "Mã lỗi ổn định hoặc mã phân loại theo resource. Giá trị cho phép: ALLERGEN_CAUTION."
+              severity:
+                type: string
+                enum:
+                  - warning
+                description: "Trường severity trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. Giá trị cho phép: warning."
+              message:
+                type: string
+                maxLength: 1000
+                description: Thông báo đọc được bởi người dùng; phân loại xử lý bằng code thay vì so sánh message.
+            additionalProperties: false
+            description: Trường safety Notices item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+          description: Trường safety Notices trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
         status:
           type:
             - string

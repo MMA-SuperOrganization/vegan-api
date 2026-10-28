@@ -52,6 +52,12 @@ const TARGET_NUTRIENTS = Object.freeze({
   fiberTargetG: "fiberG",
 });
 const TARGET_TOLERANCE = 0.2;
+const ALLERGEN_CAUTION = Object.freeze({
+  code: "ALLERGEN_CAUTION",
+  severity: "warning",
+  message:
+    "Catalog items matching saved allergens were excluded, but ingredient and cross-contact data may be incomplete. Verify product labels and preparation conditions before eating.",
+});
 const NUTRITION_QUALITY_ORDER = Object.freeze(["verified", "estimated", "unavailable"]);
 const NUTRITION_QUALITY_PRIORITY = Object.freeze(
   Object.fromEntries(NUTRITION_QUALITY_ORDER.map((quality, index) => [quality, index])),
@@ -348,6 +354,7 @@ export function createAiService({
         retrieval: { mode: "direct" },
         foods: [],
         recipes: [],
+        safetyNotices: [],
       };
     const safety = await dietarySafety(userId);
     const recipeTerms = plan.recipeTerms.length ? plan.recipeTerms : inferredTerms(plan.searchText);
@@ -496,6 +503,7 @@ export function createAiService({
           source: sourceAttribution?.provider,
         }),
       ),
+      safetyNotices: safety.allergenIds.size ? [ALLERGEN_CAUTION] : [],
     };
   }
   async function readyMedia(userId, id, type) {
@@ -676,6 +684,7 @@ export function createAiService({
         { page: 1, limit: 12, sort: { createdAt: -1, _id: -1 } },
       );
       let output;
+      let safetyNotices = [];
       if (
         /chest pain|can'?t breathe|suicid|overdos|diagnos|prescrib|treat my|stop .*medication|đau ngực|khó thở|tự tử|chẩn đoán/i.test(
           content,
@@ -700,6 +709,7 @@ export function createAiService({
       } else {
         const retrievalPlan = await planChatRetrieval(content, requestId);
         const catalog = await groundingCatalog(userId, retrievalPlan);
+        safetyNotices = catalog.safetyNotices;
         output = await execute(
           userId,
           "chat",
@@ -745,13 +755,14 @@ export function createAiService({
         content: `${output.data.content}\n\n${AI_DISCLAIMER}`,
         model: output.model,
         usage: output.usage,
+        safetyNotices,
         status: output.model === "safety-policy" ? "blocked" : "completed",
       });
       await repos.aiConversations.updateOne(
         { _id: params.id, userId },
         { $set: { lastMessageAt: now() } },
       );
-      return { ...message, runId: output.runId, disclaimer: AI_DISCLAIMER };
+      return { ...message, runId: output.runId, disclaimer: AI_DISCLAIMER, safetyNotices };
     },
     async createMealPlanProposal({ actor, body, requestId }) {
       enabled();

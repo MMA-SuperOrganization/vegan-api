@@ -482,6 +482,41 @@ describe("AI complete domain", () => {
     expect(f.provider.generate).not.toHaveBeenCalled();
     expect(f.repos.aiRuns.records[0].status).toBe("blocked");
   });
+  it("persists a clear allergen caution without exposing saved allergen IDs", async () => {
+    const f = fixture();
+    const allergenId = objectId();
+    f.deps.services.users.getNutrition.mockResolvedValue({ allergenIds: [allergenId] });
+    f.provider.planRetrieval = vi.fn(async () => ({
+      data: {
+        mode: "catalog",
+        searchText: "dinner",
+        recipeTerms: [],
+        foodTerms: [],
+        filters: {},
+      },
+    }));
+    const conversation = await f.operations.createAiConversation({
+      actor,
+      body: { title: "Allergen safety" },
+    });
+
+    const result = await f.operations.sendAiMessage({
+      actor,
+      params: { id: conversation._id },
+      body: { content: "Suggest a dinner" },
+    });
+
+    expect(result.safetyNotices).toEqual([
+      expect.objectContaining({ code: "ALLERGEN_CAUTION", severity: "warning" }),
+    ]);
+    expect(JSON.stringify(result.safetyNotices)).not.toContain(allergenId);
+    expect(f.repos.aiMessages.records.at(-1).safetyNotices).toEqual(result.safetyNotices);
+    const history = await f.operations.getAiMessages({
+      actor,
+      params: { id: conversation._id },
+    });
+    expect(history.data.at(-1).safetyNotices).toEqual(result.safetyNotices);
+  });
   it("creates a pending plan; confirms atomically once and retry returns persisted result", async () => {
     const f = fixture();
     const proposal = await f.operations.createMealPlanProposal({

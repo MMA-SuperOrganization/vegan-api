@@ -23,6 +23,16 @@ const message = new Schema(
     structuredData: Schema.Types.Mixed,
     model: String,
     usage: Schema.Types.Mixed,
+    safetyNotices: [
+      new Schema(
+        {
+          code: { type: String, enum: ["ALLERGEN_CAUTION"], required: true },
+          severity: { type: String, enum: ["warning"], required: true },
+          message: { type: String, maxlength: 1000, required: true },
+        },
+        { _id: false },
+      ),
+    ],
     status: { type: String, enum: ["completed", "failed", "blocked"], default: "completed" },
   },
   options("aiMessages"),
