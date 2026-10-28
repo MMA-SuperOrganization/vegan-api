@@ -242,6 +242,37 @@ describe("AI complete domain", () => {
       }),
     ).resolves.toMatchObject({ rating: "helpful" });
   });
+  it("returns conversation messages in a deterministic chronological order", async () => {
+    const f = fixture();
+    const conversation = await f.repos.aiConversations.create({
+      userId,
+      title: "Ordered history",
+      status: "active",
+    });
+    const later = await f.repos.aiMessages.create({
+      _id: "ffffffffffffffffffffffff",
+      userId,
+      conversationId: conversation._id,
+      role: "assistant",
+      content: "Second",
+      status: "completed",
+    });
+    const earlier = await f.repos.aiMessages.create({
+      _id: "000000000000000000000000",
+      userId,
+      conversationId: conversation._id,
+      role: "user",
+      content: "First",
+      status: "completed",
+    });
+
+    const result = await f.operations.getAiMessages({
+      actor,
+      params: { id: conversation._id },
+    });
+
+    expect(result.data.map((message) => message._id)).toEqual([earlier._id, later._id]);
+  });
   it("persists owned chat, bounded context and privacy-safe run metadata", async () => {
     const f = fixture();
     const c = await f.operations.createAiConversation({ actor, body: { title: "Cooking" } });
@@ -325,6 +356,101 @@ describe("AI complete domain", () => {
       recipeCount: 1,
       foodCount: 1,
     });
+  });
+  it("uses lower-quality catalog evidence only when no verified record is available", async () => {
+    const f = fixture();
+    f.provider.planRetrieval = vi.fn(async () => ({
+      data: {
+        mode: "catalog",
+        searchText: "",
+        recipeTerms: [],
+        foodTerms: [],
+        filters: {},
+      },
+    }));
+    const qualities = ["unavailable", "estimated", "verified"];
+    for (const [index, quality] of qualities.entries()) {
+      const catalogFoodId = objectId();
+      await f.repos.foodItems.create({
+        _id: catalogFoodId,
+        name: `${quality} food`,
+        status: "active",
+        isVegan: true,
+        allergenIds: [],
+        nutritionDataQuality: quality,
+      });
+      await f.repos.recipes.create({
+        _id: objectId(),
+        title: `${quality} recipe`,
+        status: "published",
+        visibility: "public",
+        isVegan: true,
+        allergenIds: [],
+        nutritionDataQuality: quality,
+        ingredients: [{ foodItemId: catalogFoodId, foodNameSnapshot: `${quality} food` }],
+        createdOrder: index,
+      });
+    }
+    const conversation = await f.operations.createAiConversation({
+      actor,
+      body: { title: "Evidence quality" },
+    });
+
+    await f.operations.sendAiMessage({
+      actor,
+      params: { id: conversation._id },
+      body: { content: "Suggest a vegan recipe" },
+    });
+
+    const prompt = JSON.stringify(f.provider.generate.mock.calls[0][0]);
+    expect(prompt).toContain("verified food");
+    expect(prompt).toContain("verified recipe");
+    expect(prompt).not.toContain("estimated food");
+    expect(prompt).not.toContain("estimated recipe");
+    expect(prompt).not.toContain("unavailable food");
+    expect(prompt).not.toContain("unavailable recipe");
+    expect(prompt).toContain("use unavailable records only when no suitable higher-quality record");
+
+    for (const repository of [f.repos.foodItems, f.repos.recipes]) {
+      const remaining = repository.records.filter(
+        (record) => record.nutritionDataQuality !== "verified",
+      );
+      repository.records.splice(0, repository.records.length, ...remaining);
+    }
+    const estimatedConversation = await f.operations.createAiConversation({
+      actor,
+      body: { title: "Estimated fallback" },
+    });
+    await f.operations.sendAiMessage({
+      actor,
+      params: { id: estimatedConversation._id },
+      body: { content: "Suggest another vegan recipe" },
+    });
+    const estimatedPrompt = JSON.stringify(f.provider.generate.mock.calls[1][0]);
+    expect(estimatedPrompt).toContain("estimated food");
+    expect(estimatedPrompt).toContain("estimated recipe");
+    expect(estimatedPrompt).not.toContain("unavailable food");
+    expect(estimatedPrompt).not.toContain("unavailable recipe");
+
+    for (const repository of [f.repos.foodItems, f.repos.recipes]) {
+      const remaining = repository.records.filter(
+        (record) => record.nutritionDataQuality !== "estimated",
+      );
+      repository.records.splice(0, repository.records.length, ...remaining);
+    }
+    const unavailableConversation = await f.operations.createAiConversation({
+      actor,
+      body: { title: "Unavailable fallback" },
+    });
+    await f.operations.sendAiMessage({
+      actor,
+      params: { id: unavailableConversation._id },
+      body: { content: "Suggest any remaining vegan recipe" },
+    });
+    const unavailablePrompt = JSON.stringify(f.provider.generate.mock.calls[2][0]);
+    expect(unavailablePrompt).toContain("unavailable food");
+    expect(unavailablePrompt).toContain("unavailable recipe");
+    expect(unavailablePrompt).toContain("make no quantitative nutrition claim");
   });
   it("does not persist an orphaned user message when generation fails", async () => {
     const f = fixture();

@@ -52,6 +52,38 @@ const TARGET_NUTRIENTS = Object.freeze({
   fiberTargetG: "fiberG",
 });
 const TARGET_TOLERANCE = 0.2;
+const NUTRITION_QUALITY_ORDER = Object.freeze(["verified", "estimated", "unavailable"]);
+const NUTRITION_QUALITY_PRIORITY = Object.freeze(
+  Object.fromEntries(NUTRITION_QUALITY_ORDER.map((quality, index) => [quality, index])),
+);
+const prioritizeNutritionQuality = (records) =>
+  [...records].sort(
+    (left, right) =>
+      (NUTRITION_QUALITY_PRIORITY[left.nutritionDataQuality] ?? 3) -
+      (NUTRITION_QUALITY_PRIORITY[right.nutritionDataQuality] ?? 3),
+  );
+const findManyAtBestNutritionQuality = async (repository, filter, options) => {
+  if (!repository?.findMany) return { data: [] };
+  const qualityFilter = filter.nutritionDataQuality;
+  const allowedQualities = new Set(
+    Array.isArray(qualityFilter?.$in)
+      ? qualityFilter.$in
+      : typeof qualityFilter === "string"
+        ? [qualityFilter]
+        : NUTRITION_QUALITY_ORDER,
+  );
+  const catalogFilter = { ...filter };
+  delete catalogFilter.nutritionDataQuality;
+  for (const quality of NUTRITION_QUALITY_ORDER) {
+    if (!allowedQualities.has(quality)) continue;
+    const page = await repository.findMany(
+      { ...catalogFilter, nutritionDataQuality: quality },
+      { ...options, page: 1 },
+    );
+    if (page.data?.length) return { data: page.data };
+  }
+  return { data: [] };
+};
 
 export function createAiService({
   aiRepository: repos,
@@ -339,7 +371,8 @@ export function createAiService({
       recipeFilter.cuisine = { $regex: escapeRegex(plan.filters.cuisine), $options: "i" };
 
     const [foods, recipes] = await Promise.all([
-      repositories.foodItems?.findMany?.(
+      findManyAtBestNutritionQuality(
+        repositories.foodItems,
         {
           status: "active",
           ...searchFilter(["name", "normalizedName", "aliases", "description"], foodTerms),
@@ -359,8 +392,8 @@ export function createAiService({
             sourceAttribution: 1,
           },
         },
-      ) ?? { data: [] },
-      repositories.recipes?.findMany?.(recipeFilter, {
+      ),
+      findManyAtBestNutritionQuality(repositories.recipes, recipeFilter, {
         page: 1,
         limit: 60,
         projection: {
@@ -379,7 +412,7 @@ export function createAiService({
           isVegetarian: 1,
           sourceAttribution: 1,
         },
-      }) ?? { data: [] },
+      }),
     ]);
     const ingredientIds = [
       ...new Set(
@@ -400,21 +433,21 @@ export function createAiService({
       fitsDiet(food, safety.dietType) &&
       !safety.excludedFoodItemIds.has(String(food._id)) &&
       !(food.allergenIds ?? []).some((id) => safety.allergenIds.has(String(id)));
-    const safeFoods = (foods.data ?? []).filter(safeFood).slice(0, 24);
+    const safeFoods = prioritizeNutritionQuality((foods.data ?? []).filter(safeFood)).slice(0, 24);
     const safeFoodIds = new Set(ingredientFoods.filter(safeFood).map((food) => String(food._id)));
-    const safeRecipes = (recipes.data ?? [])
-      .filter(
+    const safeRecipes = prioritizeNutritionQuality(
+      (recipes.data ?? []).filter(
         (recipe) =>
           fitsDiet(recipe, safety.dietType) &&
           !(recipe.allergenIds ?? []).some((id) => safety.allergenIds.has(String(id))) &&
           (recipe.ingredients ?? []).every((ingredient) =>
             safeFoodIds.has(String(ingredient.foodItemId)),
           ),
-      )
-      .slice(0, 12);
+      ),
+    ).slice(0, 12);
     return {
       instruction:
-        "Use only these retrieved database records for concrete food and recipe recommendations. Never invent a catalog item, ID, nutrition value, or allergen claim. Treat nutritionDataQuality=unavailable as unknown and make no quantitative nutrition claim from it. Render every mentioned recipe as [Recipe title](veganapp://recipe/ID) and every mentioned food as [Food name](veganapp://food/ID). Never display an ID as visible text, code, parentheses, or an ID label. Briefly explain why each result matches the question.",
+        "Use only these retrieved database records for concrete food and recipe recommendations. Records are ordered by nutrition evidence quality: verified first, estimated second, unavailable last. Prefer verified records, use estimated records only when needed, and use unavailable records only when no suitable higher-quality record exists. Never invent a catalog item, ID, nutrition value, or allergen claim. Treat nutritionDataQuality=unavailable as unknown and make no quantitative nutrition claim from it. Render every mentioned recipe as [Recipe title](veganapp://recipe/ID) and every mentioned food as [Food name](veganapp://food/ID). Never display an ID as visible text, code, parentheses, or an ID label. Briefly explain why each result matches the question.",
       retrieval: {
         mode: "catalog",
         searchText: plan.searchText,
