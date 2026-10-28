@@ -1,7 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
 import { z } from "zod";
-import { createAiModule } from "../../src/modules/ai/index.js";
+import { chatRetrievalOutput, createAiModule } from "../../src/modules/ai/index.js";
 import { createAiProvider, AI_SAFETY_PROMPT } from "../../src/providers/ai/ai.provider.js";
+import { linkAiCatalogReferences } from "../../src/modules/ai/ai.references.js";
 import { fakeRepository, fakeTransaction, objectId } from "./ai-reminders-fakes.js";
 const userId = objectId(),
   other = objectId(),
@@ -100,6 +101,22 @@ function fixture(overrides = {}) {
   return { ...createAiModule(deps), deps, outputs, provider: aiProvider, repos: repositories };
 }
 describe("AI complete domain", () => {
+  it("turns catalog IDs into tappable app links without exposing ID labels", () => {
+    const content = [
+      `- **Avocado Chickpea Salad** (ID: \`${recipeId}\`) - Rich in healthy fats`,
+      `- Tofu (ID: ${foodId})`,
+    ].join("\n");
+    const linked = linkAiCatalogReferences(content, {
+      recipes: [{ id: recipeId, title: "Avocado Chickpea Salad" }],
+      foods: [{ id: foodId, name: "Tofu" }],
+    });
+
+    expect(linked).toContain(
+      `**[Avocado Chickpea Salad](veganapp://recipe/${recipeId})** - Rich in healthy fats`,
+    );
+    expect(linked).toContain(`[Tofu](veganapp://food/${foodId})`);
+    expect(linked).not.toMatch(/\bID\s*:/i);
+  });
   it("confirms selected pantry items, resolving unknown recognition without another provider call", async () => {
     const f = fixture();
     f.outputs.ingredient_recognition = {
@@ -225,6 +242,37 @@ describe("AI complete domain", () => {
       }),
     ).resolves.toMatchObject({ rating: "helpful" });
   });
+  it("returns conversation messages in a deterministic chronological order", async () => {
+    const f = fixture();
+    const conversation = await f.repos.aiConversations.create({
+      userId,
+      title: "Ordered history",
+      status: "active",
+    });
+    const later = await f.repos.aiMessages.create({
+      _id: "ffffffffffffffffffffffff",
+      userId,
+      conversationId: conversation._id,
+      role: "assistant",
+      content: "Second",
+      status: "completed",
+    });
+    const earlier = await f.repos.aiMessages.create({
+      _id: "000000000000000000000000",
+      userId,
+      conversationId: conversation._id,
+      role: "user",
+      content: "First",
+      status: "completed",
+    });
+
+    const result = await f.operations.getAiMessages({
+      actor,
+      params: { id: conversation._id },
+    });
+
+    expect(result.data.map((message) => message._id)).toEqual([earlier._id, later._id]);
+  });
   it("persists owned chat, bounded context and privacy-safe run metadata", async () => {
     const f = fixture();
     const c = await f.operations.createAiConversation({ actor, body: { title: "Cooking" } });
@@ -239,12 +287,170 @@ describe("AI complete domain", () => {
     expect(f.repos.aiRuns.records[0]).toMatchObject({ feature: "chat", status: "completed" });
     const prompt = JSON.stringify(f.provider.generate.mock.calls[0][0]);
     expect(prompt).not.toContain("SECRET_");
+    expect(prompt).toContain("veganapp://recipe/ID");
+    expect(prompt).toContain("Never display an ID as visible text");
     await expect(
       f.operations.getAiMessages({ actor: { userId: other }, params: { id: c._id } }),
     ).rejects.toMatchObject({ statusCode: 404 });
     expect((await f.operations.getAiConversations({ actor: { userId: other } })).data).toHaveLength(
       0,
     );
+  });
+  it("uses an AI retrieval plan, filters DB candidates and returns tappable verified recipes", async () => {
+    const f = fixture();
+    f.provider.planRetrieval = vi.fn(async () => ({
+      data: {
+        mode: "catalog",
+        searchText: "",
+        recipeTerms: [],
+        foodTerms: [],
+        filters: { maxCaloriesKcal: 500, minProteinG: 15 },
+      },
+    }));
+    await f.repos.foodItems.create({
+      _id: foodId,
+      name: "Tofu",
+      status: "active",
+      isVegan: true,
+      isVegetarian: true,
+      allergenIds: [],
+      nutritionDataQuality: "verified",
+      nutritionPer100g: { caloriesKcal: 76, proteinG: 8.1 },
+    });
+    await f.repos.recipes.create({
+      _id: recipeId,
+      title: "Protein Tofu Bowl",
+      status: "published",
+      visibility: "public",
+      isVegan: true,
+      isVegetarian: true,
+      allergenIds: [],
+      nutritionDataQuality: "verified",
+      nutritionPerServing: { caloriesKcal: 420, proteinG: 24 },
+      ingredients: [{ foodItemId: foodId, foodNameSnapshot: "Tofu", quantity: 200, unit: "g" }],
+    });
+    f.outputs.chat = {
+      content: `Try **Protein Tofu Bowl** (ID: \`${recipeId}\`) for dinner.`,
+    };
+    const conversation = await f.operations.createAiConversation({
+      actor,
+      body: { title: "Protein dinner" },
+    });
+
+    const answer = await f.operations.sendAiMessage({
+      actor,
+      params: { id: conversation._id },
+      body: { content: "Suggest a high-protein dinner under 500 kcal" },
+      requestId: "retrieval-request",
+    });
+
+    expect(f.provider.planRetrieval).toHaveBeenCalledWith(
+      expect.objectContaining({
+        question: expect.stringContaining("high-protein"),
+        requestId: "retrieval-request",
+      }),
+    );
+    expect(answer.content).toContain(`[Protein Tofu Bowl](veganapp://recipe/${recipeId})`);
+    expect(f.repos.aiRuns.records[0].inputMetadata).toMatchObject({
+      retrievalMode: "catalog",
+      recipeCount: 1,
+      foodCount: 1,
+    });
+  });
+  it("uses lower-quality catalog evidence only when no verified record is available", async () => {
+    const f = fixture();
+    f.provider.planRetrieval = vi.fn(async () => ({
+      data: {
+        mode: "catalog",
+        searchText: "",
+        recipeTerms: [],
+        foodTerms: [],
+        filters: {},
+      },
+    }));
+    const qualities = ["unavailable", "estimated", "verified"];
+    for (const [index, quality] of qualities.entries()) {
+      const catalogFoodId = objectId();
+      await f.repos.foodItems.create({
+        _id: catalogFoodId,
+        name: `${quality} food`,
+        status: "active",
+        isVegan: true,
+        allergenIds: [],
+        nutritionDataQuality: quality,
+      });
+      await f.repos.recipes.create({
+        _id: objectId(),
+        title: `${quality} recipe`,
+        status: "published",
+        visibility: "public",
+        isVegan: true,
+        allergenIds: [],
+        nutritionDataQuality: quality,
+        ingredients: [{ foodItemId: catalogFoodId, foodNameSnapshot: `${quality} food` }],
+        createdOrder: index,
+      });
+    }
+    const conversation = await f.operations.createAiConversation({
+      actor,
+      body: { title: "Evidence quality" },
+    });
+
+    await f.operations.sendAiMessage({
+      actor,
+      params: { id: conversation._id },
+      body: { content: "Suggest a vegan recipe" },
+    });
+
+    const prompt = JSON.stringify(f.provider.generate.mock.calls[0][0]);
+    expect(prompt).toContain("verified food");
+    expect(prompt).toContain("verified recipe");
+    expect(prompt).not.toContain("estimated food");
+    expect(prompt).not.toContain("estimated recipe");
+    expect(prompt).not.toContain("unavailable food");
+    expect(prompt).not.toContain("unavailable recipe");
+    expect(prompt).toContain("use unavailable records only when no suitable higher-quality record");
+
+    for (const repository of [f.repos.foodItems, f.repos.recipes]) {
+      const remaining = repository.records.filter(
+        (record) => record.nutritionDataQuality !== "verified",
+      );
+      repository.records.splice(0, repository.records.length, ...remaining);
+    }
+    const estimatedConversation = await f.operations.createAiConversation({
+      actor,
+      body: { title: "Estimated fallback" },
+    });
+    await f.operations.sendAiMessage({
+      actor,
+      params: { id: estimatedConversation._id },
+      body: { content: "Suggest another vegan recipe" },
+    });
+    const estimatedPrompt = JSON.stringify(f.provider.generate.mock.calls[1][0]);
+    expect(estimatedPrompt).toContain("estimated food");
+    expect(estimatedPrompt).toContain("estimated recipe");
+    expect(estimatedPrompt).not.toContain("unavailable food");
+    expect(estimatedPrompt).not.toContain("unavailable recipe");
+
+    for (const repository of [f.repos.foodItems, f.repos.recipes]) {
+      const remaining = repository.records.filter(
+        (record) => record.nutritionDataQuality !== "estimated",
+      );
+      repository.records.splice(0, repository.records.length, ...remaining);
+    }
+    const unavailableConversation = await f.operations.createAiConversation({
+      actor,
+      body: { title: "Unavailable fallback" },
+    });
+    await f.operations.sendAiMessage({
+      actor,
+      params: { id: unavailableConversation._id },
+      body: { content: "Suggest any remaining vegan recipe" },
+    });
+    const unavailablePrompt = JSON.stringify(f.provider.generate.mock.calls[2][0]);
+    expect(unavailablePrompt).toContain("unavailable food");
+    expect(unavailablePrompt).toContain("unavailable recipe");
+    expect(unavailablePrompt).toContain("make no quantitative nutrition claim");
   });
   it("does not persist an orphaned user message when generation fails", async () => {
     const f = fixture();
@@ -275,6 +481,41 @@ describe("AI complete domain", () => {
     expect(result.content).toContain("emergency");
     expect(f.provider.generate).not.toHaveBeenCalled();
     expect(f.repos.aiRuns.records[0].status).toBe("blocked");
+  });
+  it("persists a clear allergen caution without exposing saved allergen IDs", async () => {
+    const f = fixture();
+    const allergenId = objectId();
+    f.deps.services.users.getNutrition.mockResolvedValue({ allergenIds: [allergenId] });
+    f.provider.planRetrieval = vi.fn(async () => ({
+      data: {
+        mode: "catalog",
+        searchText: "dinner",
+        recipeTerms: [],
+        foodTerms: [],
+        filters: {},
+      },
+    }));
+    const conversation = await f.operations.createAiConversation({
+      actor,
+      body: { title: "Allergen safety" },
+    });
+
+    const result = await f.operations.sendAiMessage({
+      actor,
+      params: { id: conversation._id },
+      body: { content: "Suggest a dinner" },
+    });
+
+    expect(result.safetyNotices).toEqual([
+      expect.objectContaining({ code: "ALLERGEN_CAUTION", severity: "warning" }),
+    ]);
+    expect(JSON.stringify(result.safetyNotices)).not.toContain(allergenId);
+    expect(f.repos.aiMessages.records.at(-1).safetyNotices).toEqual(result.safetyNotices);
+    const history = await f.operations.getAiMessages({
+      actor,
+      params: { id: conversation._id },
+    });
+    expect(history.data.at(-1).safetyNotices).toEqual(result.safetyNotices);
   });
   it("creates a pending plan; confirms atomically once and retry returns persisted result", async () => {
     const f = fixture();
@@ -576,6 +817,41 @@ describe("OpenAI-compatible native provider, offline", () => {
     const payload = JSON.parse(fetchImpl.mock.calls[0][1].body);
     expect(payload.response_format.json_schema.strict).toBe(true);
     expect(payload.thinking).toEqual({ type: "disabled" });
+  });
+  it("builds a structured retrieval plan before catalog-grounded chat", async () => {
+    const fetchImpl = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                mode: "catalog",
+                searchText: "protein dinner",
+                recipeTerms: ["tofu bowl"],
+                foodTerms: ["tofu"],
+                filters: { maxCaloriesKcal: 500 },
+              }),
+            },
+          },
+        ],
+      }),
+    }));
+    const provider = createAiProvider({ env, fetchImpl });
+
+    await expect(
+      provider.planRetrieval({
+        question: "Món tối giàu đạm dưới 500 kcal",
+        schema: chatRetrievalOutput,
+        requestId: "plan-1",
+      }),
+    ).resolves.toMatchObject({
+      data: { mode: "catalog", filters: { maxCaloriesKcal: 500 } },
+    });
+    const payload = JSON.parse(fetchImpl.mock.calls[0][1].body);
+    expect(payload.response_format.json_schema.name).toBe("chat_retrieval");
+    expect(payload.max_tokens).toBe(768);
+    expect(payload.messages.at(-1).content).toContain("database retrieval plan");
   });
   it("does not retry auth errors or malformed structured JSON", async () => {
     const fetchImpl = vi.fn(async () => ({ ok: false, status: 401 }));

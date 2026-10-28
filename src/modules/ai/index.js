@@ -24,7 +24,13 @@ function buildAiModule(deps = {}) {
 export { createAiService, createAiValidation, createAiRepository };
 export * from "./ai.model.js";
 
-export { chatOutput, mealPlanOutput, pantryOutput, summaryOutput } from "./ai.validation.js";
+export {
+  chatOutput,
+  chatRetrievalOutput,
+  mealPlanOutput,
+  pantryOutput,
+  summaryOutput,
+} from "./ai.validation.js";
 
 export const createAiModule = (deps) => {
   const module = buildAiModule(deps);

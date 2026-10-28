@@ -1,8 +1,16 @@
 import { fitsDiet } from "../../common/utils/diet.js";
 import { AppError } from "../../common/errors/app-error.js";
+import { escapeRegex } from "../../common/domain.js";
 import { scaleNutrition, sumNutrition } from "../../common/utils/nutrition.js";
 import { AI_DISCLAIMER } from "../../providers/ai/ai.provider.js";
-import { chatOutput, mealPlanOutput, pantryOutput, summaryOutput } from "./ai.validation.js";
+import {
+  chatOutput,
+  chatRetrievalOutput,
+  mealPlanOutput,
+  pantryOutput,
+  summaryOutput,
+} from "./ai.validation.js";
+import { linkAiCatalogReferences } from "./ai.references.js";
 const own = (actor) => {
   if (!actor?.userId) throw AppError.unauthorized();
   if (actor.status && actor.status !== "active") throw AppError.forbidden("Account is not active");
@@ -44,6 +52,44 @@ const TARGET_NUTRIENTS = Object.freeze({
   fiberTargetG: "fiberG",
 });
 const TARGET_TOLERANCE = 0.2;
+const ALLERGEN_CAUTION = Object.freeze({
+  code: "ALLERGEN_CAUTION",
+  severity: "warning",
+  message:
+    "Catalog items matching saved allergens were excluded, but ingredient and cross-contact data may be incomplete. Verify product labels and preparation conditions before eating.",
+});
+const NUTRITION_QUALITY_ORDER = Object.freeze(["verified", "estimated", "unavailable"]);
+const NUTRITION_QUALITY_PRIORITY = Object.freeze(
+  Object.fromEntries(NUTRITION_QUALITY_ORDER.map((quality, index) => [quality, index])),
+);
+const prioritizeNutritionQuality = (records) =>
+  [...records].sort(
+    (left, right) =>
+      (NUTRITION_QUALITY_PRIORITY[left.nutritionDataQuality] ?? 3) -
+      (NUTRITION_QUALITY_PRIORITY[right.nutritionDataQuality] ?? 3),
+  );
+const findManyAtBestNutritionQuality = async (repository, filter, options) => {
+  if (!repository?.findMany) return { data: [] };
+  const qualityFilter = filter.nutritionDataQuality;
+  const allowedQualities = new Set(
+    Array.isArray(qualityFilter?.$in)
+      ? qualityFilter.$in
+      : typeof qualityFilter === "string"
+        ? [qualityFilter]
+        : NUTRITION_QUALITY_ORDER,
+  );
+  const catalogFilter = { ...filter };
+  delete catalogFilter.nutritionDataQuality;
+  for (const quality of NUTRITION_QUALITY_ORDER) {
+    if (!allowedQualities.has(quality)) continue;
+    const page = await repository.findMany(
+      { ...catalogFilter, nutritionDataQuality: quality },
+      { ...options, page: 1 },
+    );
+    if (page.data?.length) return { data: page.data };
+  }
+  return { data: [] };
+};
 
 export function createAiService({
   aiRepository: repos,
@@ -229,45 +275,235 @@ export function createAiService({
       }
     }
   }
-  async function groundingCatalog(userId) {
-    const safety = await dietarySafety(userId);
-    const [foods, recipes] = await Promise.all([
-      repositories.foodItems?.findMany?.(
-        { status: "active" },
-        {
-          page: 1,
-          limit: 40,
-          projection: { _id: 1, name: 1, allergenIds: 1, isVegan: 1, isVegetarian: 1 },
-        },
-      ) ?? { data: [] },
-      repositories.recipes?.findMany?.(
-        { status: "published", visibility: "public" },
-        {
-          page: 1,
-          limit: 30,
-          projection: { _id: 1, title: 1, allergenIds: 1, ingredients: 1 },
-        },
-      ) ?? { data: [] },
+  async function planChatRetrieval(content, requestId) {
+    const fallback = {
+      mode: "catalog",
+      searchText: "",
+      recipeTerms: [],
+      foodTerms: [],
+      filters: {},
+    };
+    if (!aiProvider?.planRetrieval) return fallback;
+    try {
+      const result = await aiProvider.planRetrieval({
+        question: content,
+        schema: chatRetrievalOutput,
+        requestId,
+      });
+      const parsed = chatRetrievalOutput.safeParse(resultData(result));
+      return parsed.success ? parsed.data : fallback;
+    } catch (error) {
+      logger?.warn?.(
+        { requestId, code: error?.code },
+        "AI retrieval planning failed; using safe catalog fallback",
+      );
+      return fallback;
+    }
+  }
+
+  const inferredTerms = (value) => {
+    const ignored = new Set([
+      "a",
+      "an",
+      "and",
+      "for",
+      "the",
+      "with",
+      "món",
+      "ăn",
+      "cho",
+      "của",
+      "và",
+      "tôi",
+      "muốn",
+      "gợi",
+      "ý",
     ]);
-    const safeFoods = (foods.data ?? []).filter(
-      (food) =>
-        fitsDiet(food, safety.dietType) &&
-        !safety.excludedFoodItemIds.has(String(food._id)) &&
-        !(food.allergenIds ?? []).some((id) => safety.allergenIds.has(String(id))),
-    );
-    const safeFoodIds = new Set(safeFoods.map((food) => String(food._id)));
-    const safeRecipes = (recipes.data ?? []).filter(
-      (recipe) =>
-        !(recipe.allergenIds ?? []).some((id) => safety.allergenIds.has(String(id))) &&
-        (recipe.ingredients ?? []).every((ingredient) =>
-          safeFoodIds.has(String(ingredient.foodItemId)),
+    return String(value ?? "")
+      .normalize("NFKC")
+      .split(/[^\p{L}\p{N}]+/u)
+      .map((term) => term.trim())
+      .filter((term) => term.length >= 3 && !ignored.has(term.toLowerCase()))
+      .slice(0, 8);
+  };
+
+  const searchFilter = (fields, terms) => {
+    const usable = [
+      ...new Set(
+        terms.flatMap((term) => {
+          const phrase = String(term).trim();
+          return phrase ? [phrase, ...inferredTerms(phrase)] : [];
+        }),
+      ),
+    ].slice(0, 12);
+    return usable.length
+      ? {
+          $or: fields.flatMap((field) =>
+            usable.map((term) => ({
+              [field]: { $regex: escapeRegex(term), $options: "i" },
+            })),
+          ),
+        }
+      : {};
+  };
+
+  async function groundingCatalog(userId, plan) {
+    if (plan.mode === "direct")
+      return {
+        instruction: "Answer directly. No catalog records were needed for this message.",
+        retrieval: { mode: "direct" },
+        foods: [],
+        recipes: [],
+        safetyNotices: [],
+      };
+    const safety = await dietarySafety(userId);
+    const recipeTerms = plan.recipeTerms.length ? plan.recipeTerms : inferredTerms(plan.searchText);
+    const foodTerms = plan.foodTerms.length ? plan.foodTerms : inferredTerms(plan.searchText);
+    const recipeFilter = {
+      status: "published",
+      visibility: "public",
+      ...searchFilter(["title", "summary", "description", "tags", "cuisine"], recipeTerms),
+    };
+    if (safety.allergenIds.size) recipeFilter.allergenIds = { $nin: [...safety.allergenIds] };
+    if (plan.filters.maxTotalMinutes)
+      recipeFilter.totalMinutes = { $lte: plan.filters.maxTotalMinutes };
+    if (plan.filters.maxCaloriesKcal)
+      recipeFilter["nutritionPerServing.caloriesKcal"] = { $lte: plan.filters.maxCaloriesKcal };
+    if (plan.filters.minProteinG)
+      recipeFilter["nutritionPerServing.proteinG"] = { $gte: plan.filters.minProteinG };
+    if (plan.filters.maxCaloriesKcal || plan.filters.minProteinG)
+      recipeFilter.nutritionDataQuality = { $in: ["verified", "estimated"] };
+    if (plan.filters.difficulty) recipeFilter.difficulty = plan.filters.difficulty;
+    if (plan.filters.cuisine)
+      recipeFilter.cuisine = { $regex: escapeRegex(plan.filters.cuisine), $options: "i" };
+
+    const [foods, recipes] = await Promise.all([
+      findManyAtBestNutritionQuality(
+        repositories.foodItems,
+        {
+          status: "active",
+          ...searchFilter(["name", "normalizedName", "aliases", "description"], foodTerms),
+        },
+        {
+          page: 1,
+          limit: 100,
+          projection: {
+            _id: 1,
+            name: 1,
+            aliases: 1,
+            allergenIds: 1,
+            isVegan: 1,
+            isVegetarian: 1,
+            nutritionPer100g: 1,
+            nutritionDataQuality: 1,
+            sourceAttribution: 1,
+          },
+        },
+      ),
+      findManyAtBestNutritionQuality(repositories.recipes, recipeFilter, {
+        page: 1,
+        limit: 60,
+        projection: {
+          _id: 1,
+          title: 1,
+          summary: 1,
+          cuisine: 1,
+          difficulty: 1,
+          totalMinutes: 1,
+          servings: 1,
+          nutritionPerServing: 1,
+          nutritionDataQuality: 1,
+          allergenIds: 1,
+          ingredients: 1,
+          isVegan: 1,
+          isVegetarian: 1,
+          sourceAttribution: 1,
+        },
+      }),
+    ]);
+    const ingredientIds = [
+      ...new Set(
+        (recipes.data ?? []).flatMap((recipe) =>
+          (recipe.ingredients ?? []).map((ingredient) => String(ingredient.foodItemId)),
         ),
-    );
+      ),
+    ];
+    const ingredientFoods = [];
+    for (let index = 0; index < ingredientIds.length; index += 100) {
+      const page = (await repositories.foodItems?.findMany?.(
+        { _id: { $in: ingredientIds.slice(index, index + 100) }, status: "active" },
+        { page: 1, limit: 100 },
+      )) ?? { data: [] };
+      ingredientFoods.push(...page.data);
+    }
+    const safeFood = (food) =>
+      fitsDiet(food, safety.dietType) &&
+      !safety.excludedFoodItemIds.has(String(food._id)) &&
+      !(food.allergenIds ?? []).some((id) => safety.allergenIds.has(String(id)));
+    const safeFoods = prioritizeNutritionQuality((foods.data ?? []).filter(safeFood)).slice(0, 24);
+    const safeFoodIds = new Set(ingredientFoods.filter(safeFood).map((food) => String(food._id)));
+    const safeRecipes = prioritizeNutritionQuality(
+      (recipes.data ?? []).filter(
+        (recipe) =>
+          fitsDiet(recipe, safety.dietType) &&
+          !(recipe.allergenIds ?? []).some((id) => safety.allergenIds.has(String(id))) &&
+          (recipe.ingredients ?? []).every((ingredient) =>
+            safeFoodIds.has(String(ingredient.foodItemId)),
+          ),
+      ),
+    ).slice(0, 12);
     return {
       instruction:
-        "Prefer these authoritative catalog records. Do not invent IDs or recommend ingredients outside the supplied safe catalog.",
-      foods: safeFoods.map(({ _id, name }) => ({ id: _id, name })),
-      recipes: safeRecipes.map(({ _id, title }) => ({ id: _id, title })),
+        "Use only these retrieved database records for concrete food and recipe recommendations. Records are ordered by nutrition evidence quality: verified first, estimated second, unavailable last. Prefer verified records, use estimated records only when needed, and use unavailable records only when no suitable higher-quality record exists. Never invent a catalog item, ID, nutrition value, or allergen claim. Treat nutritionDataQuality=unavailable as unknown and make no quantitative nutrition claim from it. Render every mentioned recipe as [Recipe title](veganapp://recipe/ID) and every mentioned food as [Food name](veganapp://food/ID). Never display an ID as visible text, code, parentheses, or an ID label. Briefly explain why each result matches the question.",
+      retrieval: {
+        mode: "catalog",
+        searchText: plan.searchText,
+        appliedFilters: plan.filters,
+        recipeCount: safeRecipes.length,
+        foodCount: safeFoods.length,
+      },
+      foods: safeFoods.map(
+        ({ _id, name, nutritionPer100g, nutritionDataQuality, sourceAttribution }) => ({
+          id: _id,
+          name,
+          nutritionPer100g,
+          nutritionDataQuality,
+          source: sourceAttribution?.provider,
+        }),
+      ),
+      recipes: safeRecipes.map(
+        ({
+          _id,
+          title,
+          summary,
+          cuisine,
+          difficulty,
+          totalMinutes,
+          servings,
+          nutritionPerServing,
+          nutritionDataQuality,
+          ingredients,
+          sourceAttribution,
+        }) => ({
+          id: _id,
+          title,
+          summary,
+          cuisine,
+          difficulty,
+          totalMinutes,
+          servings,
+          nutritionPerServing,
+          nutritionDataQuality,
+          ingredients: (ingredients ?? []).slice(0, 30).map((ingredient) => ({
+            foodItemId: ingredient.foodItemId,
+            name: ingredient.foodNameSnapshot,
+            quantity: ingredient.quantity,
+            unit: ingredient.unit,
+          })),
+          source: sourceAttribution?.provider,
+        }),
+      ),
+      safetyNotices: safety.allergenIds.size ? [ALLERGEN_CAUTION] : [],
     };
   }
   async function readyMedia(userId, id, type) {
@@ -448,6 +684,7 @@ export function createAiService({
         { page: 1, limit: 12, sort: { createdAt: -1, _id: -1 } },
       );
       let output;
+      let safetyNotices = [];
       if (
         /chest pain|can'?t breathe|suicid|overdos|diagnos|prescrib|treat my|stop .*medication|đau ngực|khó thở|tự tử|chẩn đoán/i.test(
           content,
@@ -470,26 +707,36 @@ export function createAiService({
           usage: {},
         };
       } else {
+        const retrievalPlan = await planChatRetrieval(content, requestId);
+        const catalog = await groundingCatalog(userId, retrievalPlan);
+        safetyNotices = catalog.safetyNotices;
         output = await execute(
           userId,
           "chat",
           chatOutput,
           [
+            ...history.data.reverse().map((m) => ({ role: m.role, content: m.content })),
             {
               role: "user",
               content: JSON.stringify({
                 ...(body.useProfile === true ? { userContext: await context(userId) } : {}),
-                catalog: await groundingCatalog(userId),
+                catalog,
               }),
             },
-            ...history.data.reverse().map((m) => ({ role: m.role, content: m.content })),
             { role: "user", content },
           ],
           {
             requestId,
-            inputMetadata: { conversationId: String(params.id), messageLength: content.length },
+            inputMetadata: {
+              conversationId: String(params.id),
+              messageLength: content.length,
+              retrievalMode: catalog.retrieval.mode,
+              recipeCount: catalog.recipes.length,
+              foodCount: catalog.foods.length,
+            },
           },
         );
+        output.data.content = linkAiCatalogReferences(output.data.content, catalog);
       }
       // Do not persist a user turn until generation succeeds. Otherwise a
       // provider failure followed by retry leaves duplicate orphaned prompts.
@@ -508,13 +755,14 @@ export function createAiService({
         content: `${output.data.content}\n\n${AI_DISCLAIMER}`,
         model: output.model,
         usage: output.usage,
+        safetyNotices,
         status: output.model === "safety-policy" ? "blocked" : "completed",
       });
       await repos.aiConversations.updateOne(
         { _id: params.id, userId },
         { $set: { lastMessageAt: now() } },
       );
-      return { ...message, runId: output.runId, disclaimer: AI_DISCLAIMER };
+      return { ...message, runId: output.runId, disclaimer: AI_DISCLAIMER, safetyNotices };
     },
     async createMealPlanProposal({ actor, body, requestId }) {
       enabled();

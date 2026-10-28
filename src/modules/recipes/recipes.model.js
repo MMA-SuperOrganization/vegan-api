@@ -12,6 +12,11 @@ import {
   RECIPE_DIFFICULTIES,
   CONTENT_SOURCE_TYPES,
 } from "../../common/constants/enums/content.enums.js";
+import {
+  catalogSourceSchema,
+  nutritionDataQualityField,
+} from "../../common/persistence/catalog-source.js";
+import { imageAttributionSchema } from "../../common/persistence/image-attribution.js";
 
 const ingredient = new mongoose.Schema(
   {
@@ -53,6 +58,8 @@ export const RecipesModel = registerModel(
     summary: shortText(1000),
     description: shortText(10000),
     coverImageUrl: shortText(2048),
+    coverImageObjectKey: { ...shortText(500), select: false },
+    imageAttribution: { type: imageAttributionSchema },
     coverMediaId: ref("Media"),
     mediaIds: [ref("Media")],
     cuisine: shortText(100),
@@ -71,6 +78,8 @@ export const RecipesModel = registerModel(
       type: new mongoose.Schema(nutritionFields, { _id: false }),
       default: () => ({}),
     },
+    nutritionDataQuality: nutritionDataQualityField,
+    sourceAttribution: { type: catalogSourceSchema },
     allergenIds: [ref("Allergens")],
     isVegan: Boolean,
     isVegetarian: Boolean,

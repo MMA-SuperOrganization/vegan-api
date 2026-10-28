@@ -55642,6 +55642,51 @@ components:
             - string
             - "null"
           description: URL ảnh dùng cho master data; input yêu cầu HTTPS không chứa username/password.
+        imageObjectKey:
+          type:
+            - string
+            - "null"
+          description: Trường image Object Key trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+        imageAttribution:
+          type:
+            - object
+            - "null"
+          required:
+            - provider
+            - sourceUrl
+            - license
+            - retrievedAt
+          properties:
+            provider:
+              type: string
+              maxLength: 80
+              description: Tên adapter/provider AI.
+            sourceUrl:
+              type: string
+              maxLength: 2048
+              description: Trường source Url trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            author:
+              type:
+                - string
+                - "null"
+              maxLength: 500
+              description: Trường author trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            license:
+              type: string
+              maxLength: 100
+              description: Trường license trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            licenseUrl:
+              type:
+                - string
+                - "null"
+              maxLength: 2048
+              description: Trường license Url trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            retrievedAt:
+              type: string
+              format: date-time
+              description: Timestamp retrievedAt, ISO 8601 khi schema khai báo date-time.
+          additionalProperties: false
+          description: Trường image Attribution trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
         description:
           type:
             - string
@@ -55770,6 +55815,50 @@ components:
               description: "vitaminDMcg: giá trị tính bằng microgram."
           additionalProperties: false
           description: Dinh dưỡng tính trên 100 gram thực phẩm.
+        nutritionDataQuality:
+          type:
+            - string
+            - "null"
+          enum:
+            - verified
+            - estimated
+            - unavailable
+            - null
+          description: "Trường nutrition Data Quality trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. Giá trị cho phép: verified, estimated, unavailable, ."
+        sourceAttribution:
+          type:
+            - object
+            - "null"
+          required:
+            - provider
+            - sourceId
+            - license
+            - importedAt
+          properties:
+            provider:
+              type: string
+              maxLength: 80
+              description: Tên adapter/provider AI.
+            sourceId:
+              type: string
+              maxLength: 200
+              description: ID tham chiếu sourceId; xem resource tương ứng và kiểm tra quyền ở service.
+            url:
+              type:
+                - string
+                - "null"
+              maxLength: 2048
+              description: URL media có quyền truy cập khi do media service trả; có thể có hạn.
+            license:
+              type: string
+              maxLength: 100
+              description: Trường license trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            importedAt:
+              type: string
+              format: date-time
+              description: Timestamp importedAt, ISO 8601 khi schema khai báo date-time.
+          additionalProperties: false
+          description: Trường source Attribution trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
         allergenIds:
           type:
             - array
@@ -56165,6 +56254,52 @@ components:
             - "null"
           maxLength: 2048
           description: Trường cover Image Url trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+        coverImageObjectKey:
+          type:
+            - string
+            - "null"
+          maxLength: 500
+          description: Trường cover Image Object Key trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+        imageAttribution:
+          type:
+            - object
+            - "null"
+          required:
+            - provider
+            - sourceUrl
+            - license
+            - retrievedAt
+          properties:
+            provider:
+              type: string
+              maxLength: 80
+              description: Tên adapter/provider AI.
+            sourceUrl:
+              type: string
+              maxLength: 2048
+              description: Trường source Url trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            author:
+              type:
+                - string
+                - "null"
+              maxLength: 500
+              description: Trường author trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            license:
+              type: string
+              maxLength: 100
+              description: Trường license trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            licenseUrl:
+              type:
+                - string
+                - "null"
+              maxLength: 2048
+              description: Trường license Url trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            retrievedAt:
+              type: string
+              format: date-time
+              description: Timestamp retrievedAt, ISO 8601 khi schema khai báo date-time.
+          additionalProperties: false
+          description: Trường image Attribution trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
         coverMediaId:
           type:
             - string
@@ -56495,6 +56630,50 @@ components:
               description: "vitaminDMcg: giá trị tính bằng microgram."
           additionalProperties: false
           description: Dinh dưỡng của một khẩu phần công thức.
+        nutritionDataQuality:
+          type:
+            - string
+            - "null"
+          enum:
+            - verified
+            - estimated
+            - unavailable
+            - null
+          description: "Trường nutrition Data Quality trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. Giá trị cho phép: verified, estimated, unavailable, ."
+        sourceAttribution:
+          type:
+            - object
+            - "null"
+          required:
+            - provider
+            - sourceId
+            - license
+            - importedAt
+          properties:
+            provider:
+              type: string
+              maxLength: 80
+              description: Tên adapter/provider AI.
+            sourceId:
+              type: string
+              maxLength: 200
+              description: ID tham chiếu sourceId; xem resource tương ứng và kiểm tra quyền ở service.
+            url:
+              type:
+                - string
+                - "null"
+              maxLength: 2048
+              description: URL media có quyền truy cập khi do media service trả; có thể có hạn.
+            license:
+              type: string
+              maxLength: 100
+              description: Trường license trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            importedAt:
+              type: string
+              format: date-time
+              description: Timestamp importedAt, ISO 8601 khi schema khai báo date-time.
+          additionalProperties: false
+          description: Trường source Attribution trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
         allergenIds:
           type:
             - array
@@ -58353,6 +58532,34 @@ components:
         usage:
           $ref: "#/components/schemas/JsonValue"
           description: Thông tin sử dụng token/tài nguyên theo schema.
+        safetyNotices:
+          type:
+            - array
+            - "null"
+          items:
+            type: object
+            required:
+              - code
+              - severity
+              - message
+            properties:
+              code:
+                type: string
+                enum:
+                  - ALLERGEN_CAUTION
+                description: "Mã lỗi ổn định hoặc mã phân loại theo resource. Giá trị cho phép: ALLERGEN_CAUTION."
+              severity:
+                type: string
+                enum:
+                  - warning
+                description: "Trường severity trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. Giá trị cho phép: warning."
+              message:
+                type: string
+                maxLength: 1000
+                description: Thông báo đọc được bởi người dùng; phân loại xử lý bằng code thay vì so sánh message.
+            additionalProperties: false
+            description: Trường safety Notices item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+          description: Trường safety Notices trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
         status:
           type:
             - string
@@ -59242,6 +59449,51 @@ components:
             - string
             - "null"
           description: URL ảnh dùng cho master data; input yêu cầu HTTPS không chứa username/password.
+        imageObjectKey:
+          type:
+            - string
+            - "null"
+          description: Trường image Object Key trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+        imageAttribution:
+          type:
+            - object
+            - "null"
+          required:
+            - provider
+            - sourceUrl
+            - license
+            - retrievedAt
+          properties:
+            provider:
+              type: string
+              maxLength: 80
+              description: Tên adapter/provider AI.
+            sourceUrl:
+              type: string
+              maxLength: 2048
+              description: Trường source Url trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            author:
+              type:
+                - string
+                - "null"
+              maxLength: 500
+              description: Trường author trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            license:
+              type: string
+              maxLength: 100
+              description: Trường license trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            licenseUrl:
+              type:
+                - string
+                - "null"
+              maxLength: 2048
+              description: Trường license Url trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            retrievedAt:
+              type: string
+              format: date-time
+              description: Timestamp retrievedAt, ISO 8601 khi schema khai báo date-time.
+          additionalProperties: false
+          description: Trường image Attribution trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
         description:
           type:
             - string
@@ -59370,6 +59622,50 @@ components:
               description: "vitaminDMcg: giá trị tính bằng microgram."
           additionalProperties: false
           description: Dinh dưỡng tính trên 100 gram thực phẩm.
+        nutritionDataQuality:
+          type:
+            - string
+            - "null"
+          enum:
+            - verified
+            - estimated
+            - unavailable
+            - null
+          description: "Trường nutrition Data Quality trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. Giá trị cho phép: verified, estimated, unavailable, ."
+        sourceAttribution:
+          type:
+            - object
+            - "null"
+          required:
+            - provider
+            - sourceId
+            - license
+            - importedAt
+          properties:
+            provider:
+              type: string
+              maxLength: 80
+              description: Tên adapter/provider AI.
+            sourceId:
+              type: string
+              maxLength: 200
+              description: ID tham chiếu sourceId; xem resource tương ứng và kiểm tra quyền ở service.
+            url:
+              type:
+                - string
+                - "null"
+              maxLength: 2048
+              description: URL media có quyền truy cập khi do media service trả; có thể có hạn.
+            license:
+              type: string
+              maxLength: 100
+              description: Trường license trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            importedAt:
+              type: string
+              format: date-time
+              description: Timestamp importedAt, ISO 8601 khi schema khai báo date-time.
+          additionalProperties: false
+          description: Trường source Attribution trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
         allergenIds:
           type:
             - array
@@ -61580,6 +61876,52 @@ components:
             - "null"
           maxLength: 2048
           description: Trường cover Image Url trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+        coverImageObjectKey:
+          type:
+            - string
+            - "null"
+          maxLength: 500
+          description: Trường cover Image Object Key trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+        imageAttribution:
+          type:
+            - object
+            - "null"
+          required:
+            - provider
+            - sourceUrl
+            - license
+            - retrievedAt
+          properties:
+            provider:
+              type: string
+              maxLength: 80
+              description: Tên adapter/provider AI.
+            sourceUrl:
+              type: string
+              maxLength: 2048
+              description: Trường source Url trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            author:
+              type:
+                - string
+                - "null"
+              maxLength: 500
+              description: Trường author trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            license:
+              type: string
+              maxLength: 100
+              description: Trường license trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            licenseUrl:
+              type:
+                - string
+                - "null"
+              maxLength: 2048
+              description: Trường license Url trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            retrievedAt:
+              type: string
+              format: date-time
+              description: Timestamp retrievedAt, ISO 8601 khi schema khai báo date-time.
+          additionalProperties: false
+          description: Trường image Attribution trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
         coverMediaId:
           type:
             - string
@@ -61910,6 +62252,50 @@ components:
               description: "vitaminDMcg: giá trị tính bằng microgram."
           additionalProperties: false
           description: Dinh dưỡng của một khẩu phần công thức.
+        nutritionDataQuality:
+          type:
+            - string
+            - "null"
+          enum:
+            - verified
+            - estimated
+            - unavailable
+            - null
+          description: "Trường nutrition Data Quality trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. Giá trị cho phép: verified, estimated, unavailable, ."
+        sourceAttribution:
+          type:
+            - object
+            - "null"
+          required:
+            - provider
+            - sourceId
+            - license
+            - importedAt
+          properties:
+            provider:
+              type: string
+              maxLength: 80
+              description: Tên adapter/provider AI.
+            sourceId:
+              type: string
+              maxLength: 200
+              description: ID tham chiếu sourceId; xem resource tương ứng và kiểm tra quyền ở service.
+            url:
+              type:
+                - string
+                - "null"
+              maxLength: 2048
+              description: URL media có quyền truy cập khi do media service trả; có thể có hạn.
+            license:
+              type: string
+              maxLength: 100
+              description: Trường license trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            importedAt:
+              type: string
+              format: date-time
+              description: Timestamp importedAt, ISO 8601 khi schema khai báo date-time.
+          additionalProperties: false
+          description: Trường source Attribution trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
         allergenIds:
           type:
             - array
@@ -62113,6 +62499,52 @@ components:
             - "null"
           maxLength: 2048
           description: Trường cover Image Url trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+        coverImageObjectKey:
+          type:
+            - string
+            - "null"
+          maxLength: 500
+          description: Trường cover Image Object Key trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+        imageAttribution:
+          type:
+            - object
+            - "null"
+          required:
+            - provider
+            - sourceUrl
+            - license
+            - retrievedAt
+          properties:
+            provider:
+              type: string
+              maxLength: 80
+              description: Tên adapter/provider AI.
+            sourceUrl:
+              type: string
+              maxLength: 2048
+              description: Trường source Url trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            author:
+              type:
+                - string
+                - "null"
+              maxLength: 500
+              description: Trường author trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            license:
+              type: string
+              maxLength: 100
+              description: Trường license trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            licenseUrl:
+              type:
+                - string
+                - "null"
+              maxLength: 2048
+              description: Trường license Url trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            retrievedAt:
+              type: string
+              format: date-time
+              description: Timestamp retrievedAt, ISO 8601 khi schema khai báo date-time.
+          additionalProperties: false
+          description: Trường image Attribution trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
         coverMediaId:
           type:
             - string
@@ -62443,6 +62875,50 @@ components:
               description: "vitaminDMcg: giá trị tính bằng microgram."
           additionalProperties: false
           description: Dinh dưỡng của một khẩu phần công thức.
+        nutritionDataQuality:
+          type:
+            - string
+            - "null"
+          enum:
+            - verified
+            - estimated
+            - unavailable
+            - null
+          description: "Trường nutrition Data Quality trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. Giá trị cho phép: verified, estimated, unavailable, ."
+        sourceAttribution:
+          type:
+            - object
+            - "null"
+          required:
+            - provider
+            - sourceId
+            - license
+            - importedAt
+          properties:
+            provider:
+              type: string
+              maxLength: 80
+              description: Tên adapter/provider AI.
+            sourceId:
+              type: string
+              maxLength: 200
+              description: ID tham chiếu sourceId; xem resource tương ứng và kiểm tra quyền ở service.
+            url:
+              type:
+                - string
+                - "null"
+              maxLength: 2048
+              description: URL media có quyền truy cập khi do media service trả; có thể có hạn.
+            license:
+              type: string
+              maxLength: 100
+              description: Trường license trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            importedAt:
+              type: string
+              format: date-time
+              description: Timestamp importedAt, ISO 8601 khi schema khai báo date-time.
+          additionalProperties: false
+          description: Trường source Attribution trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
         allergenIds:
           type:
             - array
@@ -64624,6 +65100,34 @@ components:
         usage:
           $ref: "#/components/schemas/JsonValue"
           description: Thông tin sử dụng token/tài nguyên theo schema.
+        safetyNotices:
+          type:
+            - array
+            - "null"
+          items:
+            type: object
+            required:
+              - code
+              - severity
+              - message
+            properties:
+              code:
+                type: string
+                enum:
+                  - ALLERGEN_CAUTION
+                description: "Mã lỗi ổn định hoặc mã phân loại theo resource. Giá trị cho phép: ALLERGEN_CAUTION."
+              severity:
+                type: string
+                enum:
+                  - warning
+                description: "Trường severity trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. Giá trị cho phép: warning."
+              message:
+                type: string
+                maxLength: 1000
+                description: Thông báo đọc được bởi người dùng; phân loại xử lý bằng code thay vì so sánh message.
+            additionalProperties: false
+            description: Trường safety Notices item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+          description: Trường safety Notices trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
         status:
           type:
             - string
