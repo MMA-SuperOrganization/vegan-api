@@ -55642,6 +55642,51 @@ components:
             - string
             - "null"
           description: URL ảnh dùng cho master data; input yêu cầu HTTPS không chứa username/password.
+        imageObjectKey:
+          type:
+            - string
+            - "null"
+          description: Trường image Object Key trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+        imageAttribution:
+          type:
+            - object
+            - "null"
+          required:
+            - provider
+            - sourceUrl
+            - license
+            - retrievedAt
+          properties:
+            provider:
+              type: string
+              maxLength: 80
+              description: Tên adapter/provider AI.
+            sourceUrl:
+              type: string
+              maxLength: 2048
+              description: Trường source Url trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            author:
+              type:
+                - string
+                - "null"
+              maxLength: 500
+              description: Trường author trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            license:
+              type: string
+              maxLength: 100
+              description: Trường license trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            licenseUrl:
+              type:
+                - string
+                - "null"
+              maxLength: 2048
+              description: Trường license Url trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            retrievedAt:
+              type: string
+              format: date-time
+              description: Timestamp retrievedAt, ISO 8601 khi schema khai báo date-time.
+          additionalProperties: false
+          description: Trường image Attribution trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
         description:
           type:
             - string
@@ -56209,6 +56254,52 @@ components:
             - "null"
           maxLength: 2048
           description: Trường cover Image Url trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+        coverImageObjectKey:
+          type:
+            - string
+            - "null"
+          maxLength: 500
+          description: Trường cover Image Object Key trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+        imageAttribution:
+          type:
+            - object
+            - "null"
+          required:
+            - provider
+            - sourceUrl
+            - license
+            - retrievedAt
+          properties:
+            provider:
+              type: string
+              maxLength: 80
+              description: Tên adapter/provider AI.
+            sourceUrl:
+              type: string
+              maxLength: 2048
+              description: Trường source Url trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            author:
+              type:
+                - string
+                - "null"
+              maxLength: 500
+              description: Trường author trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            license:
+              type: string
+              maxLength: 100
+              description: Trường license trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            licenseUrl:
+              type:
+                - string
+                - "null"
+              maxLength: 2048
+              description: Trường license Url trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            retrievedAt:
+              type: string
+              format: date-time
+              description: Timestamp retrievedAt, ISO 8601 khi schema khai báo date-time.
+          additionalProperties: false
+          description: Trường image Attribution trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
         coverMediaId:
           type:
             - string
@@ -59330,6 +59421,51 @@ components:
             - string
             - "null"
           description: URL ảnh dùng cho master data; input yêu cầu HTTPS không chứa username/password.
+        imageObjectKey:
+          type:
+            - string
+            - "null"
+          description: Trường image Object Key trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+        imageAttribution:
+          type:
+            - object
+            - "null"
+          required:
+            - provider
+            - sourceUrl
+            - license
+            - retrievedAt
+          properties:
+            provider:
+              type: string
+              maxLength: 80
+              description: Tên adapter/provider AI.
+            sourceUrl:
+              type: string
+              maxLength: 2048
+              description: Trường source Url trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            author:
+              type:
+                - string
+                - "null"
+              maxLength: 500
+              description: Trường author trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            license:
+              type: string
+              maxLength: 100
+              description: Trường license trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            licenseUrl:
+              type:
+                - string
+                - "null"
+              maxLength: 2048
+              description: Trường license Url trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            retrievedAt:
+              type: string
+              format: date-time
+              description: Timestamp retrievedAt, ISO 8601 khi schema khai báo date-time.
+          additionalProperties: false
+          description: Trường image Attribution trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
         description:
           type:
             - string
@@ -61712,6 +61848,52 @@ components:
             - "null"
           maxLength: 2048
           description: Trường cover Image Url trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+        coverImageObjectKey:
+          type:
+            - string
+            - "null"
+          maxLength: 500
+          description: Trường cover Image Object Key trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+        imageAttribution:
+          type:
+            - object
+            - "null"
+          required:
+            - provider
+            - sourceUrl
+            - license
+            - retrievedAt
+          properties:
+            provider:
+              type: string
+              maxLength: 80
+              description: Tên adapter/provider AI.
+            sourceUrl:
+              type: string
+              maxLength: 2048
+              description: Trường source Url trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            author:
+              type:
+                - string
+                - "null"
+              maxLength: 500
+              description: Trường author trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            license:
+              type: string
+              maxLength: 100
+              description: Trường license trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            licenseUrl:
+              type:
+                - string
+                - "null"
+              maxLength: 2048
+              description: Trường license Url trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            retrievedAt:
+              type: string
+              format: date-time
+              description: Timestamp retrievedAt, ISO 8601 khi schema khai báo date-time.
+          additionalProperties: false
+          description: Trường image Attribution trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
         coverMediaId:
           type:
             - string
@@ -62289,6 +62471,52 @@ components:
             - "null"
           maxLength: 2048
           description: Trường cover Image Url trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+        coverImageObjectKey:
+          type:
+            - string
+            - "null"
+          maxLength: 500
+          description: Trường cover Image Object Key trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+        imageAttribution:
+          type:
+            - object
+            - "null"
+          required:
+            - provider
+            - sourceUrl
+            - license
+            - retrievedAt
+          properties:
+            provider:
+              type: string
+              maxLength: 80
+              description: Tên adapter/provider AI.
+            sourceUrl:
+              type: string
+              maxLength: 2048
+              description: Trường source Url trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            author:
+              type:
+                - string
+                - "null"
+              maxLength: 500
+              description: Trường author trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            license:
+              type: string
+              maxLength: 100
+              description: Trường license trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            licenseUrl:
+              type:
+                - string
+                - "null"
+              maxLength: 2048
+              description: Trường license Url trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            retrievedAt:
+              type: string
+              format: date-time
+              description: Timestamp retrievedAt, ISO 8601 khi schema khai báo date-time.
+          additionalProperties: false
+          description: Trường image Attribution trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
         coverMediaId:
           type:
             - string

@@ -10,6 +10,7 @@ const publicFields = [
   "aliases",
   "categoryId",
   "imageUrl",
+  "imageAttribution",
   "description",
   "seasons",
   "defaultServing",

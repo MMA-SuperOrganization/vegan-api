@@ -16,6 +16,7 @@ import {
   catalogSourceSchema,
   nutritionDataQualityField,
 } from "../../common/persistence/catalog-source.js";
+import { imageAttributionSchema } from "../../common/persistence/image-attribution.js";
 
 const ingredient = new mongoose.Schema(
   {
@@ -57,6 +58,8 @@ export const RecipesModel = registerModel(
     summary: shortText(1000),
     description: shortText(10000),
     coverImageUrl: shortText(2048),
+    coverImageObjectKey: { ...shortText(500), select: false },
+    imageAttribution: { type: imageAttributionSchema },
     coverMediaId: ref("Media"),
     mediaIds: [ref("Media")],
     cuisine: shortText(100),

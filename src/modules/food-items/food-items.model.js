@@ -7,6 +7,7 @@ import {
   catalogSourceSchema,
   nutritionDataQualityField,
 } from "../../common/persistence/catalog-source.js";
+import { imageAttributionSchema } from "../../common/persistence/image-attribution.js";
 
 const { Schema } = mongoose;
 const nutritionSchema = new Schema(
@@ -47,6 +48,8 @@ const schema = new Schema(
     aliases: [String],
     categoryId: { type: Schema.Types.ObjectId, ref: "Categories", required: true, index: true },
     imageUrl: String,
+    imageObjectKey: { type: String, select: false },
+    imageAttribution: { type: imageAttributionSchema },
     description: { type: String, trim: true, maxlength: 2000 },
     seasons: {
       type: [Number],

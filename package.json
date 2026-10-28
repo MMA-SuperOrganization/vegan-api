@@ -34,6 +34,8 @@
     "db:seed": "node --env-file=.env scripts/seed.js",
     "catalog:build": "node scripts/build-open-catalog.js",
     "catalog:import": "node --env-file=.env scripts/import-open-catalog.js",
+    "catalog:images": "node --env-file=.env scripts/enrich-catalog-images.js",
+    "catalog:images:mirror": "node --env-file=.env scripts/mirror-catalog-images-to-r2.js",
     "media:cleanup": "node --env-file=.env scripts/cleanup-media.js",
     "migrate": "node --env-file=.env scripts/migrate.js",
     "db:indexes": "node --env-file=.env scripts/provision-indexes.js",
