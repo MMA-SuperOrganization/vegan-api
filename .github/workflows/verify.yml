@@ -35,16 +35,32 @@ jobs:
       - run: npm audit --omit=dev
       - name: Start isolated MongoDB replica set
         run: |
-          docker run -d --name vegan-test-mongo -p 127.0.0.1:27017:27017 mongo:8.0 --replSet rs0 --bind_ip_all
+          # MongoDB 8 needs rseq enabled on GitHub runner kernels 6.19 and newer.
+          docker run -d --name vegan-test-mongo \
+            -p 127.0.0.1:27017:27017 \
+            -e GLIBC_TUNABLES=glibc.pthread.rseq=1 \
+            mongo:8.0 --replSet rs0 --bind_ip_all
           for _ in $(seq 1 30); do
-            if docker exec vegan-test-mongo mongosh --quiet --eval 'db.adminCommand({ping:1})' > /dev/null; then break; fi
+            if docker exec vegan-test-mongo mongosh --quiet --eval 'db.adminCommand({ping:1})' > /dev/null; then
+              mongo_ready=true
+              break
+            fi
+            if [[ "$(docker inspect --format '{{.State.Running}}' vegan-test-mongo)" != "true" ]]; then
+              docker logs vegan-test-mongo
+              exit 1
+            fi
             sleep 1
           done
+          if [[ "$mongo_ready" != "true" ]]; then
+            docker logs vegan-test-mongo
+            exit 1
+          fi
           docker exec vegan-test-mongo mongosh --quiet --eval 'rs.initiate({_id:"rs0",members:[{_id:0,host:"localhost:27017"}]})'
           for _ in $(seq 1 30); do
             if docker exec vegan-test-mongo mongosh --quiet --eval 'if (!db.hello().isWritablePrimary) quit(1)' > /dev/null; then exit 0; fi
             sleep 1
           done
+          docker logs vegan-test-mongo
           exit 1
       - run: npm run test:database
         env:
