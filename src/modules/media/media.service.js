@@ -168,11 +168,13 @@ export const createMediaService = (deps) => {
       throw AppError.notFound();
     return present(asset, { download: asset.status === "ready" });
   };
-  const getOwnedReady = async (userId, id, { type } = {}) => {
+  const getOwnedReady = async (userId, id, { type, purpose } = {}) => {
     const asset = requireFound(await repo.findById(id));
     assertOwner(asset, { userId }, { field: "ownerId" });
     if (asset.status !== "ready" || asset.deletedAt) throw AppError.conflict("Media is not ready");
     if (type && asset.kind !== type) throw AppError.badRequest("Media has the wrong kind");
+    if (purpose && asset.purpose !== purpose)
+      throw AppError.badRequest("Media has the wrong purpose");
     return {
       ...(await present(asset, { download: true })),
       objectKey: asset.objectKey,

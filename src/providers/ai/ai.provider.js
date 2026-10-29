@@ -79,10 +79,7 @@ export function createAiProvider({
     if (!config.baseUrl || !config.apiKey || !config.chatModel)
       throw AppError.serviceUnavailable("AI provider is not configured", "AI_UNAVAILABLE");
     if (!schema?.safeParse) throw new TypeError("A structured output schema is required");
-    const model =
-      feature === "ingredient_recognition"
-        ? config.visionModel || config.chatModel
-        : config.chatModel;
+    const model = mediaUrl ? config.visionModel || config.chatModel : config.chatModel;
     const kimiProvider = isKimiProvider(config, model);
     const boundedMessages = boundedTextMessages(messages);
     if (mediaUrl) {

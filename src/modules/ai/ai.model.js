@@ -20,6 +20,7 @@ const message = new Schema(
     aiRunId: { type: Schema.Types.ObjectId, ref: "AiRun" },
     role: { type: String, enum: ["user", "assistant", "system"], required: true },
     content: { type: String, maxlength: 10000 },
+    mediaId: { type: Schema.Types.ObjectId, ref: "MediaAsset" },
     structuredData: Schema.Types.Mixed,
     model: String,
     usage: Schema.Types.Mixed,

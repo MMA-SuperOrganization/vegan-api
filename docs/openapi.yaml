@@ -28211,7 +28211,7 @@ paths:
 
         **Nghiệp vụ:** Upload hai bước: xin URL PUT có hạn, gửi binary trực tiếp đến storage với requiredHeaders, sau đó gọi confirm. Backend kiểm tra object/MIME/kích thước; chỉ media ready hợp lệ được liên kết nội dung.
 
-        Gửi metadata JSON, không gửi file multipart. MIME hỗ trợ image/jpeg, image/png, image/webp, video/mp4, video/webm. Các purpose avatar/recipe_step/video_thumbnail/ai_ingredient yêu cầu image; video yêu cầu video. Giới hạn service còn phụ thuộc cấu hình.
+        Gửi metadata JSON, không gửi file multipart. MIME hỗ trợ image/jpeg, image/png, image/webp, video/mp4, video/webm. Các purpose avatar/recipe_step/video_thumbnail/ai_ingredient/ai_chat yêu cầu image; video yêu cầu video. Giới hạn service còn phụ thuộc cấu hình.
 
         **Request:** application/json; body bắt buộc, các trường bắt buộc được đánh dấu trong schema. Không gửi trường ngoài schema khi additionalProperties=false.
 
@@ -28595,7 +28595,7 @@ paths:
         - name: purpose
           in: query
           required: false
-          description: "Mục đích media; quyết định loại file và nơi được phép liên kết. Giá trị cho phép: avatar, recipe, recipe_step, post, video, video_thumbnail, ai_ingredient, other."
+          description: "Mục đích media; quyết định loại file và nơi được phép liên kết. Giá trị cho phép: avatar, recipe, recipe_step, post, video, video_thumbnail, ai_ingredient, ai_chat, other."
           schema:
             type: string
             enum:
@@ -28606,6 +28606,7 @@ paths:
               - video
               - video_thumbnail
               - ai_ingredient
+              - ai_chat
               - other
           example: avatar
       responses:
@@ -35892,7 +35893,7 @@ paths:
 
         **Nghiệp vụ:** Kết quả AI phải qua kiểm tra cấu trúc và tham chiếu. Tạo proposal chưa ghi kế hoạch/kho thực phẩm; chỉ confirm mới ghi. Proposal có hạn 1 giờ, xác nhận lại proposal đã consumed trả kết quả trước đó. Các thao tác gọi provider có thể trả 503 khi AI tắt/chưa cấu hình.
 
-        Gửi content vào conversation owner; AI chạy theo safety/structured-output policy và lưu kết quả/run. Provider lỗi có thể trả 502; không gửi secret trong nội dung.
+        Gửi content và tùy chọn mediaId ảnh purpose ai_chat vào conversation owner; backend kiểm tra ảnh ready/đúng owner rồi dùng vision model. AI chạy theo safety/structured-output policy và lưu kết quả/run. Provider lỗi có thể trả 502; không gửi secret trong nội dung.
 
         **Request:** application/json; body bắt buộc, các trường bắt buộc được đánh dấu trong schema. Không gửi trường ngoài schema khi additionalProperties=false.
 
@@ -55966,8 +55967,9 @@ components:
             - video
             - video_thumbnail
             - ai_ingredient
+            - ai_chat
             - other
-          description: "Mục đích media; quyết định loại file và nơi được phép liên kết. Giá trị cho phép: avatar, recipe, recipe_step, post, video, video_thumbnail, ai_ingredient, other."
+          description: "Mục đích media; quyết định loại file và nơi được phép liên kết. Giá trị cho phép: avatar, recipe, recipe_step, post, video, video_thumbnail, ai_ingredient, ai_chat, other."
         mimeType:
           type: string
           enum:
@@ -58521,6 +58523,12 @@ components:
             - "null"
           maxLength: 10000
           description: Nội dung theo loại resource; xem schema nhánh tương ứng.
+        mediaId:
+          type:
+            - string
+            - "null"
+          pattern: ^[A-Fa-f0-9]{24}$
+          description: ID media đã đăng ký; trạng thái/purpose/quyền đọc phải phù hợp. ObjectId gồm 24 ký tự hexadecimal.
         structuredData:
           $ref: "#/components/schemas/JsonValue"
           description: Kết quả AI đã kiểm tra cấu trúc; proposal chưa consumed chưa tương đương dữ liệu đã lưu.
@@ -61675,8 +61683,9 @@ components:
             - video
             - video_thumbnail
             - ai_ingredient
+            - ai_chat
             - other
-          description: "Mục đích media; quyết định loại file và nơi được phép liên kết. Giá trị cho phép: avatar, recipe, recipe_step, post, video, video_thumbnail, ai_ingredient, other."
+          description: "Mục đích media; quyết định loại file và nơi được phép liên kết. Giá trị cho phép: avatar, recipe, recipe_step, post, video, video_thumbnail, ai_ingredient, ai_chat, other."
         mimeType:
           type: string
           enum:
@@ -65089,6 +65098,12 @@ components:
             - "null"
           maxLength: 10000
           description: Nội dung theo loại resource; xem schema nhánh tương ứng.
+        mediaId:
+          type:
+            - string
+            - "null"
+          pattern: ^[A-Fa-f0-9]{24}$
+          description: ID media đã đăng ký; trạng thái/purpose/quyền đọc phải phù hợp. ObjectId gồm 24 ký tự hexadecimal.
         structuredData:
           $ref: "#/components/schemas/JsonValue"
           description: Kết quả AI đã kiểm tra cấu trúc; proposal chưa consumed chưa tương đương dữ liệu đã lưu.
@@ -71961,8 +71976,9 @@ components:
             - video
             - video_thumbnail
             - ai_ingredient
+            - ai_chat
             - other
-          description: "Mục đích media; quyết định loại file và nơi được phép liên kết. Giá trị cho phép: avatar, recipe, recipe_step, post, video, video_thumbnail, ai_ingredient, other."
+          description: "Mục đích media; quyết định loại file và nơi được phép liên kết. Giá trị cho phép: avatar, recipe, recipe_step, post, video, video_thumbnail, ai_ingredient, ai_chat, other."
       required:
         - filename
         - mimeType
@@ -72079,8 +72095,9 @@ components:
             - video
             - video_thumbnail
             - ai_ingredient
+            - ai_chat
             - other
-          description: "Mục đích media; quyết định loại file và nơi được phép liên kết. Giá trị cho phép: avatar, recipe, recipe_step, post, video, video_thumbnail, ai_ingredient, other."
+          description: "Mục đích media; quyết định loại file và nơi được phép liên kết. Giá trị cho phép: avatar, recipe, recipe_step, post, video, video_thumbnail, ai_ingredient, ai_chat, other."
       additionalProperties: false
       description: Dữ liệu Query của getMyMedia; required/default/enum/giới hạn theo validator thật, các quy tắc kiểm tra chéo xem description của operation.
     getMyMediaResponse:
@@ -73354,11 +73371,13 @@ components:
           minLength: 1
           maxLength: 4000
           description: Nội dung theo loại resource; xem schema nhánh tương ứng.
+        mediaId:
+          type: string
+          pattern: ^[a-f\d]{24}$
+          description: ID media đã đăng ký; trạng thái/purpose/quyền đọc phải phù hợp. ObjectId gồm 24 ký tự hexadecimal.
         useProfile:
           type: boolean
           description: Trường use Profile trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
-      required:
-        - content
       additionalProperties: false
       description: Dữ liệu Body của sendAiMessage; required/default/enum/giới hạn theo validator thật, các quy tắc kiểm tra chéo xem description của operation.
     sendAiMessageResponse:

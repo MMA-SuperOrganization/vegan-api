@@ -254,7 +254,7 @@ export const operationNotes = {
   getAiMessages:
     "Lấy messages trong conversation id thuộc owner, phân trang; conversation ngoài owner bị từ chối/không tìm thấy.",
   sendAiMessage:
-    "Gửi content vào conversation owner; AI chạy theo safety/structured-output policy và lưu kết quả/run. Provider lỗi có thể trả 502; không gửi secret trong nội dung.",
+    "Gửi content và tùy chọn mediaId ảnh purpose ai_chat vào conversation owner; backend kiểm tra ảnh ready/đúng owner rồi dùng vision model. AI chạy theo safety/structured-output policy và lưu kết quả/run. Provider lỗi có thể trả 502; không gửi secret trong nội dung.",
   getNotifications:
     "Inbox owner có phân trang; unread nhận chuỗi true/false. Mỗi notification có thông tin liên kết/route khi được service tạo.",
   getUnreadNotificationCount: "Trả unreadCount của owner, không cần lấy toàn bộ inbox để đếm.",
@@ -394,7 +394,7 @@ export const operationNotes = {
   getDiarySummary:
     "Trả tổng dinh dưỡng, dailyTargets và targetComparison. remaining=target-consumed; percentage so với target. Target thiếu trả null; tổng mục tiêu range tính cả ngày không có bản ghi, sử dụng mục tiêu hiện tại, không phải mục tiêu lịch sử.",
   createUploadRequest:
-    "Gửi metadata JSON, không gửi file multipart. MIME hỗ trợ image/jpeg, image/png, image/webp, video/mp4, video/webm. Các purpose avatar/recipe_step/video_thumbnail/ai_ingredient yêu cầu image; video yêu cầu video. Giới hạn service còn phụ thuộc cấu hình.",
+    "Gửi metadata JSON, không gửi file multipart. MIME hỗ trợ image/jpeg, image/png, image/webp, video/mp4, video/webm. Các purpose avatar/recipe_step/video_thumbnail/ai_ingredient/ai_chat yêu cầu image; video yêu cầu video. Giới hạn service còn phụ thuộc cấu hình.",
   confirmMediaUpload:
     "Gọi sau khi PUT binary thành công; backend kiểm tra object tồn tại, MIME và size trước khi đổi trạng thái sang ready. Không tự đặt objectKey hoặc status.",
   getMediaAsset:
