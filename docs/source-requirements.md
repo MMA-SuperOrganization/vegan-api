@@ -776,7 +776,7 @@ Không tối ưu theo một con số collection tùy ý. Tách collection khi d�
 #### `comments`
 
 - `authorId`.
-- `targetType`: `post | recipe | video`.
+- `targetType`: `post | video`. Recipe không có luồng bình luận trực tiếp.
 - `targetId`.
 - `parentCommentId` nullable; chỉ hỗ trợ tối đa một cấp reply để tránh cây vô hạn.
 - `content`.
@@ -785,7 +785,7 @@ Không tối ưu theo một con số collection tùy ý. Tách collection khi d�
 
 #### `reactions`
 
-- `userId`, `targetType`: `post | recipe | video | comment`, `targetId`.
+- `userId`, `targetType`: `post | video | comment`, `targetId`. Recipe không có reaction.
 - `type`: `like | love | helpful`.
 - Unique compound `{ userId, targetType, targetId }`.
 
@@ -1267,7 +1267,7 @@ Trước khi coi là hoàn thành, agent phải đối chiếu các luồng mobi
 - Onboarding diet/allergen/goal/activity.
 - Xem/sửa profile, nutrition profile, avatar qua media flow.
 - Browse/search/filter/autocomplete/recent search/discover/recommendation.
-- Xem recipe, nguyên liệu, nutrition, comment, reaction, rating, save.
+- Xem recipe, nguyên liệu, nutrition, rating và save; không gắn comment/reaction/share trực tiếp.
 - Tạo/sửa/gửi duyệt recipe của user.
 - Pantry thủ công, bulk và AI recognition-confirm.
 - Meal plan thủ công, AI proposal-confirm, active/current/clone.

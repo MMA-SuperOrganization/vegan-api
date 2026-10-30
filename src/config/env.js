@@ -132,6 +132,11 @@ export const envSchema = z
     SWAGGER_ENABLED: boolean(true),
     SEED_ADMIN_FIREBASE_UID: optional,
     SEED_ADMIN_EMAIL: optional,
+    SEED_ADMIN_PASSWORD: optional,
+    SEED_ADMIN_DISPLAY_NAME: optional,
+    SEED_COMMUNITY_EMAIL: optional,
+    SEED_COMMUNITY_PASSWORD: optional,
+    SEED_COMMUNITY_DISPLAY_NAME: optional,
   })
   .superRefine((env, ctx) => {
     const issue = (key, message) => ctx.addIssue({ code: "custom", path: [key], message });
@@ -307,6 +312,16 @@ export const loadEnv = (source = process.env) => {
       uploadMax: e.UPLOAD_RATE_LIMIT_MAX,
       aiMax: e.AI_RATE_LIMIT_MAX,
     },
-    seed: { adminFirebaseUid: e.SEED_ADMIN_FIREBASE_UID, adminEmail: e.SEED_ADMIN_EMAIL },
+    seed: {
+      adminFirebaseUid: e.SEED_ADMIN_FIREBASE_UID,
+      adminEmail: e.SEED_ADMIN_EMAIL,
+      adminPassword: e.SEED_ADMIN_PASSWORD,
+      adminDisplayName: e.SEED_ADMIN_DISPLAY_NAME,
+      community: {
+        email: e.SEED_COMMUNITY_EMAIL,
+        password: e.SEED_COMMUNITY_PASSWORD,
+        displayName: e.SEED_COMMUNITY_DISPLAY_NAME,
+      },
+    },
   });
 };

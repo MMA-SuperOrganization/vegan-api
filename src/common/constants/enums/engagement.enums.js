@@ -1,7 +1,6 @@
 import { createEnum } from "./enum-factory.js";
 
 export const COMMENT_TARGET_TYPES = createEnum({
-  RECIPE: "recipe",
   POST: "post",
   VIDEO: "video",
 });
@@ -13,7 +12,6 @@ export const COMMENT_STATUSES = createEnum({
 });
 
 export const REACTION_TARGET_TYPES = createEnum({
-  RECIPE: "recipe",
   POST: "post",
   VIDEO: "video",
   COMMENT: "comment",

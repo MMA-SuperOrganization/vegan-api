@@ -39,7 +39,7 @@ export const moduleNotes = {
   media:
     "Upload hai bước: xin URL PUT có hạn, gửi binary trực tiếp đến storage với requiredHeaders, sau đó gọi confirm. Backend kiểm tra object/MIME/kích thước; chỉ media ready hợp lệ được liên kết nội dung.",
   posts:
-    "Bài đăng cộng đồng theo luồng soạn thảo, gửi duyệt và xuất bản. Nội dung công khai phụ thuộc visibility, trạng thái và moderation.",
+    "Bài đăng cộng đồng được xuất bản ngay khi người dùng tạo. Nội dung công khai vẫn phụ thuộc visibility và moderation; người dùng có thể báo cáo nội dung vi phạm.",
   comments:
     "Bình luận trên targetType/targetId có thể truy cập; parentCommentId chỉ dùng cho trả lời hợp lệ trên cùng target. Quyền sửa/xóa được kiểm tra ở service.",
   reactions:
@@ -224,12 +224,15 @@ export const operationNotes = {
   getPost:
     "Đọc bằng ObjectId của bài đăng, không nhận slug. Quyền guest/owner/admin được service kiểm tra dựa trên trạng thái và visibility.",
   createPost:
-    "Tạo bài đăng theo schema ở trạng thái ban đầu của service; không tự cấp trạng thái published qua dữ liệu ngoài schema.",
+    "Tạo bài đăng cộng đồng và xuất bản ngay theo dữ liệu hợp lệ; blog nội bộ vẫn tuân theo vòng đời riêng của service.",
   deletePost:
     "Xóa bài đăng owner theo service; không xóa tài khoản tác giả hoặc media master bằng request này.",
-  submitPost: "Owner gửi bài vào luồng duyệt, yêu cầu nội dung và tham chiếu đủ điều kiện.",
-  publishPost: "Admin xuất bản bài đủ điều kiện, có kiểm tra trạng thái nguồn và version nếu gửi.",
-  rejectPost: "Admin từ chối bài, bắt buộc reason; lý do được lưu để tác giả quản lý nội dung.",
+  submitPost:
+    "Endpoint tương thích vòng đời cũ; bài cộng đồng đã xuất bản được trả về nguyên trạng, nội dung khác vẫn được kiểm tra điều kiện.",
+  publishPost:
+    "Endpoint tương thích cho admin; bài cộng đồng đã xuất bản được xử lý idempotent, nội dung khác phải đủ điều kiện.",
+  rejectPost:
+    "Admin từ chối nội dung thuộc vòng đời kiểm duyệt cũ, bắt buộc reason; bài cộng đồng mới không cần bước này.",
   getComments:
     "Lấy bình luận theo targetType/targetId, phân trang và bộ lọc được khai báo; target phải có thể truy cập.",
   createComment:

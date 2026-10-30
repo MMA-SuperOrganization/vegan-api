@@ -70,7 +70,10 @@ const makeFilter = (type, query) => {
   if (query.q) {
     const regex = fuzzyMongoRegex(query.q);
     if (type === "food-item") filter.$or = [{ name: regex }, { aliases: regex }];
-    else filter.title = regex;
+    else if (type === "post") filter.$or = [{ title: regex }, { content: regex }, { tags: regex }];
+    else if (type === "recipe")
+      filter.$or = [{ title: regex }, { summary: regex }, { tags: regex }];
+    else filter.$or = [{ title: regex }, { description: regex }, { tags: regex }];
   }
   if (query.category) filter[type === "food-item" ? "categoryId" : "categoryIds"] = query.category;
   if (query.excludeAllergenIds?.length) filter.allergenIds = { $nin: query.excludeAllergenIds };
@@ -88,7 +91,13 @@ const makeFilter = (type, query) => {
 };
 const summary = (item, type) =>
   type !== "food-item"
-    ? { ...summarizeContent(item), type }
+    ? {
+        ...summarizeContent(item),
+        ...(type === "post" && item.content
+          ? { excerpt: item.excerpt ?? item.content.slice(0, 220) }
+          : {}),
+        type,
+      }
     : {
         _id: item._id,
         name: item.name,

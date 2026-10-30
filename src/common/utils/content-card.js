@@ -5,6 +5,7 @@ export const contentCardProjection = Object.fromEntries(
     "title",
     "description",
     "excerpt",
+    "content",
     "coverImageUrl",
     "coverMediaId",
     "thumbnailMediaId",

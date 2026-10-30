@@ -213,8 +213,8 @@ export function seed() {
       {
         _id: ID.comment,
         authorId: TEST_IDS.user,
-        targetType: "recipe",
-        targetId: ID.recipe,
+        targetType: "post",
+        targetId: ID.post,
         content: "Good tofu",
         status: "visible",
         parentCommentId: null,
@@ -539,6 +539,7 @@ const keyId = (route) => {
   return ID.recipe;
 };
 export function requestFor(route) {
+  const socialTarget = /comment|reaction/i.test(route.operationId);
   const operation =
     document.paths[route.path.replace(/:([A-Za-z]+)/g, "{$1}")][route.method.toLowerCase()];
   const examples = operation.requestBody?.content?.["application/json"]?.examples;
@@ -562,11 +563,19 @@ export function requestFor(route) {
           )
         : value;
   body = replace(body);
+  if (socialTarget && body.targetType) {
+    body.targetType = "post";
+    body.targetId = ID.post;
+  }
   const query = Object.fromEntries(
     (operation.parameters ?? [])
       .filter((p) => p.in === "query" && p.required)
       .map((p) => [p.name, replacements[p.name] ?? p.example ?? p.schema.default]),
   );
+  if (socialTarget && query.targetType) {
+    query.targetType = "post";
+    query.targetId = ID.post;
+  }
   const bodies = {
     createMealPlan: {
       title: "Week",
@@ -598,8 +607,8 @@ export function requestFor(route) {
       id: keyId(route),
       idOrSlug: keyId(route),
       userId: TEST_IDS.user,
-      targetType: "recipe",
-      targetId: ID.recipe,
+      targetType: socialTarget ? "post" : "recipe",
+      targetId: socialTarget ? ID.post : ID.recipe,
       itemId: ID.item,
       mealId: ID.meal,
       proposalId: ID.proposal,
@@ -634,7 +643,7 @@ export async function prepare(h, route) {
       { $set: { description: "Tofu recipe", prepMinutes: 10, cookMinutes: 10 } },
     );
   if (op === "deleteComment")
-    await repo.recipes.updateOne({ _id: ID.recipe }, { $set: { commentCount: 1 } });
+    await repo.posts.updateOne({ _id: ID.post }, { $set: { commentCount: 1 } });
   if (op === "createModerationCase") repo.moderation.records.clear();
   if (op === "createVideo")
     await repo.mediaAssets.updateOne({ _id: ID.videoMedia }, { $set: { references: [] } });

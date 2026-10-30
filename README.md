@@ -95,6 +95,11 @@ The authoritative schema is `src/config/env.js`. Blank optional values become ab
 | `SWAGGER_ENABLED`                        | Optional; `true`                                            | Explicitly set false for production; not automatically disabled by schema                          |
 | `SEED_ADMIN_FIREBASE_UID`                | Required for default seed / cleanup admin; none             | Existing real Firebase user's UID, never CHANGE_ME; `--master-only` bypasses admin seed explicitly |
 | `SEED_ADMIN_EMAIL`                       | Required for default seed; none                             | Real matching admin email, not example/placeholder                                                 |
+| `SEED_ADMIN_PASSWORD`                    | Required only by `seed:admin`; none                         | Private admin login password, at least 12 characters; never commit it                              |
+| `SEED_ADMIN_DISPLAY_NAME`                | Optional for `seed:admin`; `VEGETA Admin`                   | Display name for the provisioned administrator                                                     |
+| `SEED_COMMUNITY_EMAIL`                   | Required for `seed:community-demo`; none                    | Private login email for the reusable community demo account                                        |
+| `SEED_COMMUNITY_PASSWORD`                | Required for `seed:community-demo`; none                    | Private demo login password, at least 12 characters; never commit it                               |
+| `SEED_COMMUNITY_DISPLAY_NAME`            | Optional for `seed:community-demo`; `Minh Ăn Xanh`          | Display name for the seeded community author                                                       |
 
 There is **no** `MONGODB_URI_TEST`, `CLOUDFLARE_R2_ENDPOINT`, `CLOUDFLARE_R2_PUBLIC_URL` or `AI_MODEL` setting in the current runtime schema. `MONGODB_URI_TEST` and `RUN_DATABASE_TESTS` are **test-harness-only** opt-in values described below, not additional application settings. Offline tests inject repositories; real persistence tests require a separate explicitly named disposable database, never production configuration.
 
@@ -102,7 +107,7 @@ There is **no** `MONGODB_URI_TEST`, `CLOUDFLARE_R2_ENDPOINT`, `CLOUDFLARE_R2_PUB
 
 In the Firebase console, enable the client sign-in providers. Under project settings/service accounts, generate a dedicated Admin service-account private key. Copy the JSON's `project_id`, `client_email` and complete `private_key` to the matching environment keys, preserving PEM boundaries and newlines. Keep the JSON/key outside version control and rotate exposed credentials.
 
-The mobile client signs in with the Firebase client SDK, gets a fresh ID token, and sends `Authorization: Bearer <idToken>`. The backend verifies the token, synchronizes/maps its UID to an internal user, checks active status and role, then enforces owner/admin permissions. Clients cannot self-assign role/status. Seed only maps an already-existing UID to MongoDB; it neither creates a Firebase account nor creates/stores a password.
+The mobile client signs in with the Firebase client SDK, gets a fresh ID token, and sends `Authorization: Bearer <idToken>`. The backend verifies the token, synchronizes/maps its UID to an internal user, checks active status and role, then enforces owner/admin permissions. Clients cannot self-assign role/status. The general catalog seed only maps an already-existing UID. The dedicated `seed:admin` command explicitly provisions or updates the configured Firebase login and promotes the matching MongoDB account; the password stays in the local/deployment environment and is never stored in MongoDB or source control.
 
 ## Private R2 media and browser CORS
 
@@ -168,9 +173,11 @@ npm run seed                               # real admin UID/email + master data 
 npm run seed -- --master-only               # skips admin AND recipes, seeds master data only
 npm run seed -- --master-only --with-demo-content
 # last form explicitly creates a non-login internal demo author + all 8 recipes, no admin
+npm run seed:admin                         # provisions the configured Firebase + MongoDB admin login
+npm run seed:community-demo                # provisions a test login, 3 published posts and 1 pending post
 ```
 
-The seed uses **container.models**, not retired singular models. It upserts 12 categories, 5 allergens and 20 plant-based foods with canonical slugs/full unit-bearing nutrition; 8 recipes have resolved ingredient snapshots and calculated per-serving nutrition. Original macronutrients are approximate demo data; zero unspecified micronutrients mean unknown demo values, not verified absence. `aliases: ['demo fixture']`, recipe tags and descriptions label fixtures. Idempotent fixture upserts log inserted/updated/unchanged counts and never delete existing records or reset engagement counters. Colliding non-demo food/recipe records fail closed rather than silently overwrite. Default admin config must match a real existing Firebase account; seed does not verify/provision it through Firebase. An existing suspended/deleted or mismatched account is refused rather than reactivated. The internal demo UID `internal:vegan-demo-fixtures:v1` has role `user`, email `vegan-demo-fixtures@example.invalid`, and recipes use `sourceType: community`; no password or login identity is provisioned. Do not create a real Firebase login using that internal UID.
+The catalog seed uses **container.models**, not retired singular models. It upserts 12 categories, 5 allergens and 20 plant-based foods with canonical slugs/full unit-bearing nutrition; 8 recipes have resolved ingredient snapshots and calculated per-serving nutrition. Original macronutrients are approximate demo data; zero unspecified micronutrients mean unknown demo values, not verified absence. `aliases: ['demo fixture']`, recipe tags and descriptions label fixtures. Idempotent fixture upserts log inserted/updated/unchanged counts and never delete existing records or reset engagement counters. Colliding non-demo food/recipe records fail closed rather than silently overwrite. Default catalog-seed admin config must still match a real existing Firebase account. Use the separate `seed:admin` command when an explicit Firebase login needs provisioning; it requires Firebase Admin credentials, MongoDB authorization and the private email/password environment values. The internal demo UID `internal:vegan-demo-fixtures:v1` remains a non-login `user`; do not create a real Firebase login using that internal UID.
 
 ### Migration and cleanup (default dry-run)
 

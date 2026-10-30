@@ -571,7 +571,7 @@ const scenarios = {
       const fixtures = {
         users: { firebaseUid: "qa-same-uid", email: "same@vegan.test" },
         userProfiles: { userId: owner._id },
-        reactions: { userId: owner._id, targetType: "recipe", targetId: ID.recipe, type: "like" },
+        reactions: { userId: owner._id, targetType: "post", targetId: ID.post, type: "like" },
         ratings: { userId: owner._id, targetType: "recipe", targetId: ID.recipe, score: 5 },
         savedItems: { userId: owner._id, targetType: "recipe", targetId: ID.recipe },
       };
@@ -591,6 +591,14 @@ const scenarios = {
         status: "active",
       });
       await db.models.recipes.create(content({ _id: ID.recipe, slug: "http-unique", servings: 1 }));
+      await db.models.posts.create(
+        content({
+          _id: ID.post,
+          title: "Community post",
+          content: "Post used to verify social uniqueness",
+          postType: "community",
+        }),
+      );
       const repositories = Object.fromEntries(
         Object.entries(db.models).map(([key, model]) => [key, createRepository(model)]),
       );
@@ -619,7 +627,7 @@ const scenarios = {
           "upsertReaction",
           {},
           "reactions",
-          { userId: TEST_IDS.user, targetType: "recipe", targetId: ID.recipe },
+          { userId: TEST_IDS.user, targetType: "post", targetId: ID.post },
         ],
         [
           "upsertRating",
