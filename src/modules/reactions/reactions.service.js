@@ -40,12 +40,13 @@ export const createReactionsService = (deps) => {
         if (before) return updateReactionType(before, body.type, params, session);
 
         let after;
+        const coordinated = Boolean(session || deps.standalone);
         try {
           after = await repo.create({ ...filter, type: body.type, version: 0 }, { session });
         } catch (error) {
           // A duplicate aborts a Mongo transaction and must reach the outer retry.
-          // Only recover in-place for standalone writes where no session exists.
-          if (error?.code !== 11000 || session) throw error;
+          // Only recover in-place for uncoordinated writes where no transaction exists.
+          if (error?.code !== 11000 || coordinated) throw error;
           const concurrent = await repo.findOne(filter, { session });
           if (!concurrent) throw error;
           return updateReactionType(concurrent, body.type, params, session);
@@ -59,13 +60,14 @@ export const createReactionsService = (deps) => {
           );
           return after;
         } catch (error) {
-          if (!session) await repo.deleteOne({ ...filter, _id: after._id });
+          if (!coordinated) await repo.deleteOne({ ...filter, _id: after._id });
           throw error;
         }
       }),
     deleteReaction: ({ actor, params }) =>
       persistWithStandaloneFallback(async (session) => {
         requireActor(actor);
+        const coordinated = Boolean(session || deps.standalone);
         const filter = {
           userId: actor.userId,
           targetType: params.targetType,
@@ -86,7 +88,7 @@ export const createReactionsService = (deps) => {
           );
           return { removed: true };
         } catch (error) {
-          if (!session) {
+          if (!coordinated) {
             try {
               await repo.create({ ...filter, type: before.type, version: before.version ?? 0 });
             } catch (restoreError) {

@@ -29,7 +29,9 @@ export const cachedController = (container, operation, handler) => {
             JSON.stringify([operationId, context.params, context.query]),
             load,
           );
-        return container.standalone ? container.standalone.run(read) : read();
+        return container.standalone
+          ? (container.standalone.read ?? container.standalone.run)(read)
+          : read();
       },
     },
   })[operationId];

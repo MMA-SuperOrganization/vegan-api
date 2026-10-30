@@ -14,7 +14,9 @@ export const coordinateRepositories = ({ repositories, standalone, cache }) => {
       repository[method] = async (...args) => {
         const work = () => original(...args);
         const result = standalone
-          ? await (mutation ? standalone.mutate(model, method, args, work) : standalone.run(work))
+          ? await (mutation
+              ? standalone.mutate(model, method, args, work)
+              : (standalone.read ?? standalone.run)(work))
           : await work();
         if (mutation) await cache?.invalidate();
         return result;

@@ -8,7 +8,10 @@ import { createContainer } from "./container.js";
 import { createReminderScheduler } from "./scheduler/reminder.scheduler.js";
 import mongoose from "mongoose";
 import { connectRedis, createRedisSupport } from "./common/cache/redis.js";
-import { createStandaloneCoordinator } from "./common/persistence/standalone-coordinator.js";
+import {
+  createStandaloneCoordinator,
+  recoverStandaloneOperation,
+} from "./common/persistence/standalone-coordinator.js";
 
 export const startServer = async ({
   env = loadEnv(),
@@ -27,10 +30,21 @@ export const startServer = async ({
       })
     : undefined;
   let standalone;
-  if (env.standaloneRedisEnabled && !overrides.skipDatabaseConnect) {
+  if ((env.standaloneRedisEnabled || cache) && !overrides.skipDatabaseConnect) {
     const hello = await mongoose.connection.db.admin().command({ hello: 1 });
     if (!hello.setName && hello.msg !== "isdbgrid") {
-      standalone = createStandaloneCoordinator({ connection: mongoose.connection, redis: cache });
+      if (cache) {
+        const lease = await cache.acquire();
+        try {
+          if (await recoverStandaloneOperation(mongoose.connection)) {
+            await cache.invalidate();
+            logger.warn("Recovered unfinished standalone database operation on startup");
+          }
+        } finally {
+          await lease.release();
+        }
+        standalone = createStandaloneCoordinator({ connection: mongoose.connection, redis: cache });
+      }
       logger.warn("MongoDB standalone uses serialized operations with compensating rollback");
     }
   }

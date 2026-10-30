@@ -40,9 +40,14 @@ const mutationSnapshot = async (model, kind, args) => {
     id = before?._id;
     if (before) args[0] = { ...filterOrData, _id: id };
     else if (kind === "updateOne" && options.upsert) {
-      id =
-        filter._id instanceof mongoose.Types.ObjectId ? filter._id : new mongoose.Types.ObjectId();
-      args[1] = { ...update, $setOnInsert: { ...update.$setOnInsert, _id: id } };
+      const hasScalarId =
+        filter._id instanceof mongoose.Types.ObjectId ||
+        typeof filter._id === "string" ||
+        typeof filter._id === "number";
+      id = hasScalarId ? filter._id : new mongoose.Types.ObjectId();
+      if (!hasScalarId) {
+        args[1] = { ...update, $setOnInsert: { ...update.$setOnInsert, _id: id } };
+      }
     }
   }
   return id ? { collection: model.collection.name, id, before: before ?? null } : null;
@@ -54,6 +59,21 @@ const mutationSnapshot = async (model, kind, args) => {
 export const createStandaloneCoordinator = ({ connection, redis }) => {
   const context = new AsyncLocalStorage();
   const guards = () => connection.db.collection(GUARD_COLLECTION);
+  const read = async (work) => {
+    const existing = context.getStore();
+    if (existing) {
+      assertActive(existing);
+      return work();
+    }
+    if (redis.waitUntilUnlocked) await redis.waitUntilUnlocked();
+    else {
+      const lease = await redis.acquire();
+      await lease.release();
+    }
+    if (await guards().findOne({ _id: GUARD_ID }, { projection: { _id: 1 } }))
+      throw recoveryRequired();
+    return work();
+  };
   const run = async (work) => {
     const existing = context.getStore();
     if (existing) {
@@ -62,22 +82,38 @@ export const createStandaloneCoordinator = ({ connection, redis }) => {
     }
     const lease = await redis.acquire();
     try {
-      try {
-        await guards().insertOne(
-          {
-            _id: GUARD_ID,
-            owner: lease.token,
-            startedAt: new Date(),
-            state: "running",
-            entries: [],
-          },
-          { writeConcern: { w: 1, j: true } },
-        );
-      } catch (error) {
-        if (error.code === 11000) throw recoveryRequired();
-        throw error;
-      }
-      const state = { lease, entries: [], active: true, pending: new Set(), writeError: null };
+      if (await guards().findOne({ _id: GUARD_ID }, { projection: { _id: 1 } }))
+        throw recoveryRequired();
+      const state = {
+        lease,
+        entries: [],
+        active: true,
+        pending: new Set(),
+        writeError: null,
+        guardInserted: false,
+        guardPromise: null,
+        ensureGuard() {
+          state.guardPromise ??= (async () => {
+            try {
+              await guards().insertOne(
+                {
+                  _id: GUARD_ID,
+                  owner: lease.token,
+                  startedAt: new Date(),
+                  state: "running",
+                  entries: [],
+                },
+                { writeConcern: { w: 1, j: true } },
+              );
+              state.guardInserted = true;
+            } catch (error) {
+              if (error.code === 11000) throw recoveryRequired();
+              throw error;
+            }
+          })();
+          return state.guardPromise;
+        },
+      };
       try {
         const result = await context.run(state, work);
         const settled = await drainWrites(state);
@@ -85,32 +121,36 @@ export const createStandaloneCoordinator = ({ connection, redis }) => {
         const failed = settled.find((outcome) => outcome.status === "rejected");
         if (failed) throw failed.reason;
         await lease.assertOwned();
-        // Committed marker makes recovery distinguish success from interrupted work.
-        const commit = await guards().updateOne(
-          { _id: GUARD_ID, owner: lease.token },
-          { $set: { state: "committed" } },
-          { writeConcern: { w: 1, j: true } },
-        );
-        if (commit.matchedCount !== 1) throw recoveryRequired();
-        if (state.entries.length) await redis.invalidate();
-        await guards().deleteOne(
-          { _id: GUARD_ID, owner: lease.token },
-          { writeConcern: { w: 1, j: true } },
-        );
+        if (state.guardInserted) {
+          // Committed marker makes recovery distinguish success from interrupted work.
+          const commit = await guards().updateOne(
+            { _id: GUARD_ID, owner: lease.token },
+            { $set: { state: "committed" } },
+            { writeConcern: { w: 1, j: true } },
+          );
+          if (commit.matchedCount !== 1) throw recoveryRequired();
+          if (state.entries.length) await redis.invalidate();
+          await guards().deleteOne(
+            { _id: GUARD_ID, owner: lease.token },
+            { writeConcern: { w: 1, j: true } },
+          );
+        }
         return result;
       } catch (error) {
         // A rejected Promise.all may leave another Mongo write in flight. Drain
         // every started mutation before restoring its preimage or releasing guard.
         await drainWrites(state);
-        // Read journal from Mongo: a failed acknowledgement may still have persisted.
-        const guard = await guards().findOne({ _id: GUARD_ID, owner: lease.token });
-        if (!guard) throw recoveryRequired();
-        if (guard.state !== "committed") await restoreStandaloneJournal(connection, guard);
-        if (guard.entries.length) await redis.invalidate();
-        await guards().deleteOne(
-          { _id: GUARD_ID, owner: lease.token },
-          { writeConcern: { w: 1, j: true } },
-        );
+        if (state.guardInserted) {
+          // Read journal from Mongo: a failed acknowledgement may still have persisted.
+          const guard = await guards().findOne({ _id: GUARD_ID, owner: lease.token });
+          if (!guard) throw recoveryRequired();
+          if (guard.state !== "committed") await restoreStandaloneJournal(connection, guard);
+          if (guard.entries.length) await redis.invalidate();
+          await guards().deleteOne(
+            { _id: GUARD_ID, owner: lease.token },
+            { writeConcern: { w: 1, j: true } },
+          );
+        }
         throw error;
       }
     } finally {
@@ -119,6 +159,7 @@ export const createStandaloneCoordinator = ({ connection, redis }) => {
     }
   };
   return {
+    read,
     run,
     async mutate(model, kind, args, work) {
       return run(() => {
@@ -126,6 +167,7 @@ export const createStandaloneCoordinator = ({ connection, redis }) => {
         const operation = (async () => {
           assertActive(state);
           await state.lease.assertOwned();
+          await state.ensureGuard();
           const entry = await mutationSnapshot(model, kind, args);
           assertActive(state);
           if (entry) {

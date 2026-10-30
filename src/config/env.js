@@ -92,7 +92,10 @@ export const envSchema = z
       .default("vegeta"),
     REDIS_CACHE_TTL_SECONDS: integer(60, 1, 600),
     REDIS_COMMAND_TIMEOUT_MS: integer(1000, 100, 10000),
-    MONGODB_STANDALONE_REDIS_ENABLED: boolean(false),
+    MONGODB_STANDALONE_REDIS_ENABLED: z.preprocess(
+      (v) => (v === undefined || v === "" ? undefined : v),
+      z.union([z.boolean(), z.stringbool()]).optional(),
+    ),
     MONGODB_DB_NAME: z
       .string()
       .regex(/^[\w-]+$/)
@@ -258,7 +261,7 @@ export const loadEnv = (source = process.env) => {
       ttlSeconds: e.REDIS_CACHE_TTL_SECONDS,
       commandTimeoutMs: e.REDIS_COMMAND_TIMEOUT_MS,
     },
-    standaloneRedisEnabled: e.MONGODB_STANDALONE_REDIS_ENABLED,
+    standaloneRedisEnabled: e.MONGODB_STANDALONE_REDIS_ENABLED ?? supplied(e.REDIS_URL),
     database: {
       uri: e.MONGODB_URI,
       dbName: e.MONGODB_DB_NAME,

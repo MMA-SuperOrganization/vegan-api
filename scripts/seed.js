@@ -428,21 +428,41 @@ export async function main(args = process.argv.slice(2)) {
   if (!env.database.uri) throw new Error("A configured MongoDB URI is required for seeding");
   if (!options.masterOnly) validateAdminConfig(env.seed);
   const logger = createLogger(env);
+  const { default: mongoose } = await import("mongoose");
   const { createContainer } = await import("../src/container.js");
-  const container = createContainer({
-    env,
-    logger,
-    overrides: {
-      authProvider: null,
-      storageProvider: null,
-      aiProvider: null,
-      messagingProvider: null,
-    },
-  });
+  const { connectRedis, createRedisSupport } = await import("../src/common/cache/redis.js");
+  const { createStandaloneCoordinator } =
+    await import("../src/common/persistence/standalone-coordinator.js");
+  let redisClient;
   try {
     await connectDB({ ...env.database, logger });
+    redisClient = await connectRedis({ config: env.redis, logger });
+    const cache = redisClient
+      ? createRedisSupport({
+          client: redisClient,
+          prefix: env.redis.prefix,
+          ttlSeconds: env.redis.ttlSeconds,
+          commandTimeoutMs: env.redis.commandTimeoutMs,
+        })
+      : undefined;
+    const standalone = cache
+      ? createStandaloneCoordinator({ connection: mongoose.connection, redis: cache })
+      : undefined;
+    const container = createContainer({
+      env,
+      logger,
+      overrides: {
+        cache,
+        standalone,
+        authProvider: null,
+        storageProvider: null,
+        aiProvider: null,
+        messagingProvider: null,
+      },
+    });
     await runSeed(container, options);
   } finally {
+    if (redisClient?.isOpen) redisClient.destroy();
     await disconnectDatabase();
   }
 }

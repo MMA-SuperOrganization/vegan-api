@@ -92,10 +92,9 @@ export const createTransaction =
       return result;
     } catch (error) {
       if (error.code === 20 || error.codeName === "IllegalOperation") {
-        throw AppError.serviceUnavailable(
-          "This operation requires a MongoDB replica set",
-          "TRANSACTIONS_REQUIRED",
-        );
+        const result = await work(undefined);
+        await cache?.invalidate();
+        return result;
       }
       throw error;
     } finally {

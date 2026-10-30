@@ -62,18 +62,38 @@ export async function main(args = process.argv.slice(2)) {
   if (!env.database.uri)
     throw new Error("A configured MongoDB URI is required for cleanup inventory");
   const logger = createLogger(env);
+  const { default: mongoose } = await import("mongoose");
   const { createContainer } = await import("../src/container.js");
-  const overrides = {
-    authProvider: null,
-    aiProvider: null,
-    messagingProvider: null,
-    ...(!options.apply ? { storageProvider: null } : {}),
-  };
-  const container = createContainer({ env, logger, overrides });
+  const { connectRedis, createRedisSupport } = await import("../src/common/cache/redis.js");
+  const { createStandaloneCoordinator } =
+    await import("../src/common/persistence/standalone-coordinator.js");
+  let redisClient;
   try {
     await connectDB({ ...env.database, logger });
+    redisClient = await connectRedis({ config: env.redis, logger });
+    const cache = redisClient
+      ? createRedisSupport({
+          client: redisClient,
+          prefix: env.redis.prefix,
+          ttlSeconds: env.redis.ttlSeconds,
+          commandTimeoutMs: env.redis.commandTimeoutMs,
+        })
+      : undefined;
+    const standalone = cache
+      ? createStandaloneCoordinator({ connection: mongoose.connection, redis: cache })
+      : undefined;
+    const overrides = {
+      cache,
+      standalone,
+      authProvider: null,
+      aiProvider: null,
+      messagingProvider: null,
+      ...(!options.apply ? { storageProvider: null } : {}),
+    };
+    const container = createContainer({ env, logger, overrides });
     return await runCleanup(container, options);
   } finally {
+    if (redisClient?.isOpen) redisClient.destroy();
     await disconnectDatabase();
   }
 }

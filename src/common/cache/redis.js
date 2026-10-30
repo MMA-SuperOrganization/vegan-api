@@ -34,7 +34,7 @@ export const createRedisSupport = ({
   client,
   prefix,
   ttlSeconds = 60,
-  lockWaitMs = 3000,
+  lockWaitMs = 15000,
   lockTtlMs = 30000,
   commandTimeoutMs = 1000,
 }) => {
@@ -69,6 +69,24 @@ export const createRedisSupport = ({
         /* Read-through continues when Redis is down. */
       }
       return result;
+    },
+    async waitUntilUnlocked() {
+      const lockKey = key("standalone-lock");
+      const deadline = Date.now() + lockWaitMs;
+      do {
+        let locked;
+        try {
+          locked = await command("get", lockKey);
+        } catch {
+          throw unavailable();
+        }
+        if (locked === null) return;
+        await delay(25);
+      } while (Date.now() < deadline);
+      throw AppError.serviceUnavailable(
+        "Another database operation is in progress; retry shortly",
+        "DATABASE_BUSY",
+      );
     },
     async acquire() {
       const token = randomUUID(),

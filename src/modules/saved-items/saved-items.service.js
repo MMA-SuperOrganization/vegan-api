@@ -55,10 +55,11 @@ export const createSavedItemsService = (deps) => {
         const before = await repo.findOne(filter, { session });
         if (before) return before;
         let after;
+        const coordinated = Boolean(session || deps.standalone);
         try {
           after = await repo.create(filter, { session });
         } catch (error) {
-          if (error?.code !== 11000 || session) throw error;
+          if (error?.code !== 11000 || coordinated) throw error;
           return repo.findOne(filter, { session });
         }
         if (!hasSaveCounter(params.targetType)) return after;
@@ -71,13 +72,14 @@ export const createSavedItemsService = (deps) => {
           );
           return after;
         } catch (error) {
-          if (!session) await repo.deleteOne(filter);
+          if (!coordinated) await repo.deleteOne(filter);
           throw error;
         }
       }),
     unsaveItem: ({ actor, params }) =>
       persistWithStandaloneFallback(async (session) => {
         requireActor(actor);
+        const coordinated = Boolean(session || deps.standalone);
         const filter = {
           userId: actor.userId,
           targetType: params.targetType,
@@ -97,7 +99,7 @@ export const createSavedItemsService = (deps) => {
           );
           return { removed: true };
         } catch (error) {
-          if (!session) {
+          if (!coordinated) {
             try {
               await repo.create(filter);
             } catch (restoreError) {

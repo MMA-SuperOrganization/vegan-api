@@ -76,5 +76,16 @@ describe("Redis cache boundaries", () => {
     expect(() => loadEnv({ NODE_ENV: "test", REDIS_URL: "https://invalid.example" })).toThrow(
       "Expected redis://",
     );
+    expect(loadEnv({ NODE_ENV: "test" }).standaloneRedisEnabled).toBe(false);
+    expect(
+      loadEnv({ NODE_ENV: "test", REDIS_URL: "redis://localhost:6379" }).standaloneRedisEnabled,
+    ).toBe(true);
+  });
+  it("waits until standalone lock is free or times out with DATABASE_BUSY", async () => {
+    const client = memoryClient();
+    const cache = createRedisSupport({ client, prefix: "isolated", lockWaitMs: 40 });
+    await expect(cache.waitUntilUnlocked()).resolves.toBeUndefined();
+    client.values.set("isolated:standalone-lock", "active-writer");
+    await expect(cache.waitUntilUnlocked()).rejects.toMatchObject({ code: "DATABASE_BUSY" });
   });
 });
