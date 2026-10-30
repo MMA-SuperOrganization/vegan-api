@@ -2,9 +2,7 @@ import { z } from "zod";
 import { AppError } from "../../common/errors/app-error.js";
 import { dateOnly } from "../../common/validators/domain.schemas.js";
 import { REPORT_TARGET_TYPES } from "../../common/constants/enums/moderation.enums.js";
-import {
-  COMMENT_TARGET_TYPES,
-} from "../../common/constants/enums/engagement.enums.js";
+import { COMMENT_TARGET_TYPES } from "../../common/constants/enums/engagement.enums.js";
 import {
   CONTENT_STATUSES,
   CONTENT_VISIBILITIES,
@@ -28,9 +26,7 @@ export const targetTypes = REPORT_TARGET_TYPES.values();
 export const contentTypes = COMMENT_TARGET_TYPES.values();
 export const empty = z.object({}).strict();
 export const idParams = z.object({ id }).strict();
-export const targetParams = z
-  .object({ targetType: z.enum(targetTypes), targetId: id })
-  .strict();
+export const targetParams = z.object({ targetType: z.enum(targetTypes), targetId: id }).strict();
 export const publicFilter = {
   status: CONTENT_STATUSES.PUBLISHED,
   visibility: CONTENT_VISIBILITIES.PUBLIC,
