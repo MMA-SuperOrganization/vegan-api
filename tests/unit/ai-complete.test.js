@@ -542,9 +542,8 @@ describe("AI complete domain", () => {
       actor,
       params: { id: conversation._id },
     });
-    expect(history.data.find((message) => message.role === "assistant")?.safetyNotices).toEqual(
-      result.safetyNotices,
-    );
+    const assistantMessage = history.data.findLast((message) => message.role === "assistant");
+    expect(assistantMessage.safetyNotices).toEqual(result.safetyNotices);
   });
   it("creates a pending plan; confirms atomically once and retry returns persisted result", async () => {
     const f = fixture();
