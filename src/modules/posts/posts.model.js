@@ -1,7 +1,8 @@
 import {
   registerModel,
-  contentFields,
+  baseContentFields,
   contentIndexes,
+  socialContentFields,
   ref,
   shortText,
 } from "../../common/persistence/content-model.js";
@@ -10,7 +11,8 @@ import { POST_TYPES, POST_VISIBILITIES } from "../../common/constants/enums/cont
 export const PostsModel = registerModel(
   "Posts",
   {
-    ...contentFields,
+    ...baseContentFields,
+    ...socialContentFields,
     content: { ...shortText(30000), required: true },
     mediaIds: [ref("Media")],
     recipeId: ref("Recipes"),

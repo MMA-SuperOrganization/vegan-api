@@ -11,6 +11,8 @@ import {
   listFilter,
   listOptions,
   lifecycle,
+  now,
+  requireAdmin,
   syncMedia,
   userState,
 } from "../../common/content-service.js";
@@ -29,6 +31,7 @@ export const createPostsService = (deps) => {
       publicFilter({
         ...listFilter(query),
         ...(query.postType ? { postType: query.postType } : {}),
+        ...(query.recipeId ? { recipeId: query.recipeId } : {}),
       }),
       { ...listOptions(query), ...options },
     );
@@ -70,12 +73,14 @@ export const createPostsService = (deps) => {
         if (body.postType === "blog" && actor.role !== "admin")
           throw AppError.forbidden("Only administrators can create blogs");
         await assertRecipeExists(body.recipeId, session);
+        const communityPost = (body.postType ?? "community") === "community";
         const post = await repo.create(
           {
             ...body,
             authorId: actor.userId,
             postType: body.postType ?? "community",
-            status: "draft",
+            status: communityPost ? "published" : "draft",
+            publishedAt: communityPost ? now(deps) : null,
             visibility: body.visibility ?? "public",
             deletedAt: null,
             version: 0,
@@ -95,21 +100,45 @@ export const createPostsService = (deps) => {
         if (changes.postType === "blog" && actor.role !== "admin")
           throw AppError.forbidden("Only administrators can create blogs");
         await assertRecipeExists(changes.recipeId, session);
-        if (before.status === "rejected")
+        const communityPost = (changes.postType ?? before.postType ?? "community") === "community";
+        if (communityPost)
+          Object.assign(changes, {
+            status: "published",
+            publishedAt: before.publishedAt ?? now(deps),
+            rejectionReason: null,
+          });
+        else if (before.status === "rejected")
           Object.assign(changes, { status: "draft", rejectionReason: null });
-        if (before.status === "published" && actor.role !== "admin")
+        if (!communityPost && before.status === "published" && actor.role !== "admin")
           Object.assign(changes, { status: "draft", publishedAt: null });
         const candidate = { ...before, ...changes };
+        if (
+          candidate.status === "published" &&
+          (!candidate.title?.trim() || !candidate.content?.trim())
+        )
+          throw AppError.badRequest("A post requires a title and content");
         await syncMedia(deps, "post", before, candidate, actor, session);
-        if (before.status === "published") await validatePublication(candidate, actor, session);
         const after = await casUpdate(repo, before, changes, { version, session });
         await auditAdmin(deps, context, "post", before, after, "post.update", session);
         return safeContent(after, { actor });
       }),
     deletePost: (context) => lifecycle(deps, repo, "post", context, "delete", validatePublication),
-    submitPost: (context) => lifecycle(deps, repo, "post", context, "submit", validatePublication),
-    publishPost: (context) =>
-      lifecycle(deps, repo, "post", context, "publish", validatePublication),
+    submitPost: async (context) => {
+      const existing = requireFound(await repo.findById(context.params.id));
+      if (existing.postType === "community" && existing.status === "published") {
+        assertEditable(existing, context.actor);
+        return safeContent(existing, { actor: context.actor });
+      }
+      return lifecycle(deps, repo, "post", context, "submit", validatePublication);
+    },
+    publishPost: async (context) => {
+      const existing = requireFound(await repo.findById(context.params.id));
+      if (existing.postType === "community" && existing.status === "published") {
+        requireAdmin(context.actor);
+        return safeContent(existing, { actor: context.actor });
+      }
+      return lifecycle(deps, repo, "post", context, "publish", validatePublication);
+    },
     rejectPost: (context) => lifecycle(deps, repo, "post", context, "reject", validatePublication),
   };
   return { operations, service: { getById, listPublic, listMine, validatePublication } };

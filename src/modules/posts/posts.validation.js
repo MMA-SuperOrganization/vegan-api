@@ -24,7 +24,12 @@ export const postInput = z
   })
   .strict();
 export const createPostsValidation = () => ({
-  getPosts: { query: contentQuery.extend({ postType: z.enum(POST_TYPES.values()).optional() }) },
+  getPosts: {
+    query: contentQuery.extend({
+      postType: z.enum(POST_TYPES.values()).optional(),
+      recipeId: id.optional(),
+    }),
+  },
   getMyPosts: { query: mineQuery.extend({ postType: z.enum(POST_TYPES.values()).optional() }) },
   getPost: { params: idParams },
   createPost: { body: postInput },

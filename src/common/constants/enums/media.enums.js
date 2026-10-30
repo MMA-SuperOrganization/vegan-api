@@ -28,6 +28,7 @@ export const MEDIA_PURPOSES = createEnum({
   VIDEO: "video",
   VIDEO_THUMBNAIL: "video_thumbnail",
   AI_INGREDIENT: "ai_ingredient",
+  AI_CHAT: "ai_chat",
   OTHER: "other",
 });
 

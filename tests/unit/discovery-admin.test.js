@@ -302,9 +302,9 @@ describe("Discovery behavior and input safety", () => {
     expect(h.deps.services.users.getById).not.toHaveBeenCalled();
     const home = await h.call("getHomeFeed", { actor: null, query: { limit: 1 } });
     expect(home.featured.recipes).toHaveLength(1);
-    expect(home.featured.posts[0]._id).toBe(IDS.post);
+    expect(home.featured.posts[0]._id).toBe(IDS.community);
     expect(h.deps.services.posts.listPublic).toHaveBeenCalledWith(
-      expect.objectContaining({ postType: "blog" }),
+      expect.objectContaining({ postType: "community" }),
     );
     expect(home.featured.recipes[0]).not.toHaveProperty("ingredients");
   });
@@ -371,6 +371,43 @@ describe("Discovery behavior and input safety", () => {
       [IDS.recipe, IDS.allergicRecipe, IDS.ingredientAllergyRecipe].sort(),
     );
     expect((await h.call("searchContent", { actor: null, query: { q: ".*" } })).data).toEqual([]);
+  });
+  it("finds related posts by body or tags and ingredients by fuzzy aliases", async () => {
+    const h = harness({
+      recipes: [],
+      videos: [],
+      posts: [
+        content({
+          _id: IDS.post,
+          title: "Bữa tối nhanh",
+          content: "Mình thường áp chảo đậu hũ cùng nấm và rau xanh.",
+          tags: ["giàu-đạm"],
+        }),
+      ],
+      foodItems: [
+        {
+          _id: IDS.food,
+          name: "Tofu",
+          aliases: ["đậu hũ"],
+          slug: "tofu",
+          status: "active",
+          isVegan: true,
+        },
+      ],
+    });
+
+    const result = await h.call("searchContent", {
+      actor: null,
+      query: { q: "đậu hũ", type: "all" },
+    });
+
+    expect(result.data).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ _id: IDS.post, type: "post" }),
+        expect.objectContaining({ _id: IDS.food, type: "food-item" }),
+      ]),
+    );
+    expect(result.data.find((item) => item.type === "post").excerpt).toContain("đậu hũ");
   });
   it.each(["vegetarian", "lacto_vegetarian", "ovo_vegetarian", "lacto_ovo_vegetarian"])(
     "applies accepted %s food diet filters",

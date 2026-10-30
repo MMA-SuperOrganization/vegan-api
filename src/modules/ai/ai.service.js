@@ -126,7 +126,7 @@ export function createAiService({
       userId,
       feature,
       provider: aiProvider.provider || env.ai.provider,
-      model: feature === "ingredient_recognition" ? env.ai.visionModel : env.ai.chatModel,
+      model: mediaUrl ? env.ai.visionModel || env.ai.chatModel : env.ai.chatModel,
       status: "pending",
       inputMetadata,
     });
@@ -506,10 +506,11 @@ export function createAiService({
       safetyNotices: safety.allergenIds.size ? [ALLERGEN_CAUTION] : [],
     };
   }
-  async function readyMedia(userId, id, type) {
+  async function readyMedia(userId, id, type, purpose) {
     if (!services.media?.getOwnedReady)
       throw AppError.serviceUnavailable("Media service is unavailable");
-    const media = await services.media.getOwnedReady(userId, id, { type });
+    const criteria = purpose ? { type, purpose } : { type };
+    const media = await services.media.getOwnedReady(userId, id, criteria);
     if (
       !media ||
       String(media.userId ?? media.ownerId) !== String(userId) ||
@@ -678,7 +679,13 @@ export function createAiService({
       const userId = own(actor);
       const convo = await conversation(userId, params.id);
       if (convo.status !== "active") throw AppError.conflict("Conversation is archived");
-      const content = String(body.content).slice(0, 4000);
+      const content = String(body.content ?? "Please analyze the attached image.").slice(0, 4000);
+      const media = body.mediaId
+        ? await readyMedia(userId, body.mediaId, "image", "ai_chat")
+        : null;
+      const mediaUrl = media ? (media.url ?? media.downloadUrl) : undefined;
+      if (media && !mediaUrl)
+        throw AppError.serviceUnavailable("Readable media URL is unavailable");
       const history = await repos.aiMessages.findMany(
         { userId, conversationId: params.id, status: "completed" },
         { page: 1, limit: 12, sort: { createdAt: -1, _id: -1 } },
@@ -727,9 +734,11 @@ export function createAiService({
           ],
           {
             requestId,
+            mediaUrl,
             inputMetadata: {
               conversationId: String(params.id),
               messageLength: content.length,
+              ...(body.mediaId ? { mediaId: String(body.mediaId) } : {}),
               retrievalMode: catalog.retrieval.mode,
               recipeCount: catalog.recipes.length,
               foodCount: catalog.foods.length,
@@ -745,6 +754,7 @@ export function createAiService({
         conversationId: params.id,
         role: "user",
         content,
+        ...(body.mediaId ? { mediaId: body.mediaId } : {}),
         status: "completed",
       });
       const message = await repos.aiMessages.create({

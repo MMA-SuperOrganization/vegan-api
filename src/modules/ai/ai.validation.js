@@ -91,7 +91,15 @@ export const createAiValidation = () => ({
   getAiMessages: { params: z.strictObject({ id }), query: pagination },
   sendAiMessage: {
     params: z.strictObject({ id }),
-    body: z.strictObject({ content: text(4000), useProfile: z.boolean().optional() }),
+    body: z
+      .strictObject({
+        content: text(4000).optional(),
+        mediaId: id.optional(),
+        useProfile: z.boolean().optional(),
+      })
+      .refine(({ content, mediaId }) => Boolean(content || mediaId), {
+        message: "A message or image is required",
+      }),
   },
   createMealPlanProposal: {
     body: z.strictObject({

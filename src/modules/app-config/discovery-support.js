@@ -4,7 +4,6 @@ import { dateOnly } from "../../common/validators/domain.schemas.js";
 import { REPORT_TARGET_TYPES } from "../../common/constants/enums/moderation.enums.js";
 import {
   COMMENT_TARGET_TYPES,
-  REACTION_TARGET_TYPES,
 } from "../../common/constants/enums/engagement.enums.js";
 import {
   CONTENT_STATUSES,
@@ -30,7 +29,7 @@ export const contentTypes = COMMENT_TARGET_TYPES.values();
 export const empty = z.object({}).strict();
 export const idParams = z.object({ id }).strict();
 export const targetParams = z
-  .object({ targetType: z.enum(REACTION_TARGET_TYPES.values()), targetId: id })
+  .object({ targetType: z.enum(targetTypes), targetId: id })
   .strict();
 export const publicFilter = {
   status: CONTENT_STATUSES.PUBLISHED,

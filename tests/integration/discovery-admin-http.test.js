@@ -148,7 +148,7 @@ describe("Discovery/admin operation coverage through Supertest", () => {
           unreadCount: 1,
         });
       if (operation === "getHomeFeed") {
-        expect(data.featured.posts.map((p) => p._id)).toEqual([IDS.post]);
+        expect(data.featured.posts.map((p) => p._id)).toEqual([IDS.community]);
         expect(data.personalized.recipes.map((r) => r._id)).toEqual([IDS.recipe]);
       }
       if (operation === "searchContent") {

@@ -164,6 +164,7 @@ describe("Complete content HTTP flows", () => {
     await api("post", `/posts/${post._id}/reject`, {
       token: TEST_TOKENS.admin,
       body: { reason: "Needs references" },
+      status: 409,
     });
     await api("patch", `/posts/${post._id}`, { body: { content: "Reviewed advice" } });
     await api("post", `/posts/${post._id}/submit`, { body: {} });
@@ -301,7 +302,7 @@ describe("Complete content HTTP flows", () => {
           .send({})
       ).status,
     ).toBe(403);
-    expect((await request(app).get(`/api/v1/posts/${id}`)).status).toBe(404);
+    expect((await request(app).get(`/api/v1/posts/${id}`)).status).toBe(200);
     expect(
       (
         await request(app)
@@ -386,53 +387,67 @@ describe("Complete content modules", () => {
       h.call("recipes", "updateRecipe", { params: { id: newId() }, body: { version: 0 } }),
     ).rejects.toThrow();
   });
-  it("enforces owner/admin lifecycle, rejects unpublished public reads, audits admin transitions", async () => {
+  it("publishes community posts immediately while preserving owner and moderation guards", async () => {
     const h = createHarness();
-    const draft = await h.call("posts", "createPost", {
+    const post = await h.call("posts", "createPost", {
       body: { title: "A post", content: "Nutrition advice" },
     });
+    expect(post.status).toBe("published");
+    expect(post.publishedAt).toBeTruthy();
+    expect((await h.call("posts", "getPosts", { actor: null })).data).toHaveLength(1);
     await expect(
-      h.call("posts", "submitPost", { actor: other, params: { id: draft._id } }),
+      h.call("posts", "getPost", { actor: null, params: { id: post._id } }),
+    ).resolves.toMatchObject({ _id: post._id, status: "published" });
+    await expect(
+      h.call("posts", "updatePost", {
+        actor: other,
+        params: { id: post._id },
+        body: { content: "Forged edit" },
+      }),
     ).rejects.toMatchObject({ statusCode: 403 });
-    expect((await h.call("posts", "getPosts", { actor: null })).data).toHaveLength(0);
-    await expect(
-      h.call("posts", "getPost", { actor: null, params: { id: draft._id } }),
-    ).rejects.toMatchObject({ statusCode: 404 });
     const submitted = await h.call("posts", "submitPost", {
-      params: { id: draft._id },
+      params: { id: post._id },
       body: { version: 0 },
     });
-    expect(submitted.status).toBe("pending_review");
-    await expect(
-      h.call("posts", "updatePost", { params: { id: draft._id }, body: { content: "Change" } }),
-    ).rejects.toMatchObject({ statusCode: 409 });
-    await expect(
-      h.call("posts", "publishPost", { params: { id: draft._id } }),
-    ).rejects.toMatchObject({ statusCode: 403 });
+    expect(submitted.status).toBe("published");
     const result = await h.call("posts", "publishPost", {
       actor: admin,
-      params: { id: draft._id },
-      body: { version: 1 },
+      params: { id: post._id },
+      body: { version: 0 },
     });
     expect(result.status).toBe("published");
-    expect(h.audit.record).toHaveBeenCalledWith(
-      expect.objectContaining({ action: "post.publish", session: expect.anything() }),
-    );
-    expect((await h.call("posts", "getPosts", { actor: null })).data).toHaveLength(1);
-    await h.deps.services.content.setVisibility("post", draft._id, { actor: admin, hidden: true });
+    await h.deps.services.content.setVisibility("post", post._id, { actor: admin, hidden: true });
     await expect(
-      h.call("posts", "getPost", { actor: null, params: { id: draft._id } }),
+      h.call("posts", "getPost", { actor: null, params: { id: post._id } }),
     ).rejects.toMatchObject({ statusCode: 404 });
     await h.deps.services.content.setVisibility({
       targetType: "post",
-      targetId: draft._id,
+      targetId: post._id,
       actor: admin,
       hidden: false,
     });
-    await h.call("posts", "deletePost", { params: { id: draft._id } });
+    await h.call("posts", "deletePost", { params: { id: post._id } });
     expect((await h.call("posts", "getPosts", { actor: null })).data).toHaveLength(0);
   });
-  it("moves owner edits of published content back through review", async () => {
+  it("filters published community posts by their related recipe", async () => {
+    const recipeId = newId();
+    const otherRecipeId = newId();
+    const related = published({ content: "Related tip", recipeId, postType: "community" });
+    const unrelated = published({
+      content: "Another tip",
+      recipeId: otherRecipeId,
+      postType: "community",
+    });
+    const h = createHarness({ posts: [related, unrelated] });
+
+    const result = await h.call("posts", "getPosts", {
+      actor: null,
+      query: { recipeId, postType: "community" },
+    });
+
+    expect(result.data.map((post) => post._id)).toEqual([related._id]);
+  });
+  it("keeps owner edits of community posts published without review", async () => {
     const post = published({ content: "Original", publishedAt: new Date("2026-10-01") });
     const h = createHarness({ posts: [post] });
 
@@ -443,17 +458,11 @@ describe("Complete content modules", () => {
 
     expect(edited).toMatchObject({
       content: "Updated",
-      status: "draft",
-      publishedAt: null,
+      status: "published",
+      publishedAt: post.publishedAt,
       version: 1,
     });
-    expect((await h.call("posts", "getPosts", { actor: null })).data).toHaveLength(0);
-
-    const submitted = await h.call("posts", "submitPost", {
-      params: { id: post._id },
-      body: { version: 1 },
-    });
-    expect(submitted.status).toBe("pending_review");
+    expect((await h.call("posts", "getPosts", { actor: null })).data).toHaveLength(1);
   });
   it("never overlaps repository calls on the same transaction session", async () => {
     const foods = [newId(), newId()];
@@ -740,16 +749,24 @@ describe("Complete content modules", () => {
   });
   it("maintains unique idempotent saves/reactions and actual transactional rating averages", async () => {
     const recipe = published();
-    const h = createHarness({ recipes: [recipe] });
+    const post = published({ content: "A community tip", postType: "community" });
+    const h = createHarness({ recipes: [recipe], posts: [post] });
     const params = { targetType: "recipe", targetId: recipe._id };
+    const reactionParams = { targetType: "post", targetId: post._id };
     await Promise.all(
       Array.from({ length: 8 }, () => h.call("saved-items", "saveItem", { params })),
     );
     expect(await h.repositories.savedItems.count({})).toBe(1);
     expect((await h.repositories.recipes.findById(recipe._id)).saveCount).toBe(1);
-    await h.call("reactions", "upsertReaction", { params, body: { type: "like" } });
-    await h.call("reactions", "upsertReaction", { params, body: { type: "love" } });
-    expect((await h.repositories.recipes.findById(recipe._id)).reactionCount).toBe(1);
+    await h.call("reactions", "upsertReaction", {
+      params: reactionParams,
+      body: { type: "like" },
+    });
+    await h.call("reactions", "upsertReaction", {
+      params: reactionParams,
+      body: { type: "love" },
+    });
+    expect((await h.repositories.posts.findById(post._id)).reactionCount).toBe(1);
     await h.call("ratings", "upsertRating", { params, body: { score: 5 } });
     await h.call("ratings", "upsertRating", { actor: other, params, body: { score: 3 } });
     await h.call("ratings", "upsertRating", { params, body: { score: 1, review: "Changed" } });

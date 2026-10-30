@@ -7,7 +7,7 @@ export const ref = (model, required = false) => ({
   required,
 });
 export const shortText = (max = 200) => ({ type: String, trim: true, maxlength: max });
-export const contentFields = {
+export const baseContentFields = {
   authorId: { ...ref("Users", true), index: true },
   title: { ...shortText(), required: true },
   categoryIds: [ref("Categories")],
@@ -29,12 +29,21 @@ export const contentFields = {
   version: { type: Number, default: 0, min: 0 },
   viewReceipts: [{ _id: false, key: String, at: Date }],
   viewCount: { type: Number, default: 0, min: 0 },
+  saveCount: { type: Number, default: 0, min: 0 },
+};
+export const socialContentFields = {
   commentCount: { type: Number, default: 0, min: 0 },
   reactionCount: { type: Number, default: 0, min: 0 },
-  saveCount: { type: Number, default: 0, min: 0 },
+};
+export const ratingContentFields = {
   ratingCount: { type: Number, default: 0, min: 0 },
   ratingSum: { type: Number, default: 0, min: 0 },
   ratingAverage: { type: Number, default: 0, min: 0, max: 5 },
+};
+export const contentFields = {
+  ...baseContentFields,
+  ...socialContentFields,
+  ...ratingContentFields,
 };
 export const nutritionFields = Object.fromEntries(
   [

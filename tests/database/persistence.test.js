@@ -121,7 +121,7 @@ suite(
         models.users.create({ firebaseUid: owner.firebaseUid, role: "user", status: "active" }),
       ).rejects.toMatchObject({ code: 11000 });
       const cases = [
-        ["reactions", { userId: owner._id, targetType: "recipe", targetId, type: "like" }],
+        ["reactions", { userId: owner._id, targetType: "post", targetId, type: "like" }],
         ["savedItems", { userId: owner._id, targetType: "recipe", targetId }],
         ["ratings", { userId: owner._id, targetType: "recipe", targetId, score: 4 }],
         ["viewHistories", { userId: owner._id, targetType: "recipe", targetId }],

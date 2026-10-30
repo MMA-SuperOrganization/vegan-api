@@ -66,7 +66,7 @@ tags:
   - name: pantries
     description: Kho thực phẩm của chính người dùng; quantity đi cùng unit. Gợi ý công thức dựa trên nguyên liệu trong kho và ràng buộc chế độ ăn/dị ứng.
   - name: posts
-    description: Bài đăng cộng đồng theo luồng soạn thảo, gửi duyệt và xuất bản. Nội dung công khai phụ thuộc visibility, trạng thái và moderation.
+    description: Bài đăng cộng đồng được xuất bản ngay khi người dùng tạo. Nội dung công khai vẫn phụ thuộc visibility và moderation; người dùng có thể báo cáo nội dung vi phạm.
   - name: ratings
     description: Đánh giá theo người dùng và target được hỗ trợ. PUT thay đánh giá hiện tại; summary tổng hợp điểm và có thể kèm đánh giá của người gọi khi đăng nhập.
   - name: reactions
@@ -28211,7 +28211,7 @@ paths:
 
         **Nghiệp vụ:** Upload hai bước: xin URL PUT có hạn, gửi binary trực tiếp đến storage với requiredHeaders, sau đó gọi confirm. Backend kiểm tra object/MIME/kích thước; chỉ media ready hợp lệ được liên kết nội dung.
 
-        Gửi metadata JSON, không gửi file multipart. MIME hỗ trợ image/jpeg, image/png, image/webp, video/mp4, video/webm. Các purpose avatar/recipe_step/video_thumbnail/ai_ingredient yêu cầu image; video yêu cầu video. Giới hạn service còn phụ thuộc cấu hình.
+        Gửi metadata JSON, không gửi file multipart. MIME hỗ trợ image/jpeg, image/png, image/webp, video/mp4, video/webm. Các purpose avatar/recipe_step/video_thumbnail/ai_ingredient/ai_chat yêu cầu image; video yêu cầu video. Giới hạn service còn phụ thuộc cấu hình.
 
         **Request:** application/json; body bắt buộc, các trường bắt buộc được đánh dấu trong schema. Không gửi trường ngoài schema khi additionalProperties=false.
 
@@ -28595,7 +28595,7 @@ paths:
         - name: purpose
           in: query
           required: false
-          description: "Mục đích media; quyết định loại file và nơi được phép liên kết. Giá trị cho phép: avatar, recipe, recipe_step, post, video, video_thumbnail, ai_ingredient, other."
+          description: "Mục đích media; quyết định loại file và nơi được phép liên kết. Giá trị cho phép: avatar, recipe, recipe_step, post, video, video_thumbnail, ai_ingredient, ai_chat, other."
           schema:
             type: string
             enum:
@@ -28606,6 +28606,7 @@ paths:
               - video
               - video_thumbnail
               - ai_ingredient
+              - ai_chat
               - other
           example: avatar
       responses:
@@ -29686,7 +29687,7 @@ paths:
 
         **Quyền truy cập:** Không yêu cầu token. Chỉ dữ liệu được phép công khai được trả về.
 
-        **Nghiệp vụ:** Bài đăng cộng đồng theo luồng soạn thảo, gửi duyệt và xuất bản. Nội dung công khai phụ thuộc visibility, trạng thái và moderation.
+        **Nghiệp vụ:** Bài đăng cộng đồng được xuất bản ngay khi người dùng tạo. Nội dung công khai vẫn phụ thuộc visibility và moderation; người dùng có thể báo cáo nội dung vi phạm.
 
         Danh sách bài đăng có quyền công khai, phân trang/bộ lọc query; bài draft/ẩn không tự xuất hiện ở public list.
 
@@ -29797,6 +29798,14 @@ paths:
               - community
               - blog
           example: community
+        - name: recipeId
+          in: query
+          required: false
+          description: ID công thức; quyền truy cập và trạng thái được kiểm tra trước khi dùng. ObjectId gồm 24 ký tự hexadecimal.
+          schema:
+            type: string
+            pattern: ^[a-f\d]{24}$
+          example: 507f1f77bcf86cd799439011
       responses:
         "200":
           description: Success
@@ -29978,9 +29987,9 @@ paths:
 
         **Quyền truy cập:** Bắt buộc Firebase ID token và tài khoản backend đang active; đồng bộ qua POST /auth/sync trước khi dùng API cá nhân.
 
-        **Nghiệp vụ:** Bài đăng cộng đồng theo luồng soạn thảo, gửi duyệt và xuất bản. Nội dung công khai phụ thuộc visibility, trạng thái và moderation.
+        **Nghiệp vụ:** Bài đăng cộng đồng được xuất bản ngay khi người dùng tạo. Nội dung công khai vẫn phụ thuộc visibility và moderation; người dùng có thể báo cáo nội dung vi phạm.
 
-        Tạo bài đăng theo schema ở trạng thái ban đầu của service; không tự cấp trạng thái published qua dữ liệu ngoài schema.
+        Tạo bài đăng cộng đồng và xuất bản ngay theo dữ liệu hợp lệ; blog nội bộ vẫn tuân theo vòng đời riêng của service.
 
         **Request:** application/json; body bắt buộc, các trường bắt buộc được đánh dấu trong schema. Không gửi trường ngoài schema khi additionalProperties=false.
 
@@ -30287,7 +30296,7 @@ paths:
 
         **Quyền truy cập:** Bắt buộc Firebase ID token, tài khoản active và quyền sở hữu resource. Backend lấy danh tính từ token; ID của người khác không cấp quyền truy cập.
 
-        **Nghiệp vụ:** Bài đăng cộng đồng theo luồng soạn thảo, gửi duyệt và xuất bản. Nội dung công khai phụ thuộc visibility, trạng thái và moderation.
+        **Nghiệp vụ:** Bài đăng cộng đồng được xuất bản ngay khi người dùng tạo. Nội dung công khai vẫn phụ thuộc visibility và moderation; người dùng có thể báo cáo nội dung vi phạm.
 
         Danh sách bài đăng tác giả hiện tại, lọc trạng thái để quản lý nội dung chưa xuất bản.
 
@@ -30581,7 +30590,7 @@ paths:
 
         **Quyền truy cập:** Có thể gọi không token. Nếu gửi Authorization: Bearer <Firebase ID token> thì token phải hợp lệ; token lỗi không được tự động coi là guest.
 
-        **Nghiệp vụ:** Bài đăng cộng đồng theo luồng soạn thảo, gửi duyệt và xuất bản. Nội dung công khai phụ thuộc visibility, trạng thái và moderation.
+        **Nghiệp vụ:** Bài đăng cộng đồng được xuất bản ngay khi người dùng tạo. Nội dung công khai vẫn phụ thuộc visibility và moderation; người dùng có thể báo cáo nội dung vi phạm.
 
         Đọc bằng ObjectId của bài đăng, không nhận slug. Quyền guest/owner/admin được service kiểm tra dựa trên trạng thái và visibility.
 
@@ -30832,7 +30841,7 @@ paths:
 
         **Quyền truy cập:** Bắt buộc Firebase ID token, tài khoản active và quyền sở hữu resource. Backend lấy danh tính từ token; ID của người khác không cấp quyền truy cập.
 
-        **Nghiệp vụ:** Bài đăng cộng đồng theo luồng soạn thảo, gửi duyệt và xuất bản. Nội dung công khai phụ thuộc visibility, trạng thái và moderation.
+        **Nghiệp vụ:** Bài đăng cộng đồng được xuất bản ngay khi người dùng tạo. Nội dung công khai vẫn phụ thuộc visibility và moderation; người dùng có thể báo cáo nội dung vi phạm.
 
         Ít nhất một trường chỉnh sửa ngoài version; version tùy chọn giúp phát hiện cập nhật đồng thời (409).
 
@@ -31149,7 +31158,7 @@ paths:
 
         **Quyền truy cập:** Bắt buộc Firebase ID token, tài khoản active và quyền sở hữu resource. Backend lấy danh tính từ token; ID của người khác không cấp quyền truy cập.
 
-        **Nghiệp vụ:** Bài đăng cộng đồng theo luồng soạn thảo, gửi duyệt và xuất bản. Nội dung công khai phụ thuộc visibility, trạng thái và moderation.
+        **Nghiệp vụ:** Bài đăng cộng đồng được xuất bản ngay khi người dùng tạo. Nội dung công khai vẫn phụ thuộc visibility và moderation; người dùng có thể báo cáo nội dung vi phạm.
 
         Xóa bài đăng owner theo service; không xóa tài khoản tác giả hoặc media master bằng request này.
 
@@ -31425,9 +31434,9 @@ paths:
 
         **Quyền truy cập:** Bắt buộc Firebase ID token, tài khoản active và quyền sở hữu resource. Backend lấy danh tính từ token; ID của người khác không cấp quyền truy cập.
 
-        **Nghiệp vụ:** Bài đăng cộng đồng theo luồng soạn thảo, gửi duyệt và xuất bản. Nội dung công khai phụ thuộc visibility, trạng thái và moderation.
+        **Nghiệp vụ:** Bài đăng cộng đồng được xuất bản ngay khi người dùng tạo. Nội dung công khai vẫn phụ thuộc visibility và moderation; người dùng có thể báo cáo nội dung vi phạm.
 
-        Owner gửi bài vào luồng duyệt, yêu cầu nội dung và tham chiếu đủ điều kiện.
+        Endpoint tương thích vòng đời cũ; bài cộng đồng đã xuất bản được trả về nguyên trạng, nội dung khác vẫn được kiểm tra điều kiện.
 
         Chuyển trạng thái qua endpoint chuyên biệt; trạng thái nguồn phải hợp lệ. version tùy chọn để phát hiện xung đột; reject yêu cầu reason. Xuất bản còn kiểm tra tính đầy đủ và media/tham chiếu.
 
@@ -31742,9 +31751,9 @@ paths:
 
         **Quyền truy cập:** Bắt buộc Firebase ID token của tài khoản backend active có role=admin; tài khoản user bị từ chối.
 
-        **Nghiệp vụ:** Bài đăng cộng đồng theo luồng soạn thảo, gửi duyệt và xuất bản. Nội dung công khai phụ thuộc visibility, trạng thái và moderation.
+        **Nghiệp vụ:** Bài đăng cộng đồng được xuất bản ngay khi người dùng tạo. Nội dung công khai vẫn phụ thuộc visibility và moderation; người dùng có thể báo cáo nội dung vi phạm.
 
-        Admin xuất bản bài đủ điều kiện, có kiểm tra trạng thái nguồn và version nếu gửi.
+        Endpoint tương thích cho admin; bài cộng đồng đã xuất bản được xử lý idempotent, nội dung khác phải đủ điều kiện.
 
         Chuyển trạng thái qua endpoint chuyên biệt; trạng thái nguồn phải hợp lệ. version tùy chọn để phát hiện xung đột; reject yêu cầu reason. Xuất bản còn kiểm tra tính đầy đủ và media/tham chiếu.
 
@@ -32059,9 +32068,9 @@ paths:
 
         **Quyền truy cập:** Bắt buộc Firebase ID token của tài khoản backend active có role=admin; tài khoản user bị từ chối.
 
-        **Nghiệp vụ:** Bài đăng cộng đồng theo luồng soạn thảo, gửi duyệt và xuất bản. Nội dung công khai phụ thuộc visibility, trạng thái và moderation.
+        **Nghiệp vụ:** Bài đăng cộng đồng được xuất bản ngay khi người dùng tạo. Nội dung công khai vẫn phụ thuộc visibility và moderation; người dùng có thể báo cáo nội dung vi phạm.
 
-        Admin từ chối bài, bắt buộc reason; lý do được lưu để tác giả quản lý nội dung.
+        Admin từ chối nội dung thuộc vòng đời kiểm duyệt cũ, bắt buộc reason; bài cộng đồng mới không cần bước này.
 
         Chuyển trạng thái qua endpoint chuyên biệt; trạng thái nguồn phải hợp lệ. version tùy chọn để phát hiện xung đột; reject yêu cầu reason. Xuất bản còn kiểm tra tính đầy đủ và media/tham chiếu.
 
@@ -32416,14 +32425,13 @@ paths:
         - name: targetType
           in: query
           required: true
-          description: "Loại resource đa hình; enum giới hạn theo endpoint. Giá trị cho phép: recipe, post, video."
+          description: "Loại resource đa hình; enum giới hạn theo endpoint. Giá trị cho phép: post, video."
           schema:
             type: string
             enum:
-              - recipe
               - post
               - video
-          example: recipe
+          example: post
         - name: targetId
           in: query
           required: true
@@ -32466,7 +32474,7 @@ paths:
                     success: true
                     data:
                       - authorId: 507f1f77bcf86cd799439011
-                        targetType: recipe
+                        targetType: post
                         targetId: 507f1f77bcf86cd799439011
                         content: Ví dụ
                         _id: 507f1f77bcf86cd799439011
@@ -32662,7 +32670,7 @@ paths:
                 summary: Payload hợp lệ
                 description: Dữ liệu minh họa qua validator; thay ID bằng bản ghi thật có quyền truy cập. Ví dụ không chứng minh resource/provider tồn tại.
                 value:
-                  targetType: recipe
+                  targetType: post
                   targetId: 507f1f77bcf86cd799439011
                   content: Ví dụ
       responses:
@@ -32680,7 +32688,7 @@ paths:
                     success: true
                     data:
                       authorId: 507f1f77bcf86cd799439011
-                      targetType: recipe
+                      targetType: post
                       targetId: 507f1f77bcf86cd799439011
                       content: Ví dụ
                       _id: 507f1f77bcf86cd799439011
@@ -32999,7 +33007,7 @@ paths:
                     success: true
                     data:
                       authorId: 507f1f77bcf86cd799439011
-                      targetType: recipe
+                      targetType: post
                       targetId: 507f1f77bcf86cd799439011
                       content: Ví dụ
                       _id: 507f1f77bcf86cd799439011
@@ -33556,15 +33564,14 @@ paths:
         - name: targetType
           in: path
           required: true
-          description: "Loại resource đa hình; enum giới hạn theo endpoint. Giá trị cho phép: recipe, post, video, comment."
+          description: "Loại resource đa hình; enum giới hạn theo endpoint. Giá trị cho phép: post, video, comment."
           schema:
             type: string
             enum:
-              - recipe
               - post
               - video
               - comment
-          example: recipe
+          example: post
         - name: targetId
           in: path
           required: true
@@ -33601,7 +33608,7 @@ paths:
                     success: true
                     data:
                       userId: 507f1f77bcf86cd799439011
-                      targetType: recipe
+                      targetType: post
                       targetId: 507f1f77bcf86cd799439011
                       type: like
                       _id: 507f1f77bcf86cd799439011
@@ -33882,15 +33889,14 @@ paths:
         - name: targetType
           in: path
           required: true
-          description: "Loại resource đa hình; enum giới hạn theo endpoint. Giá trị cho phép: recipe, post, video, comment."
+          description: "Loại resource đa hình; enum giới hạn theo endpoint. Giá trị cho phép: post, video, comment."
           schema:
             type: string
             enum:
-              - recipe
               - post
               - video
               - comment
-          example: recipe
+          example: post
         - name: targetId
           in: path
           required: true
@@ -35892,7 +35898,7 @@ paths:
 
         **Nghiệp vụ:** Kết quả AI phải qua kiểm tra cấu trúc và tham chiếu. Tạo proposal chưa ghi kế hoạch/kho thực phẩm; chỉ confirm mới ghi. Proposal có hạn 1 giờ, xác nhận lại proposal đã consumed trả kết quả trước đó. Các thao tác gọi provider có thể trả 503 khi AI tắt/chưa cấu hình.
 
-        Gửi content vào conversation owner; AI chạy theo safety/structured-output policy và lưu kết quả/run. Provider lỗi có thể trả 502; không gửi secret trong nội dung.
+        Gửi content và tùy chọn mediaId ảnh purpose ai_chat vào conversation owner; backend kiểm tra ảnh ready/đúng owner rồi dùng vision model. AI chạy theo safety/structured-output policy và lưu kết quả/run. Provider lỗi có thể trả 502; không gửi secret trong nội dung.
 
         **Request:** application/json; body bắt buộc, các trường bắt buộc được đánh dấu trong schema. Không gửi trường ngoài schema khi additionalProperties=false.
 
@@ -44012,7 +44018,7 @@ paths:
         - name: targetType
           in: path
           required: true
-          description: "Loại resource đa hình; enum giới hạn theo endpoint. Giá trị cho phép: recipe, post, video, comment."
+          description: "Loại resource đa hình; enum giới hạn theo endpoint. Giá trị cho phép: recipe, post, video, comment, user."
           schema:
             type: string
             enum:
@@ -44020,6 +44026,7 @@ paths:
               - post
               - video
               - comment
+              - user
           example: recipe
         - name: targetId
           in: path
@@ -44346,7 +44353,7 @@ paths:
         - name: targetType
           in: path
           required: true
-          description: "Loại resource đa hình; enum giới hạn theo endpoint. Giá trị cho phép: recipe, post, video, comment."
+          description: "Loại resource đa hình; enum giới hạn theo endpoint. Giá trị cho phép: recipe, post, video, comment, user."
           schema:
             type: string
             enum:
@@ -44354,6 +44361,7 @@ paths:
               - post
               - video
               - comment
+              - user
           example: recipe
         - name: targetId
           in: path
@@ -55966,8 +55974,9 @@ components:
             - video
             - video_thumbnail
             - ai_ingredient
+            - ai_chat
             - other
-          description: "Mục đích media; quyết định loại file và nơi được phép liên kết. Giá trị cho phép: avatar, recipe, recipe_step, post, video, video_thumbnail, ai_ingredient, other."
+          description: "Mục đích media; quyết định loại file và nơi được phép liên kết. Giá trị cho phép: avatar, recipe, recipe_step, post, video, video_thumbnail, ai_ingredient, ai_chat, other."
         mimeType:
           type: string
           enum:
@@ -56195,18 +56204,6 @@ components:
             - "null"
           minimum: 0
           description: Số lượt xem sau cơ chế chống đếm lặp; không tăng ở mọi request đọc.
-        commentCount:
-          type:
-            - number
-            - "null"
-          minimum: 0
-          description: Số bình luận đã được bộ đếm service ghi nhận.
-        reactionCount:
-          type:
-            - number
-            - "null"
-          minimum: 0
-          description: Tổng reaction được bộ đếm service ghi nhận.
         saveCount:
           type:
             - number
@@ -56844,6 +56841,12 @@ components:
             - "null"
           minimum: 0
           description: Số lượt xem sau cơ chế chống đếm lặp; không tăng ở mọi request đọc.
+        saveCount:
+          type:
+            - number
+            - "null"
+          minimum: 0
+          description: Số lượt lưu target được bộ đếm service ghi nhận.
         commentCount:
           type:
             - number
@@ -56856,31 +56859,6 @@ components:
             - "null"
           minimum: 0
           description: Tổng reaction được bộ đếm service ghi nhận.
-        saveCount:
-          type:
-            - number
-            - "null"
-          minimum: 0
-          description: Số lượt lưu target được bộ đếm service ghi nhận.
-        ratingCount:
-          type:
-            - number
-            - "null"
-          minimum: 0
-          description: Số rating được tính cho target.
-        ratingSum:
-          type:
-            - number
-            - "null"
-          minimum: 0
-          description: Tổng điểm rating phục vụ tính trung bình.
-        ratingAverage:
-          type:
-            - number
-            - "null"
-          minimum: 0
-          maximum: 5
-          description: Điểm rating trung bình của target.
         content:
           type: string
           maxLength: 30000
@@ -57043,6 +57021,12 @@ components:
             - "null"
           minimum: 0
           description: Số lượt xem sau cơ chế chống đếm lặp; không tăng ở mọi request đọc.
+        saveCount:
+          type:
+            - number
+            - "null"
+          minimum: 0
+          description: Số lượt lưu target được bộ đếm service ghi nhận.
         commentCount:
           type:
             - number
@@ -57055,12 +57039,6 @@ components:
             - "null"
           minimum: 0
           description: Tổng reaction được bộ đếm service ghi nhận.
-        saveCount:
-          type:
-            - number
-            - "null"
-          minimum: 0
-          description: Số lượt lưu target được bộ đếm service ghi nhận.
         ratingCount:
           type:
             - number
@@ -57195,10 +57173,9 @@ components:
         targetType:
           type: string
           enum:
-            - recipe
             - post
             - video
-          description: "Loại resource đa hình; enum giới hạn theo endpoint. Giá trị cho phép: recipe, post, video."
+          description: "Loại resource đa hình; enum giới hạn theo endpoint. Giá trị cho phép: post, video."
         targetId:
           type: string
           pattern: ^[A-Fa-f0-9]{24}$
@@ -57279,11 +57256,10 @@ components:
         targetType:
           type: string
           enum:
-            - recipe
             - post
             - video
             - comment
-          description: "Loại resource đa hình; enum giới hạn theo endpoint. Giá trị cho phép: recipe, post, video, comment."
+          description: "Loại resource đa hình; enum giới hạn theo endpoint. Giá trị cho phép: post, video, comment."
         targetId:
           type: string
           pattern: ^[A-Fa-f0-9]{24}$
@@ -58521,6 +58497,12 @@ components:
             - "null"
           maxLength: 10000
           description: Nội dung theo loại resource; xem schema nhánh tương ứng.
+        mediaId:
+          type:
+            - string
+            - "null"
+          pattern: ^[A-Fa-f0-9]{24}$
+          description: ID media đã đăng ký; trạng thái/purpose/quyền đọc phải phù hợp. ObjectId gồm 24 ký tự hexadecimal.
         structuredData:
           $ref: "#/components/schemas/JsonValue"
           description: Kết quả AI đã kiểm tra cấu trúc; proposal chưa consumed chưa tương đương dữ liệu đã lưu.
@@ -60517,19 +60499,6 @@ components:
               type: string
               pattern: ^[A-Fa-f0-9]{24}$
               description: ID tham chiếu authorId; xem resource tương ứng và kiểm tra quyền ở service. ObjectId gồm 24 ký tự hexadecimal.
-            ratingAverage:
-              type:
-                - number
-                - "null"
-              minimum: 0
-              maximum: 5
-              description: Điểm rating trung bình của target.
-            ratingCount:
-              type:
-                - number
-                - "null"
-              minimum: 0
-              description: Số rating được tính cho target.
             viewCount:
               type:
                 - number
@@ -60934,19 +60903,6 @@ components:
               type: string
               pattern: ^[A-Fa-f0-9]{24}$
               description: ID tham chiếu authorId; xem resource tương ứng và kiểm tra quyền ở service. ObjectId gồm 24 ký tự hexadecimal.
-            ratingAverage:
-              type:
-                - number
-                - "null"
-              minimum: 0
-              maximum: 5
-              description: Điểm rating trung bình của target.
-            ratingCount:
-              type:
-                - number
-                - "null"
-              minimum: 0
-              description: Số rating được tính cho target.
             viewCount:
               type:
                 - number
@@ -61374,19 +61330,6 @@ components:
               type: string
               pattern: ^[A-Fa-f0-9]{24}$
               description: ID tham chiếu authorId; xem resource tương ứng và kiểm tra quyền ở service. ObjectId gồm 24 ký tự hexadecimal.
-            ratingAverage:
-              type:
-                - number
-                - "null"
-              minimum: 0
-              maximum: 5
-              description: Điểm rating trung bình của target.
-            ratingCount:
-              type:
-                - number
-                - "null"
-              minimum: 0
-              description: Số rating được tính cho target.
             viewCount:
               type:
                 - number
@@ -61675,8 +61618,9 @@ components:
             - video
             - video_thumbnail
             - ai_ingredient
+            - ai_chat
             - other
-          description: "Mục đích media; quyết định loại file và nơi được phép liên kết. Giá trị cho phép: avatar, recipe, recipe_step, post, video, video_thumbnail, ai_ingredient, other."
+          description: "Mục đích media; quyết định loại file và nơi được phép liên kết. Giá trị cho phép: avatar, recipe, recipe_step, post, video, video_thumbnail, ai_ingredient, ai_chat, other."
         mimeType:
           type: string
           enum:
@@ -61823,18 +61767,6 @@ components:
             - "null"
           minimum: 0
           description: Số lượt xem sau cơ chế chống đếm lặp; không tăng ở mọi request đọc.
-        commentCount:
-          type:
-            - number
-            - "null"
-          minimum: 0
-          description: Số bình luận đã được bộ đếm service ghi nhận.
-        reactionCount:
-          type:
-            - number
-            - "null"
-          minimum: 0
-          description: Tổng reaction được bộ đếm service ghi nhận.
         saveCount:
           type:
             - number
@@ -62446,18 +62378,6 @@ components:
             - "null"
           minimum: 0
           description: Số lượt xem sau cơ chế chống đếm lặp; không tăng ở mọi request đọc.
-        commentCount:
-          type:
-            - number
-            - "null"
-          minimum: 0
-          description: Số bình luận đã được bộ đếm service ghi nhận.
-        reactionCount:
-          type:
-            - number
-            - "null"
-          minimum: 0
-          description: Tổng reaction được bộ đếm service ghi nhận.
         saveCount:
           type:
             - number
@@ -63101,6 +63021,12 @@ components:
             - "null"
           minimum: 0
           description: Số lượt xem sau cơ chế chống đếm lặp; không tăng ở mọi request đọc.
+        saveCount:
+          type:
+            - number
+            - "null"
+          minimum: 0
+          description: Số lượt lưu target được bộ đếm service ghi nhận.
         commentCount:
           type:
             - number
@@ -63113,25 +63039,6 @@ components:
             - "null"
           minimum: 0
           description: Tổng reaction được bộ đếm service ghi nhận.
-        saveCount:
-          type:
-            - number
-            - "null"
-          minimum: 0
-          description: Số lượt lưu target được bộ đếm service ghi nhận.
-        ratingCount:
-          type:
-            - number
-            - "null"
-          minimum: 0
-          description: Số rating được tính cho target.
-        ratingAverage:
-          type:
-            - number
-            - "null"
-          minimum: 0
-          maximum: 5
-          description: Điểm rating trung bình của target.
         content:
           type: string
           maxLength: 30000
@@ -63270,6 +63177,12 @@ components:
             - "null"
           minimum: 0
           description: Số lượt xem sau cơ chế chống đếm lặp; không tăng ở mọi request đọc.
+        saveCount:
+          type:
+            - number
+            - "null"
+          minimum: 0
+          description: Số lượt lưu target được bộ đếm service ghi nhận.
         commentCount:
           type:
             - number
@@ -63282,25 +63195,6 @@ components:
             - "null"
           minimum: 0
           description: Tổng reaction được bộ đếm service ghi nhận.
-        saveCount:
-          type:
-            - number
-            - "null"
-          minimum: 0
-          description: Số lượt lưu target được bộ đếm service ghi nhận.
-        ratingCount:
-          type:
-            - number
-            - "null"
-          minimum: 0
-          description: Số rating được tính cho target.
-        ratingAverage:
-          type:
-            - number
-            - "null"
-          minimum: 0
-          maximum: 5
-          description: Điểm rating trung bình của target.
         content:
           type: string
           maxLength: 30000
@@ -63475,6 +63369,12 @@ components:
             - "null"
           minimum: 0
           description: Số lượt xem sau cơ chế chống đếm lặp; không tăng ở mọi request đọc.
+        saveCount:
+          type:
+            - number
+            - "null"
+          minimum: 0
+          description: Số lượt lưu target được bộ đếm service ghi nhận.
         commentCount:
           type:
             - number
@@ -63487,12 +63387,6 @@ components:
             - "null"
           minimum: 0
           description: Tổng reaction được bộ đếm service ghi nhận.
-        saveCount:
-          type:
-            - number
-            - "null"
-          minimum: 0
-          description: Số lượt lưu target được bộ đếm service ghi nhận.
         ratingCount:
           type:
             - number
@@ -63699,6 +63593,12 @@ components:
             - "null"
           minimum: 0
           description: Số lượt xem sau cơ chế chống đếm lặp; không tăng ở mọi request đọc.
+        saveCount:
+          type:
+            - number
+            - "null"
+          minimum: 0
+          description: Số lượt lưu target được bộ đếm service ghi nhận.
         commentCount:
           type:
             - number
@@ -63711,12 +63611,6 @@ components:
             - "null"
           minimum: 0
           description: Tổng reaction được bộ đếm service ghi nhận.
-        saveCount:
-          type:
-            - number
-            - "null"
-          minimum: 0
-          description: Số lượt lưu target được bộ đếm service ghi nhận.
         ratingCount:
           type:
             - number
@@ -65089,6 +64983,12 @@ components:
             - "null"
           maxLength: 10000
           description: Nội dung theo loại resource; xem schema nhánh tương ứng.
+        mediaId:
+          type:
+            - string
+            - "null"
+          pattern: ^[A-Fa-f0-9]{24}$
+          description: ID media đã đăng ký; trạng thái/purpose/quyền đọc phải phù hợp. ObjectId gồm 24 ký tự hexadecimal.
         structuredData:
           $ref: "#/components/schemas/JsonValue"
           description: Kết quả AI đã kiểm tra cấu trúc; proposal chưa consumed chưa tương đương dữ liệu đã lưu.
@@ -71961,8 +71861,9 @@ components:
             - video
             - video_thumbnail
             - ai_ingredient
+            - ai_chat
             - other
-          description: "Mục đích media; quyết định loại file và nơi được phép liên kết. Giá trị cho phép: avatar, recipe, recipe_step, post, video, video_thumbnail, ai_ingredient, other."
+          description: "Mục đích media; quyết định loại file và nơi được phép liên kết. Giá trị cho phép: avatar, recipe, recipe_step, post, video, video_thumbnail, ai_ingredient, ai_chat, other."
       required:
         - filename
         - mimeType
@@ -72079,8 +71980,9 @@ components:
             - video
             - video_thumbnail
             - ai_ingredient
+            - ai_chat
             - other
-          description: "Mục đích media; quyết định loại file và nơi được phép liên kết. Giá trị cho phép: avatar, recipe, recipe_step, post, video, video_thumbnail, ai_ingredient, other."
+          description: "Mục đích media; quyết định loại file và nơi được phép liên kết. Giá trị cho phép: avatar, recipe, recipe_step, post, video, video_thumbnail, ai_ingredient, ai_chat, other."
       additionalProperties: false
       description: Dữ liệu Query của getMyMedia; required/default/enum/giới hạn theo validator thật, các quy tắc kiểm tra chéo xem description của operation.
     getMyMediaResponse:
@@ -72273,6 +72175,10 @@ components:
             - community
             - blog
           description: "Loại bài community/blog khi validator hỗ trợ. Giá trị cho phép: community, blog."
+        recipeId:
+          type: string
+          pattern: ^[a-f\d]{24}$
+          description: ID công thức; quyền truy cập và trạng thái được kiểm tra trước khi dùng. ObjectId gồm 24 ký tự hexadecimal.
       additionalProperties: false
       description: Dữ liệu Query của getPosts; required/default/enum/giới hạn theo validator thật, các quy tắc kiểm tra chéo xem description của operation.
     getPostsResponse:
@@ -72735,10 +72641,9 @@ components:
         targetType:
           type: string
           enum:
-            - recipe
             - post
             - video
-          description: "Loại resource đa hình; enum giới hạn theo endpoint. Giá trị cho phép: recipe, post, video."
+          description: "Loại resource đa hình; enum giới hạn theo endpoint. Giá trị cho phép: post, video."
         targetId:
           type: string
           pattern: ^[a-f\d]{24}$
@@ -72787,10 +72692,9 @@ components:
         targetType:
           type: string
           enum:
-            - recipe
             - post
             - video
-          description: "Loại resource đa hình; enum giới hạn theo endpoint. Giá trị cho phép: recipe, post, video."
+          description: "Loại resource đa hình; enum giới hạn theo endpoint. Giá trị cho phép: post, video."
         targetId:
           type: string
           pattern: ^[a-f\d]{24}$
@@ -72929,11 +72833,10 @@ components:
         targetType:
           type: string
           enum:
-            - recipe
             - post
             - video
             - comment
-          description: "Loại resource đa hình; enum giới hạn theo endpoint. Giá trị cho phép: recipe, post, video, comment."
+          description: "Loại resource đa hình; enum giới hạn theo endpoint. Giá trị cho phép: post, video, comment."
         targetId:
           type: string
           pattern: ^[a-f\d]{24}$
@@ -72982,11 +72885,10 @@ components:
         targetType:
           type: string
           enum:
-            - recipe
             - post
             - video
             - comment
-          description: "Loại resource đa hình; enum giới hạn theo endpoint. Giá trị cho phép: recipe, post, video, comment."
+          description: "Loại resource đa hình; enum giới hạn theo endpoint. Giá trị cho phép: post, video, comment."
         targetId:
           type: string
           pattern: ^[a-f\d]{24}$
@@ -73354,11 +73256,13 @@ components:
           minLength: 1
           maxLength: 4000
           description: Nội dung theo loại resource; xem schema nhánh tương ứng.
+        mediaId:
+          type: string
+          pattern: ^[a-f\d]{24}$
+          description: ID media đã đăng ký; trạng thái/purpose/quyền đọc phải phù hợp. ObjectId gồm 24 ký tự hexadecimal.
         useProfile:
           type: boolean
           description: Trường use Profile trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
-      required:
-        - content
       additionalProperties: false
       description: Dữ liệu Body của sendAiMessage; required/default/enum/giới hạn theo validator thật, các quy tắc kiểm tra chéo xem description của operation.
     sendAiMessageResponse:
@@ -74960,7 +74864,8 @@ components:
             - post
             - video
             - comment
-          description: "Loại resource đa hình; enum giới hạn theo endpoint. Giá trị cho phép: recipe, post, video, comment."
+            - user
+          description: "Loại resource đa hình; enum giới hạn theo endpoint. Giá trị cho phép: recipe, post, video, comment, user."
         targetId:
           type: string
           pattern: ^[a-f\d]{24}$
@@ -75034,7 +74939,8 @@ components:
             - post
             - video
             - comment
-          description: "Loại resource đa hình; enum giới hạn theo endpoint. Giá trị cho phép: recipe, post, video, comment."
+            - user
+          description: "Loại resource đa hình; enum giới hạn theo endpoint. Giá trị cho phép: recipe, post, video, comment, user."
         targetId:
           type: string
           pattern: ^[a-f\d]{24}$
@@ -77365,19 +77271,6 @@ components:
                     type: string
                     pattern: ^[A-Fa-f0-9]{24}$
                     description: ID tham chiếu authorId; xem resource tương ứng và kiểm tra quyền ở service. ObjectId gồm 24 ký tự hexadecimal.
-                  ratingAverage:
-                    type:
-                      - number
-                      - "null"
-                    minimum: 0
-                    maximum: 5
-                    description: Điểm rating trung bình của target.
-                  ratingCount:
-                    type:
-                      - number
-                      - "null"
-                    minimum: 0
-                    description: Số rating được tính cho target.
                   viewCount:
                     type:
                       - number

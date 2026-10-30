@@ -43,9 +43,9 @@ function fixture(overrides = {}) {
   const aiProvider = {
     enabled: true,
     provider: "fake",
-    generate: vi.fn(async ({ feature }) => ({
+    generate: vi.fn(async ({ feature, mediaUrl }) => ({
       data: outputs[feature],
-      model: `fake-${feature}`,
+      model: mediaUrl ? "fake-vision" : `fake-${feature}`,
       usage: { total_tokens: 10 },
     })),
   };
@@ -295,6 +295,33 @@ describe("AI complete domain", () => {
     expect((await f.operations.getAiConversations({ actor: { userId: other } })).data).toHaveLength(
       0,
     );
+  });
+  it("passes an owned ready image to chat through the vision model", async () => {
+    const f = fixture();
+    const conversation = await f.operations.createAiConversation({
+      actor,
+      body: { title: "Image question" },
+    });
+
+    await f.operations.sendAiMessage({
+      actor,
+      params: { id: conversation._id },
+      body: { content: "Is this meal balanced?", mediaId },
+      requestId: "image-chat-request",
+    });
+
+    expect(f.deps.services.media.getOwnedReady).toHaveBeenCalledWith(userId, mediaId, {
+      type: "image",
+      purpose: "ai_chat",
+    });
+    expect(f.provider.generate.mock.calls[0][0]).toMatchObject({
+      feature: "chat",
+      mediaUrl: "https://private.example.test/signed",
+    });
+    expect(f.repos.aiRuns.records[0].model).toBe("fake-vision");
+    expect(f.repos.aiMessages.records[0]).toMatchObject({ role: "user", mediaId });
+    expect(f.validation.sendAiMessage.body.safeParse({ mediaId }).success).toBe(true);
+    expect(f.validation.sendAiMessage.body.safeParse({}).success).toBe(false);
   });
   it("uses an AI retrieval plan, filters DB candidates and returns tappable verified recipes", async () => {
     const f = fixture();
@@ -914,7 +941,7 @@ describe("OpenAI-compatible native provider, offline", () => {
     });
     expect(fetchImpl).not.toHaveBeenCalled();
     await createAiProvider({ env, fetchImpl }).generate({
-      feature: "ingredient_recognition",
+      feature: "chat",
       schema,
       messages: [],
       mediaUrl: "https://media.example.test/signed",

@@ -1,8 +1,9 @@
 import mongoose from "mongoose";
 import {
   registerModel,
-  contentFields,
+  baseContentFields,
   contentIndexes,
+  ratingContentFields,
   ref,
   shortText,
   nutritionFields,
@@ -53,7 +54,8 @@ const step = new mongoose.Schema(
 export const RecipesModel = registerModel(
   "Recipes",
   {
-    ...contentFields,
+    ...baseContentFields,
+    ...ratingContentFields,
     slug: { ...shortText(240), required: true, unique: true },
     summary: shortText(1000),
     description: shortText(10000),

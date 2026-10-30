@@ -188,14 +188,22 @@ describe("Concrete response contracts against mounted HTTP results", () => {
     check("searchContent", await request(app).get("/api/v1/search?q=Tofu"));
     check("getHomeFeed", await request(app).get("/api/v1/home"));
     check("discoverContent", await request(app).get("/api/v1/discover"));
+    const post = await request(app)
+      .post("/api/v1/posts")
+      .set(user)
+      .send({ title: "Tofu tip", content: "Press tofu before cooking", recipeId });
+    check("createPost", post);
+    const postId = post.body.data._id;
+    check("submitPost", await request(app).post(`/api/v1/posts/${postId}/submit`).set(user));
+    check("publishPost", await request(app).post(`/api/v1/posts/${postId}/publish`).set(admin));
     const comment = await request(app)
       .post("/api/v1/comments")
       .set(user)
-      .send({ targetType: "recipe", targetId: recipeId, content: "Great" });
+      .send({ targetType: "post", targetId: postId, content: "Great" });
     check("createComment", comment);
     check(
       "getComments",
-      await request(app).get(`/api/v1/comments?targetType=recipe&targetId=${recipeId}`),
+      await request(app).get(`/api/v1/comments?targetType=post&targetId=${postId}`),
     );
     check(
       "deleteComment",

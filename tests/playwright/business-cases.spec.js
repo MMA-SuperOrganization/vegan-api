@@ -415,16 +415,16 @@ const scenarios = {
   async "BIZ-0028"({ h }) {
     const reply = await created(h, "createComment", {
       body: {
-        targetType: "recipe",
-        targetId: ID.recipe,
+        targetType: "post",
+        targetId: ID.post,
         content: "Reply",
         parentCommentId: ID.comment,
       },
     });
     await h.call("createComment", {
       body: {
-        targetType: "recipe",
-        targetId: ID.recipe,
+        targetType: "post",
+        targetId: ID.post,
         content: "Deep",
         parentCommentId: reply._id,
       },
@@ -435,7 +435,7 @@ const scenarios = {
   async "BIZ-0029"({ h }) {
     await Promise.all(Array.from({ length: 10 }, () => h.call("upsertReaction", { status: 200 })));
     expect(await h.repositories.reactions.count({ userId: TEST_IDS.user })).toBe(1);
-    expect(row(h, "recipes", ID.recipe).reactionCount).toBe(1);
+    expect(row(h, "posts", ID.post).reactionCount).toBe(1);
   },
   async "BIZ-0030"({ h }) {
     await ok(h, "saveItem");

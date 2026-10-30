@@ -29,6 +29,7 @@ export const createMediaValidation = () => ({
             MEDIA_PURPOSES.RECIPE_STEP,
             MEDIA_PURPOSES.VIDEO_THUMBNAIL,
             MEDIA_PURPOSES.AI_INGREDIENT,
+            MEDIA_PURPOSES.AI_CHAT,
           ].includes(purpose) || mimeType.startsWith("image/"),
         "Purpose requires an image",
       )
