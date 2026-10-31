@@ -16,6 +16,7 @@ describe("community demo seed", () => {
     const posts = buildCommunityDemoPosts({
       authorId: "author-id",
       recipeIds: ["recipe-1", "recipe-2", "recipe-3"],
+      foodItemIds: ["food-1", "food-2"],
       categoryIds: ["category-id"],
       now: new Date("2026-10-30T00:00:00.000Z"),
     });
@@ -24,6 +25,10 @@ describe("community demo seed", () => {
     expect(posts.every(({ document }) => document.status === "published")).toBe(true);
     expect(posts[0].document.recipeId).toBe("recipe-1");
     expect(posts[1].document.recipeId).toBeNull();
+    expect(posts[1].document.foodItemIds).toEqual(["food-2"]);
+    expect(
+      posts.every(({ document }) => document.recipeId || document.foodItemIds.length > 0),
+    ).toBe(true);
     expect(posts.every(({ document }) => document.postType === "community")).toBe(true);
     expect(posts[0].document.publishedAt.getTime()).toBeGreaterThan(
       posts.at(-1).document.publishedAt.getTime(),

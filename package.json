@@ -35,6 +35,7 @@
     "seed:admin": "node --env-file=.env scripts/seed-admin.js",
     "seed:community-demo": "node --env-file=.env scripts/seed-community-demo.js",
     "seed:community-posts": "node --env-file=.env scripts/seed-community-posts.js",
+    "seed:community-load": "node --env-file=.env scripts/seed-community-load.js",
     "catalog:build": "node scripts/build-open-catalog.js",
     "catalog:import": "node --env-file=.env scripts/import-open-catalog.js",
     "catalog:images": "node --env-file=.env scripts/enrich-catalog-images.js",

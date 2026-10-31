@@ -81,6 +81,13 @@ export async function main() {
       .limit(3)
       .project({ _id: 1 })
       .toArray();
+    const foodItems = await database
+      .collection("fooditems")
+      .find({ status: { $ne: "inactive" }, deletedAt: null })
+      .sort({ updatedAt: -1, _id: -1 })
+      .limit(24)
+      .project({ _id: 1 })
+      .toArray();
     const category = await database.collection("categories").findOne({
       type: "post",
       status: "active",
@@ -88,6 +95,7 @@ export async function main() {
     const definitions = buildCommunityDemoPosts({
       authorId: user._id,
       recipeIds: recipes.map((recipe) => recipe._id),
+      foodItemIds: foodItems.map((foodItem) => foodItem._id),
       categoryIds: category ? [category._id] : [],
       now,
     });
@@ -96,7 +104,7 @@ export async function main() {
     const seededPosts = [];
     for (const definition of definitions) {
       const post = await posts.findOneAndUpdate(
-        { authorId: user._id, tags: definition.marker },
+        { tags: definition.marker },
         {
           $set: { ...definition.document, updatedAt: now },
           $setOnInsert: {

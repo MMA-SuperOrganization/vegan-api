@@ -14,7 +14,13 @@ export function validateCommunitySeedConfig(seed = {}) {
   return { email, password, displayName };
 }
 
-export function buildCommunityDemoPosts({ authorId, recipeIds = [], categoryIds = [], now }) {
+export function buildCommunityDemoPosts({
+  authorId,
+  recipeIds = [],
+  foodItemIds = [],
+  categoryIds = [],
+  now,
+}) {
   const shared = {
     authorId,
     categoryIds,
@@ -197,6 +203,10 @@ export function buildCommunityDemoPosts({ authorId, recipeIds = [], categoryIds 
 
   return posts.map(([key, title, content, tags, recipeIndex], index) => {
     const marker = `community-demo-${key}`;
+    const recipeId = recipeIndex == null ? null : (recipeIds[recipeIndex] ?? null);
+    const foodItemId = foodItemIds[index % foodItemIds.length];
+    if (!recipeId && !foodItemId)
+      throw new Error("Community demo posts require published recipes or active ingredients");
     return {
       marker,
       document: {
@@ -204,7 +214,8 @@ export function buildCommunityDemoPosts({ authorId, recipeIds = [], categoryIds 
         title,
         content,
         tags: [marker, ...tags],
-        recipeId: recipeIndex == null ? null : (recipeIds[recipeIndex] ?? null),
+        recipeId,
+        foodItemIds: recipeId ? [] : [foodItemId],
         status: "published",
         publishedAt: new Date(now.getTime() - index * 15 * 60 * 1000),
       },

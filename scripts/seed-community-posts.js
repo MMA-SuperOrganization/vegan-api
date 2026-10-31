@@ -5,6 +5,7 @@ import { connectDatabase, disconnectDatabase } from "../src/config/database.js";
 import { loadEnv } from "../src/config/env.js";
 import { createLogger } from "../src/config/logger.js";
 import { buildCommunityDemoPosts } from "./seed-community-demo-core.js";
+import { provisionCommunitySeedAuthors } from "./community-seed-authors.js";
 
 const argument = (name) => {
   const index = process.argv.indexOf(name);
@@ -16,14 +17,14 @@ const resolveAuthor = async (database) => {
   if (requestedId && !mongoose.isValidObjectId(requestedId))
     throw new Error("--author-id must be a MongoDB ObjectId");
 
-  const author = await database
-    .collection("users")
-    .findOne(
-      requestedId
-        ? { _id: new mongoose.Types.ObjectId(requestedId), status: "active" }
-        : { role: "user", status: "active", onboardingCompleted: true },
-      { sort: { updatedAt: -1, _id: -1 }, projection: { _id: 1, displayName: 1 } },
-    );
+  const author = requestedId
+    ? await database
+        .collection("users")
+        .findOne(
+          { _id: new mongoose.Types.ObjectId(requestedId), status: "active" },
+          { projection: { _id: 1, displayName: 1 } },
+        )
+    : (await provisionCommunitySeedAuthors(database, new Date(), 1))[0];
   if (!author) throw new Error("No active onboarded user is available for community post seeding");
   return author;
 };
@@ -43,6 +44,13 @@ export async function main() {
       .limit(3)
       .project({ _id: 1 })
       .toArray();
+    const foodItems = await database
+      .collection("fooditems")
+      .find({ status: { $ne: "inactive" }, deletedAt: null })
+      .sort({ updatedAt: -1, _id: -1 })
+      .limit(24)
+      .project({ _id: 1 })
+      .toArray();
     const category = await database.collection("categories").findOne({
       type: "post",
       status: "active",
@@ -50,14 +58,15 @@ export async function main() {
     const definitions = buildCommunityDemoPosts({
       authorId: author._id,
       recipeIds: recipes.map((recipe) => recipe._id),
+      foodItemIds: foodItems.map((foodItem) => foodItem._id),
       categoryIds: category ? [category._id] : [],
       now,
     });
     const posts = database.collection("posts");
 
     for (const definition of definitions)
-      await posts.updateOne(
-        { authorId: author._id, tags: definition.marker },
+      await posts.updateMany(
+        { tags: definition.marker },
         {
           $set: { ...definition.document, updatedAt: now },
           $setOnInsert: {
