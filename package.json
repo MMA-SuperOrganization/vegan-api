@@ -72,5 +72,8 @@
     "prettier": "3.9.9",
     "supertest": "7.3.0",
     "vitest": "5.0.2"
+  },
+  "overrides": {
+    "@google-cloud/firestore-api": "0.7.1"
   }
 }
