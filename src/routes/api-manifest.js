@@ -598,6 +598,13 @@ export const apiManifest = [
     module: "grocery-lists",
     operationId: "clearCheckedGroceryItems",
   },
+  {
+    method: "POST",
+    path: "/grocery-lists/:id/transfer-checked-to-pantry",
+    auth: "owner",
+    module: "grocery-lists",
+    operationId: "transferCheckedGroceryItemsToPantry",
+  },
 
   // Diary, Weight, Water
   { method: "GET", path: "/diary", auth: "owner", module: "diary", operationId: "getDiaryEntries" },

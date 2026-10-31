@@ -89,6 +89,7 @@ POST /grocery-lists/:id/items addGroceryItem
 PATCH /grocery-lists/:id/items/:itemId updateGroceryItem
 DELETE /grocery-lists/:id/items/:itemId deleteGroceryItem
 POST /grocery-lists/:id/clear-checked clearCheckedGroceryItems
+POST /grocery-lists/:id/transfer-checked-to-pantry transferCheckedGroceryItemsToPantry
 GET /diary getDiaryEntries
 POST /diary createDiaryEntry
 PATCH /diary/:id updateDiaryEntry

@@ -5,7 +5,11 @@ const owner = (actor) => {
   if (!actor?.userId) throw AppError.unauthorized();
   return actor.userId;
 };
-export function createGroceryListsService({ groceryListsRepository: repo, services = {} }) {
+export function createGroceryListsService({
+  groceryListsRepository: repo,
+  services = {},
+  transaction,
+}) {
   async function getOwned(userId, id, options = {}) {
     if (!userId) throw AppError.unauthorized();
     const list = await repo.findOne({ _id: id, userId }, options);
@@ -134,6 +138,59 @@ export function createGroceryListsService({ groceryListsRepository: repo, servic
           ? { items: list.items.filter((item) => !item.checked) }
           : null,
       ),
+    transferCheckedGroceryItemsToPantry: async ({ actor, params }) => {
+      const userId = owner(actor);
+      if (!transaction || !services.pantries?.addItems)
+        throw AppError.serviceUnavailable("Pantry transfer is unavailable");
+      return transaction(async (session) => {
+        const list = await getOwned(userId, params.id, { session });
+        if (list.status === "archived")
+          throw AppError.conflict("Archived lists cannot be transferred");
+        const checked = list.items.filter((item) => item.checked);
+        const transferable = checked.filter((item) => item.foodItemId || item.personalIngredientId);
+        if (!transferable.length)
+          throw AppError.badRequest("No checked grocery items can be transferred to pantry");
+        const pantry = await services.pantries.addItems(
+          userId,
+          transferable.map((item) => ({
+            ...(item.foodItemId ? { foodItemId: item.foodItemId } : {}),
+            ...(item.personalIngredientId
+              ? { personalIngredientId: item.personalIngredientId }
+              : {}),
+            quantity: item.quantity,
+            unit: item.unit,
+            ...(item.note ? { note: item.note } : {}),
+          })),
+          {
+            session,
+            idempotencyKey: `grocery-transfer:${list._id}:${list.version ?? 0}`,
+          },
+        );
+        const transferredIds = new Set(transferable.map((item) => item.itemId));
+        const groceryList = await repo.updateOne(
+          {
+            _id: list._id,
+            userId,
+            version: list.version === undefined ? { $exists: false } : list.version,
+          },
+          {
+            $set: { items: list.items.filter((item) => !transferredIds.has(item.itemId)) },
+            $inc: { version: 1 },
+          },
+          { session },
+        );
+        if (!groceryList)
+          throw AppError.conflict("Grocery list changed concurrently; retry your request");
+        return {
+          groceryList,
+          pantry,
+          transferredCount: transferable.length,
+          skippedItems: checked
+            .filter((item) => !transferredIds.has(item.itemId))
+            .map((item) => ({ itemId: item.itemId, nameSnapshot: item.nameSnapshot })),
+        };
+      });
+    },
   };
   return {
     operations,

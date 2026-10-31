@@ -72,7 +72,7 @@ export function createPantriesService({
     const sanitized = inputs.map((input) =>
       pantryItemInput.parse(
         Object.fromEntries(
-          ["foodItemId", "quantity", "unit", "expiresAt", "note"]
+          ["foodItemId", "personalIngredientId", "quantity", "unit", "expiresAt", "note"]
             .filter((key) => input[key] !== undefined)
             .map((key) => [key, input[key]]),
         ),
@@ -95,17 +95,32 @@ export function createPantriesService({
     // Resolve once outside the CAS retry loop; names are immutable snapshots.
     const items = [];
     for (const input of sanitized) {
-      if (!services.foodItems?.getById)
-        throw AppError.serviceUnavailable("Food item service is unavailable");
-      const food = await services.foodItems.getById(input.foodItemId, {
-        actor: { userId },
-        session,
-      });
-      if (!food || food.status === "inactive") throw AppError.notFound("Food item not found");
+      let foodNameSnapshot;
+      if (input.foodItemId) {
+        if (!services.foodItems?.getById)
+          throw AppError.serviceUnavailable("Food item service is unavailable");
+        const food = await services.foodItems.getById(input.foodItemId, {
+          actor: { userId },
+          session,
+        });
+        if (!food || food.status === "inactive") throw AppError.notFound("Food item not found");
+        foodNameSnapshot = food.name;
+      } else {
+        if (!services.personalIngredients?.getOwned)
+          throw AppError.serviceUnavailable("Personal ingredient service is unavailable");
+        const ingredient = await services.personalIngredients.getOwned(
+          userId,
+          input.personalIngredientId,
+          { session },
+        );
+        if (ingredient.status !== "active")
+          throw AppError.notFound("Personal ingredient not found");
+        foodNameSnapshot = ingredient.name;
+      }
       items.push({
         ...input,
         itemId: randomUUID(),
-        foodNameSnapshot: food.name,
+        foodNameSnapshot,
         expiresAt: input.expiresAt ? new Date(input.expiresAt) : undefined,
         addedAt: now(),
         updatedAt: now(),

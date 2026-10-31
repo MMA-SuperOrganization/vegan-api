@@ -61,4 +61,5 @@ export const createGroceryListsValidation = () => ({
   },
   deleteGroceryItem: { params: params.extend({ itemId: uuid }) },
   clearCheckedGroceryItems: { params, body: emptyBody },
+  transferCheckedGroceryItemsToPantry: { params, body: emptyBody },
 });

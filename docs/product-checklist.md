@@ -28,9 +28,9 @@ Các bằng chứng nên lưu kèm:
 | Hạng mục                            |                     Tổng |                      Hoàn thành |                                                  Còn lại | Người phụ trách          |
 | ----------------------------------- | -----------------------: | ------------------------------: | -------------------------------------------------------: | ------------------------ |
 | Functional features (toàn sản phẩm) |                      199 |         0 nghiệm thu end-to-end |                                        199 cần Mobile/QA | Chưa nghiệm thu frontend |
-| Trách nhiệm functional của Backend  |                      189 |           189 code/test backend | 0 thiếu sót đã xác nhận chưa sửa; 15 mục client-only N/A | Backend                  |
+| Trách nhiệm functional của Backend  |                      190 |           190 code/test backend | 0 thiếu sót đã xác nhận chưa sửa; 15 mục client-only N/A | Backend                  |
 | Mobile screens/flows                | Chưa kiểm kê mã nguồn FE |                        Chưa làm |                                    Ngoài phạm vi lần này | Mobile                   |
-| Backend API operations              |                  **189** |                         **189** |                                                        0 | Backend                  |
+| Backend API operations              |                  **190** |                         **190** |                                                        0 | Backend                  |
 | Integration flows                   |  Theo staging acceptance |             Local DB/backup đạt |    Firebase/R2/FCM/AI và deployment thật chưa nghiệm thu | Backend/Staging          |
 | Automated tests backend             |                      531 |    522 offline + 9 MongoDB thật |           0 lỗi trong suite; provider thật chưa kiểm tra | Backend                  |
 | Non-functional requirements         |               Chương 6–9 | Code/test: xem các mục đánh dấu |        Production env/monitoring/provider/secret history | Backend/Ops              |
@@ -394,7 +394,7 @@ Các bằng chứng nên lưu kèm:
 
 ---
 
-## 5. Checklist toàn bộ 189 API operations
+## 5. Checklist toàn bộ 190 API operations
 
 Mỗi dòng chỉ đánh dấu `Done` khi đạt đủ: route/controller/service/repository cần thiết, Zod validation, authentication/authorization/ownership, error mapping, automated test và OpenAPI.
 
@@ -674,21 +674,27 @@ Mỗi dòng chỉ đánh dấu `Done` khi đạt đủ: route/controller/service
 
 ### 5.19 Personal Ingredients — 5 APIs
 
-|   # | Method và path                       | Mục đích                         | BE  | Mobile | Test | OpenAPI |
-| --: | ------------------------------------ | -------------------------------- | --- | ------ | ---- | ------- |
-| 185 | `GET /ingredients/suggestions`       | Gợi ý catalog và nguyên liệu riêng | ☑ | ☐      | ☑    | ☑       |
-| 186 | `GET /personal-ingredients`          | Danh sách nguyên liệu riêng      | ☑   | ☐      | ☑    | ☑       |
-| 187 | `POST /personal-ingredients`         | Tạo nguyên liệu riêng            | ☑   | ☐      | ☑    | ☑       |
-| 188 | `PATCH /personal-ingredients/:id`    | Sửa nguyên liệu riêng            | ☑   | ☐      | ☑    | ☑       |
-| 189 | `DELETE /personal-ingredients/:id`   | Inactivate nguyên liệu riêng     | ☑   | ☐      | ☑    | ☑       |
+|   # | Method và path                     | Mục đích                           | BE  | Mobile | Test | OpenAPI |
+| --: | ---------------------------------- | ---------------------------------- | --- | ------ | ---- | ------- |
+| 185 | `GET /ingredients/suggestions`     | Gợi ý catalog và nguyên liệu riêng | ☑   | ☐      | ☑    | ☑       |
+| 186 | `GET /personal-ingredients`        | Danh sách nguyên liệu riêng        | ☑   | ☐      | ☑    | ☑       |
+| 187 | `POST /personal-ingredients`       | Tạo nguyên liệu riêng              | ☑   | ☐      | ☑    | ☑       |
+| 188 | `PATCH /personal-ingredients/:id`  | Sửa nguyên liệu riêng              | ☑   | ☐      | ☑    | ☑       |
+| 189 | `DELETE /personal-ingredients/:id` | Inactivate nguyên liệu riêng       | ☑   | ☐      | ☑    | ☑       |
+
+### 5.20 Grocery to Pantry — 1 API
+
+|   # | Method và path                                       | Mục đích                                      | BE  | Mobile | Test | OpenAPI |
+| --: | ---------------------------------------------------- | --------------------------------------------- | --- | ------ | ---- | ------- |
+| 190 | `POST /grocery-lists/:id/transfer-checked-to-pantry` | Chuyển món đã mua vào Pantry theo transaction | ☑   | ☑      | ☑    | ☑       |
 
 ---
 
 ## 6. Checklist API contract và business rules
 
-- [x] `src/routes/api-manifest.js` chứa đủ 189 operations.
-- [x] Express đã mount đủ 189 operations.
-- [x] OpenAPI có đủ 189 operations.
+- [x] `src/routes/api-manifest.js` chứa đủ 190 operations.
+- [x] Express đã mount đủ 190 operations.
+- [x] OpenAPI có đủ 190 operations.
 - [x] Mỗi OpenAPI operation có `operationId` duy nhất.
 - [x] `docs/api-matrix.md` map mọi màn hình/use case tới API hoặc `CLIENT_ONLY` hợp lệ.
 - [x] Contract test phát hiện route thiếu hoặc OpenAPI thừa/thiếu.
@@ -751,7 +757,7 @@ Mỗi dòng chỉ đánh dấu `Done` khi đạt đủ: route/controller/service
 - [x] Integration test 401/403/404/409/422-or-400/429/500 representative.
 - [x] Integration test User A không truy cập dữ liệu User B.
 - [x] Integration test user không gọi được admin API.
-- [x] Contract test đủ 189 APIs.
+- [x] Contract test đủ 190 APIs.
 - [x] Test không gọi Firebase/R2/FCM/AI thật.
 
 ### 8.2 Mobile/manual QA
@@ -799,7 +805,7 @@ Mỗi dòng chỉ đánh dấu `Done` khi đạt đủ: route/controller/service
 Chỉ đánh dấu release khi toàn bộ điều kiện sau đạt:
 
 - [ ] Tất cả feature bắt buộc đã hoàn thành hoặc có `N/A` được phê duyệt.
-- [x] Đủ **189/189 API operations** trong manifest, Express, OpenAPI và contract test.
+- [x] Đủ **190/190 API operations** trong manifest, Express, OpenAPI và contract test.
 - [x] Không còn route rỗng, TODO hoặc mock trong production flow.
 - [ ] Firebase Auth, MongoDB Atlas, Cloudflare R2 và FCM đã test end-to-end.
 - [x] AI flow có fallback an toàn khi disabled hoặc provider lỗi.

@@ -4,7 +4,11 @@ import { UNITS } from "../../common/utils/units.js";
 const itemSchema = new mongoose.Schema(
   {
     itemId: { type: String, required: true },
-    foodItemId: { type: mongoose.Schema.Types.ObjectId, ref: "FoodItems", required: true },
+    foodItemId: { type: mongoose.Schema.Types.ObjectId, ref: "FoodItems" },
+    personalIngredientId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "PersonalIngredients",
+    },
     foodNameSnapshot: { type: String, required: true, trim: true, maxlength: 200 },
     quantity: { type: Number, required: true, min: Number.EPSILON, max: 1000000 },
     unit: { type: String, enum: UNITS, required: true },
@@ -15,6 +19,15 @@ const itemSchema = new mongoose.Schema(
   },
   { _id: false },
 );
+itemSchema.pre("validate", function validateIngredientReference() {
+  const referenceCount =
+    Number(Boolean(this.foodItemId)) + Number(Boolean(this.personalIngredientId));
+  if (referenceCount !== 1)
+    this.invalidate(
+      "foodItemId",
+      "Pantry item requires either a catalog food or a personal ingredient",
+    );
+});
 const schema = new mongoose.Schema(
   {
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "Users", required: true, unique: true },

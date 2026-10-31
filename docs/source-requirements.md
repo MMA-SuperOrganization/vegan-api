@@ -959,26 +959,26 @@ Không trả `medicalNotes` qua public profile. Kết quả BMI/calorie target p
 
 ### 13.3 Category, allergen và food item
 
-| Method | Path              | Quyền                 | Chức năng                                                      |
-| ------ | ----------------- | --------------------- | -------------------------------------------------------------- |
-| GET    | `/categories`     | public, optional auth | Danh sách active; admin có thể lọc inactive; phân cấp parentId |
-| POST   | `/categories`     | admin                 | Tạo category                                                   |
-| PATCH  | `/categories/:id` | admin                 | Sửa category                                                   |
-| DELETE | `/categories/:id` | admin                 | Inactivate nếu đang được dùng                                  |
-| GET    | `/allergens`      | public, optional auth | Danh sách active; admin có thể lọc inactive                    |
-| POST   | `/allergens`      | admin                 | Tạo allergen                                                   |
-| PATCH  | `/allergens/:id`  | admin                 | Sửa allergen                                                   |
-| DELETE | `/allergens/:id`  | admin                 | Inactivate nếu đang được dùng                                  |
-| GET    | `/food-items`     | public, optional auth | Search/filter/pagination; admin có thể lọc inactive            |
-| GET    | `/food-items/:id` | public                | Chi tiết và nutrition                                          |
-| POST   | `/food-items`     | admin                 | Tạo food item                                                  |
-| PATCH  | `/food-items/:id` | admin                 | Cập nhật                                                       |
-| DELETE | `/food-items/:id` | admin                 | Inactivate, không phá snapshot                                 |
-| GET    | `/ingredients/suggestions` | owner        | Gợi ý hợp nhất food item chung và nguyên liệu riêng            |
-| GET    | `/personal-ingredients` | owner            | Danh sách nguyên liệu riêng của người dùng                     |
-| POST   | `/personal-ingredients` | owner           | Tạo nguyên liệu chỉ thuộc người dùng hiện tại                  |
-| PATCH  | `/personal-ingredients/:id` | owner       | Sửa nguyên liệu riêng                                          |
-| DELETE | `/personal-ingredients/:id` | owner       | Inactivate nguyên liệu riêng                                   |
+| Method | Path                        | Quyền                 | Chức năng                                                      |
+| ------ | --------------------------- | --------------------- | -------------------------------------------------------------- |
+| GET    | `/categories`               | public, optional auth | Danh sách active; admin có thể lọc inactive; phân cấp parentId |
+| POST   | `/categories`               | admin                 | Tạo category                                                   |
+| PATCH  | `/categories/:id`           | admin                 | Sửa category                                                   |
+| DELETE | `/categories/:id`           | admin                 | Inactivate nếu đang được dùng                                  |
+| GET    | `/allergens`                | public, optional auth | Danh sách active; admin có thể lọc inactive                    |
+| POST   | `/allergens`                | admin                 | Tạo allergen                                                   |
+| PATCH  | `/allergens/:id`            | admin                 | Sửa allergen                                                   |
+| DELETE | `/allergens/:id`            | admin                 | Inactivate nếu đang được dùng                                  |
+| GET    | `/food-items`               | public, optional auth | Search/filter/pagination; admin có thể lọc inactive            |
+| GET    | `/food-items/:id`           | public                | Chi tiết và nutrition                                          |
+| POST   | `/food-items`               | admin                 | Tạo food item                                                  |
+| PATCH  | `/food-items/:id`           | admin                 | Cập nhật                                                       |
+| DELETE | `/food-items/:id`           | admin                 | Inactivate, không phá snapshot                                 |
+| GET    | `/ingredients/suggestions`  | owner                 | Gợi ý hợp nhất food item chung và nguyên liệu riêng            |
+| GET    | `/personal-ingredients`     | owner                 | Danh sách nguyên liệu riêng của người dùng                     |
+| POST   | `/personal-ingredients`     | owner                 | Tạo nguyên liệu chỉ thuộc người dùng hiện tại                  |
+| PATCH  | `/personal-ingredients/:id` | owner                 | Sửa nguyên liệu riêng                                          |
+| DELETE | `/personal-ingredients/:id` | owner                 | Inactivate nguyên liệu riêng                                   |
 
 Food search hỗ trợ `q`, category, allergen exclusion, vegan flag và sort whitelist.
 
@@ -1040,17 +1040,18 @@ Việc trừ pantry khi đánh dấu bữa ăn hoàn thành không tự động 
 
 ### 13.7 Grocery list
 
-| Method | Path                               | Quyền | Chức năng                                         |
-| ------ | ---------------------------------- | ----- | ------------------------------------------------- |
-| GET    | `/grocery-lists`                   | owner | Danh sách                                         |
-| GET    | `/grocery-lists/:id`               | owner | Chi tiết                                          |
-| POST   | `/grocery-lists`                   | owner | Tạo thủ công                                      |
-| PATCH  | `/grocery-lists/:id`               | owner | Đổi tên/status                                    |
-| DELETE | `/grocery-lists/:id`               | owner | Archive/delete                                    |
-| POST   | `/grocery-lists/:id/items`         | owner | Thêm item                                         |
-| PATCH  | `/grocery-lists/:id/items/:itemId` | owner | Sửa/check item                                    |
-| DELETE | `/grocery-lists/:id/items/:itemId` | owner | Xóa item                                          |
-| POST   | `/grocery-lists/:id/clear-checked` | owner | Xóa/archive các item đã chọn theo cách idempotent |
+| Method | Path                                            | Quyền | Chức năng                                                        |
+| ------ | ----------------------------------------------- | ----- | ---------------------------------------------------------------- |
+| GET    | `/grocery-lists`                                | owner | Danh sách                                                        |
+| GET    | `/grocery-lists/:id`                            | owner | Chi tiết                                                         |
+| POST   | `/grocery-lists`                                | owner | Tạo thủ công                                                     |
+| PATCH  | `/grocery-lists/:id`                            | owner | Đổi tên/status                                                   |
+| DELETE | `/grocery-lists/:id`                            | owner | Archive/delete                                                   |
+| POST   | `/grocery-lists/:id/items`                      | owner | Thêm item                                                        |
+| PATCH  | `/grocery-lists/:id/items/:itemId`              | owner | Sửa/check item                                                   |
+| DELETE | `/grocery-lists/:id/items/:itemId`              | owner | Xóa item                                                         |
+| POST   | `/grocery-lists/:id/clear-checked`              | owner | Xóa/archive các item đã chọn theo cách idempotent                |
+| POST   | `/grocery-lists/:id/transfer-checked-to-pantry` | owner | Đưa item đã mua vào Pantry và xóa khỏi Grocery trong transaction |
 
 Khi sinh từ meal plan, cộng gộp cùng food item và đơn vị có thể quy đổi; item không quy đổi được phải giữ riêng, không cộng sai.
 

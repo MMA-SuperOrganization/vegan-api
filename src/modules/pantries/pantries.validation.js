@@ -9,15 +9,18 @@ import {
   patch,
   units,
 } from "../../common/validators/domain.schemas.js";
-export const pantryItemInput = z
+const pantryItemDetails = z
   .object({
-    foodItemId: id,
     quantity: positive(),
     unit: units,
     expiresAt: dateTime.nullable().optional(),
     note: text(1000, 0).optional(),
   })
   .strict();
+export const pantryItemInput = z.union([
+  pantryItemDetails.extend({ foodItemId: id }).strict(),
+  pantryItemDetails.extend({ personalIngredientId: id }).strict(),
+]);
 const itemParams = z.object({ itemId: uuid }).strict();
 export const createPantriesValidation = () => ({
   getPantry: {},
@@ -27,7 +30,10 @@ export const createPantriesValidation = () => ({
       .object({ items: z.array(pantryItemInput).min(1).max(100), idempotencyKey: text(128) })
       .strict(),
   },
-  updatePantryItem: { params: itemParams, body: patch(pantryItemInput.omit({ foodItemId: true })) },
+  updatePantryItem: {
+    params: itemParams,
+    body: patch(pantryItemDetails),
+  },
   deletePantryItem: { params: itemParams },
   getExpiringPantryItems: {
     query: pagination

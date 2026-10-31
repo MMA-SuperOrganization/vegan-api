@@ -74,6 +74,41 @@ describe("personal ingredient HTTP flow", () => {
       unit: "g",
     });
 
+    const checked = await request(app)
+      .patch(
+        `/api/v1/grocery-lists/${grocery.body.data._id}/items/${grocery.body.data.items[0].itemId}`,
+      )
+      .set(bearer(TEST_TOKENS.user))
+      .send({ checked: true });
+    expect(checked.status).toBe(200);
+
+    const transferred = await request(app)
+      .post(`/api/v1/grocery-lists/${grocery.body.data._id}/transfer-checked-to-pantry`)
+      .set(bearer(TEST_TOKENS.user))
+      .send({});
+    expect(transferred.status).toBe(200);
+    expect(transferred.body.data.transferredCount).toBe(1);
+    expect(transferred.body.data.groceryList.items).toHaveLength(0);
+    expect(transferred.body.data.pantry.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          personalIngredientId: created.body.data._id,
+          foodNameSnapshot: "Tofu skin",
+          quantity: 250,
+          unit: "g",
+        }),
+      ]),
+    );
+
+    const pantryItem = transferred.body.data.pantry.items.find(
+      (item) => item.personalIngredientId === created.body.data._id,
+    );
+    const removedFromPantry = await request(app)
+      .delete(`/api/v1/pantry/items/${pantryItem.itemId}`)
+      .set(bearer(TEST_TOKENS.user));
+    expect(removedFromPantry.status).toBe(200);
+    expect(removedFromPantry.body.data.items).toHaveLength(0);
+
     const otherOwner = await request(app)
       .post("/api/v1/grocery-lists")
       .set(bearer(TEST_TOKENS.other))

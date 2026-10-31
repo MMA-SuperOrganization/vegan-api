@@ -3,7 +3,7 @@ info:
   title: Vegan Support API (MMA302)
   version: 0.1.0
   description: |-
-    Tài liệu 189 API backend, sinh từ route registry và Zod validator.
+    Tài liệu 190 API backend, sinh từ route registry và Zod validator.
 
     Đăng nhập bằng Firebase client SDK, lấy ID token, bấm Authorize và nhập token (không thêm chữ Bearer trong ô Swagger). Gọi POST /auth/sync trước API cá nhân. Optional auth cho phép guest nhưng từ chối token đã gửi mà không hợp lệ.
 
@@ -17265,12 +17265,19 @@ paths:
               $ref: "#/components/schemas/addPantryItemBody"
             examples:
               example1:
-                summary: Payload hợp lệ
+                summary: Payload hợp lệ (example1)
                 description: Dữ liệu minh họa qua validator; thay ID bằng bản ghi thật có quyền truy cập. Ví dụ không chứng minh resource/provider tồn tại.
                 value:
-                  foodItemId: 507f1f77bcf86cd799439011
                   quantity: 1
                   unit: g
+                  foodItemId: 507f1f77bcf86cd799439011
+              example2:
+                summary: Payload hợp lệ (example2)
+                description: Dữ liệu minh họa qua validator; thay ID bằng bản ghi thật có quyền truy cập. Ví dụ không chứng minh resource/provider tồn tại.
+                value:
+                  quantity: 1
+                  unit: g
+                  personalIngredientId: 507f1f77bcf86cd799439011
               Nguyen_lieu_co_han:
                 summary: Nguyen lieu co han
                 description: Ví dụ nghiệp vụ hợp lệ theo validator. Thay ID và thời điểm bằng resource/dữ liệu thật; service vẫn kiểm tra quyền, trạng thái, dị ứng và dependency.
@@ -17586,9 +17593,9 @@ paths:
                 description: Dữ liệu minh họa qua validator; thay ID bằng bản ghi thật có quyền truy cập. Ví dụ không chứng minh resource/provider tồn tại.
                 value:
                   items:
-                    - foodItemId: 507f1f77bcf86cd799439011
-                      quantity: 1
+                    - quantity: 1
                       unit: g
+                      foodItemId: 507f1f77bcf86cd799439011
                   idempotencyKey: Ví dụ
               Nhieu_nguyen_lieu_retry:
                 summary: Nhieu nguyen lieu retry
@@ -18538,7 +18545,6 @@ paths:
                     success: true
                     data:
                       - itemId: 507f1f77bcf86cd799439011
-                        foodItemId: 507f1f77bcf86cd799439011
                         foodNameSnapshot: Ví dụ
                         quantity: 1
                         unit: g
@@ -25069,6 +25075,328 @@ paths:
                       userId: 507f1f77bcf86cd799439011
                       name: Ví dụ
                       _id: 507f1f77bcf86cd799439011
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "400":
+          description: "Invalid request / business validation. Các mã có thể gặp từ middleware/service: BAD_REQUEST, VALIDATION_ERROR, INVALID_JSON, INVALID_ID. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 400 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: VALIDATION_ERROR
+                      message: Validation failed
+                      details:
+                        - location: body
+                          path: exampleField
+                          code: invalid_type
+                          message: Invalid field value
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "401":
+          description: "Missing, expired or invalid Firebase token. Các mã có thể gặp từ middleware/service: TOKEN_MISSING, TOKEN_INVALID, TOKEN_EXPIRED, TOKEN_REVOKED, UNAUTHORIZED. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 401 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: UNAUTHORIZED
+                      message: Authentication required
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "403":
+          description: "Inactive account, insufficient role or non-owner. Các mã có thể gặp từ middleware/service: FORBIDDEN, ACCOUNT_DISABLED, ACCOUNT_SUSPENDED, ACCOUNT_DELETED. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 403 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: FORBIDDEN
+                      message: Access denied
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "404":
+          description: "Resource not found or unavailable to this actor. Các mã có thể gặp từ middleware/service: NOT_FOUND, USER_NOT_FOUND, ROUTE_NOT_FOUND. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 404 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: NOT_FOUND
+                      message: Resource not found
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "409":
+          description: "Duplicate, invalid state or concurrent update conflict. Các mã có thể gặp từ middleware/service: CONFLICT, DUPLICATE_KEY, VERSION_CONFLICT, COUNTER_CONFLICT. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 409 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: CONFLICT
+                      message: Resource state conflict
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "413":
+          description: "Request exceeds JSON body limit. Các mã có thể gặp từ middleware/service: PAYLOAD_TOO_LARGE. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 413 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: PAYLOAD_TOO_LARGE
+                      message: Request payload too large
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "429":
+          description: "Request rate exceeded. Các mã có thể gặp từ middleware/service: TOO_MANY_REQUESTS. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 429 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: TOO_MANY_REQUESTS
+                      message: Too many requests
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+            RateLimit:
+              description: Thông tin quota và thời gian reset của limiter (draft-8); tên policy/quota phụ thuộc cấu hình.
+              schema:
+                type: string
+            RateLimit-Policy:
+              description: Chính sách quota/window hiện áp dụng (draft-8).
+              schema:
+                type: string
+            Retry-After:
+              description: Số giây trước khi nên retry request bị giới hạn; chỉ có khi limiter phát header.
+              schema:
+                type: string
+        "500":
+          description: "Sanitized internal server error. Các mã có thể gặp từ middleware/service: INTERNAL_ERROR. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 500 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: INTERNAL_ERROR
+                      message: Internal server error
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "503":
+          description: "Required dependency unavailable or feature disabled. Các mã có thể gặp từ middleware/service: SERVICE_UNAVAILABLE, DEPENDENCY_UNAVAILABLE, TRANSACTIONS_REQUIRED; Firebase: AUTH_PROVIDER_ERROR; AI: AI_DISABLED/AI_UNAVAILABLE; storage: STORAGE_PROVIDER_ERROR; readiness: DATABASE_UNAVAILABLE. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 503 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: SERVICE_UNAVAILABLE
+                      message: Required dependency unavailable
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+  /grocery-lists/{id}/transfer-checked-to-pantry:
+    post:
+      tags:
+        - grocery-lists
+      summary: Đưa item đã mua vào Pantry và xóa khỏi Grocery trong transaction
+      description: |-
+        Đưa item đã mua vào Pantry và xóa khỏi Grocery trong transaction.
+
+        **Quyền truy cập:** Bắt buộc Firebase ID token, tài khoản active và quyền sở hữu resource. Backend lấy danh tính từ token; ID của người khác không cấp quyền truy cập.
+
+        **Nghiệp vụ:** Danh sách mua sắm riêng của người dùng. Các mục có số lượng, đơn vị và trạng thái checked; có thể tạo từ kế hoạch ăn.
+
+        Đưa các mục checked có foodItemId hoặc personalIngredientId vào Pantry và xóa đúng các mục đã chuyển khỏi Grocery trong cùng transaction. Mục free-text cũ không có tham chiếu được giữ lại và trả về trong skippedItems.
+
+        **Request:** application/json; có thể bỏ body hoặc gửi {} để dùng hành vi/default theo schema. Không gửi trường ngoài schema khi additionalProperties=false.
+
+        **Response:** HTTP 200; envelope {success:true,data,meta}. data theo schema transferCheckedGroceryItemsToPantryResponse; meta.requestId khớp X-Request-Id. Danh sách có metadata phân trang khi schema khai báo.
+
+        **Lỗi:** envelope {success:false,error:{code,message,details},meta:{requestId}}. 400 là dữ liệu/điều kiện nghiệp vụ không hợp lệ; 404 có thể che resource không được phép truy cập. Xem responses cho lỗi xác thực, xung đột, giới hạn và dependency. Các mã lỗi chung là khả năng của middleware, không bảo đảm mọi nhánh xuất hiện ở mọi request.
+      operationId: transferCheckedGroceryItemsToPantry
+      x-auth: owner
+      x-tests:
+        - tests/contract/api-contract.test.js
+        - tests/unit/planning.http.test.js
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID resource trong đường dẫn. ObjectId gồm 24 ký tự hexadecimal.
+          schema:
+            type: string
+            pattern: ^[a-f\d]{24}$
+          example: 507f1f77bcf86cd799439011
+      requestBody:
+        required: false
+        description: JSON theo schema. Trường không có trong schema bị từ chối khi additionalProperties=false; bỏ qua trường optional khác với gửi null. Thay ID ví dụ bằng resource thật có quyền truy cập.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/transferCheckedGroceryItemsToPantryBody"
+            examples:
+              example1:
+                summary: Payload hợp lệ
+                description: Dữ liệu minh họa qua validator; thay ID bằng bản ghi thật có quyền truy cập. Ví dụ không chứng minh resource/provider tồn tại.
+                value: {}
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/transferCheckedGroceryItemsToPantryResponse"
+              examples:
+                example:
+                  summary: Kết quả thành công minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: true
+                    data:
+                      groceryList:
+                        userId: 507f1f77bcf86cd799439011
+                        name: Ví dụ
+                        _id: 507f1f77bcf86cd799439011
+                      pantry:
+                        userId: 507f1f77bcf86cd799439011
+                        _id: 507f1f77bcf86cd799439011
+                      transferredCount: 1
+                      skippedItems:
+                        - itemId: 507f1f77bcf86cd799439011
+                          nameSnapshot: Ví dụ
                     meta:
                       requestId: swagger-example-request
           headers:
@@ -58994,7 +59322,6 @@ components:
             type: object
             required:
               - itemId
-              - foodItemId
               - foodNameSnapshot
               - quantity
               - unit
@@ -59005,9 +59332,17 @@ components:
                 type: string
                 description: ID tham chiếu itemId; xem resource tương ứng và kiểm tra quyền ở service.
               foodItemId:
-                type: string
+                type:
+                  - string
+                  - "null"
                 pattern: ^[A-Fa-f0-9]{24}$
                 description: ID thực phẩm chuẩn; phải tồn tại và hợp lệ theo kiểm tra service. ObjectId gồm 24 ký tự hexadecimal.
+              personalIngredientId:
+                type:
+                  - string
+                  - "null"
+                pattern: ^[A-Fa-f0-9]{24}$
+                description: ID tham chiếu personalIngredientId; xem resource tương ứng và kiểm tra quyền ở service. ObjectId gồm 24 ký tự hexadecimal.
               foodNameSnapshot:
                 type: string
                 maxLength: 200
@@ -65394,7 +65729,6 @@ components:
             type: object
             required:
               - itemId
-              - foodItemId
               - foodNameSnapshot
               - quantity
               - unit
@@ -65405,9 +65739,17 @@ components:
                 type: string
                 description: ID tham chiếu itemId; xem resource tương ứng và kiểm tra quyền ở service.
               foodItemId:
-                type: string
+                type:
+                  - string
+                  - "null"
                 pattern: ^[A-Fa-f0-9]{24}$
                 description: ID thực phẩm chuẩn; phải tồn tại và hợp lệ theo kiểm tra service. ObjectId gồm 24 ký tự hexadecimal.
+              personalIngredientId:
+                type:
+                  - string
+                  - "null"
+                pattern: ^[A-Fa-f0-9]{24}$
+                description: ID tham chiếu personalIngredientId; xem resource tương ứng và kiểm tra quyền ở service. ObjectId gồm 24 ký tự hexadecimal.
               foodNameSnapshot:
                 type: string
                 maxLength: 200
@@ -70330,49 +70672,95 @@ components:
       additionalProperties: false
       description: Envelope thành công của getPantry; data là kết quả nghiệp vụ, meta chứa requestId và metadata được khai báo.
     addPantryItemBody:
-      type: object
-      properties:
-        foodItemId:
-          type: string
-          pattern: ^[a-f\d]{24}$
-          description: ID thực phẩm chuẩn; phải tồn tại và hợp lệ theo kiểm tra service. ObjectId gồm 24 ký tự hexadecimal.
-        quantity:
-          type: number
-          exclusiveMinimum: 0
-          maximum: 1000000
-          description: Số lượng dương, được diễn giải cùng unit.
-        unit:
-          type: string
-          enum:
-            - g
-            - kg
-            - ml
-            - l
-            - piece
-            - tbsp
-            - tsp
-            - cup
-            - serving
-          description: "Đơn vị quantity theo enum; không tự coi mọi đơn vị là gram. Giá trị cho phép: g, kg, ml, l, piece, tbsp, tsp, cup, serving."
-        expiresAt:
-          anyOf:
-            - type: string
-              format: date-time
-              pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|([+-](?:[01]\d|2[0-3]):[0-5]\d)))$
+      anyOf:
+        - type: object
+          properties:
+            quantity:
+              type: number
+              exclusiveMinimum: 0
+              maximum: 1000000
+              description: Số lượng dương, được diễn giải cùng unit.
+            unit:
+              type: string
+              enum:
+                - g
+                - kg
+                - ml
+                - l
+                - piece
+                - tbsp
+                - tsp
+                - cup
+                - serving
+              description: "Đơn vị quantity theo enum; không tự coi mọi đơn vị là gram. Giá trị cho phép: g, kg, ml, l, piece, tbsp, tsp, cup, serving."
+            expiresAt:
+              anyOf:
+                - type: string
+                  format: date-time
+                  pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|([+-](?:[01]\d|2[0-3]):[0-5]\d)))$
+                  description: Thời điểm hết hạn ISO 8601; null khi schema cho phép không có hạn. Pantry thường dùng timestamp này thay expiryDate của AI input.
+                - type: "null"
+                  description: Thời điểm hết hạn ISO 8601; null khi schema cho phép không có hạn. Pantry thường dùng timestamp này thay expiryDate của AI input.
               description: Thời điểm hết hạn ISO 8601; null khi schema cho phép không có hạn. Pantry thường dùng timestamp này thay expiryDate của AI input.
-            - type: "null"
+            note:
+              type: string
+              minLength: 0
+              maxLength: 1000
+              description: Ghi chú tùy chọn.
+            foodItemId:
+              type: string
+              pattern: ^[a-f\d]{24}$
+              description: ID thực phẩm chuẩn; phải tồn tại và hợp lệ theo kiểm tra service. ObjectId gồm 24 ký tự hexadecimal.
+          required:
+            - quantity
+            - unit
+            - foodItemId
+          additionalProperties: false
+          description: Trường add Pantry Item Body trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+        - type: object
+          properties:
+            quantity:
+              type: number
+              exclusiveMinimum: 0
+              maximum: 1000000
+              description: Số lượng dương, được diễn giải cùng unit.
+            unit:
+              type: string
+              enum:
+                - g
+                - kg
+                - ml
+                - l
+                - piece
+                - tbsp
+                - tsp
+                - cup
+                - serving
+              description: "Đơn vị quantity theo enum; không tự coi mọi đơn vị là gram. Giá trị cho phép: g, kg, ml, l, piece, tbsp, tsp, cup, serving."
+            expiresAt:
+              anyOf:
+                - type: string
+                  format: date-time
+                  pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|([+-](?:[01]\d|2[0-3]):[0-5]\d)))$
+                  description: Thời điểm hết hạn ISO 8601; null khi schema cho phép không có hạn. Pantry thường dùng timestamp này thay expiryDate của AI input.
+                - type: "null"
+                  description: Thời điểm hết hạn ISO 8601; null khi schema cho phép không có hạn. Pantry thường dùng timestamp này thay expiryDate của AI input.
               description: Thời điểm hết hạn ISO 8601; null khi schema cho phép không có hạn. Pantry thường dùng timestamp này thay expiryDate của AI input.
-          description: Thời điểm hết hạn ISO 8601; null khi schema cho phép không có hạn. Pantry thường dùng timestamp này thay expiryDate của AI input.
-        note:
-          type: string
-          minLength: 0
-          maxLength: 1000
-          description: Ghi chú tùy chọn.
-      required:
-        - foodItemId
-        - quantity
-        - unit
-      additionalProperties: false
+            note:
+              type: string
+              minLength: 0
+              maxLength: 1000
+              description: Ghi chú tùy chọn.
+            personalIngredientId:
+              type: string
+              pattern: ^[a-f\d]{24}$
+              description: ID tham chiếu personalIngredientId; xem resource tương ứng và kiểm tra quyền ở service. ObjectId gồm 24 ký tự hexadecimal.
+          required:
+            - quantity
+            - unit
+            - personalIngredientId
+          additionalProperties: false
+          description: Trường add Pantry Item Body trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
       description: Dữ liệu Body của addPantryItem; required/default/enum/giới hạn theo validator thật, các quy tắc kiểm tra chéo xem description của operation.
     addPantryItemResponse:
       type: object
@@ -70401,49 +70789,95 @@ components:
           maxItems: 100
           type: array
           items:
-            type: object
-            properties:
-              foodItemId:
-                type: string
-                pattern: ^[a-f\d]{24}$
-                description: ID thực phẩm chuẩn; phải tồn tại và hợp lệ theo kiểm tra service. ObjectId gồm 24 ký tự hexadecimal.
-              quantity:
-                type: number
-                exclusiveMinimum: 0
-                maximum: 1000000
-                description: Số lượng dương, được diễn giải cùng unit.
-              unit:
-                type: string
-                enum:
-                  - g
-                  - kg
-                  - ml
-                  - l
-                  - piece
-                  - tbsp
-                  - tsp
-                  - cup
-                  - serving
-                description: "Đơn vị quantity theo enum; không tự coi mọi đơn vị là gram. Giá trị cho phép: g, kg, ml, l, piece, tbsp, tsp, cup, serving."
-              expiresAt:
-                anyOf:
-                  - type: string
-                    format: date-time
-                    pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|([+-](?:[01]\d|2[0-3]):[0-5]\d)))$
+            anyOf:
+              - type: object
+                properties:
+                  quantity:
+                    type: number
+                    exclusiveMinimum: 0
+                    maximum: 1000000
+                    description: Số lượng dương, được diễn giải cùng unit.
+                  unit:
+                    type: string
+                    enum:
+                      - g
+                      - kg
+                      - ml
+                      - l
+                      - piece
+                      - tbsp
+                      - tsp
+                      - cup
+                      - serving
+                    description: "Đơn vị quantity theo enum; không tự coi mọi đơn vị là gram. Giá trị cho phép: g, kg, ml, l, piece, tbsp, tsp, cup, serving."
+                  expiresAt:
+                    anyOf:
+                      - type: string
+                        format: date-time
+                        pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|([+-](?:[01]\d|2[0-3]):[0-5]\d)))$
+                        description: Thời điểm hết hạn ISO 8601; null khi schema cho phép không có hạn. Pantry thường dùng timestamp này thay expiryDate của AI input.
+                      - type: "null"
+                        description: Thời điểm hết hạn ISO 8601; null khi schema cho phép không có hạn. Pantry thường dùng timestamp này thay expiryDate của AI input.
                     description: Thời điểm hết hạn ISO 8601; null khi schema cho phép không có hạn. Pantry thường dùng timestamp này thay expiryDate của AI input.
-                  - type: "null"
+                  note:
+                    type: string
+                    minLength: 0
+                    maxLength: 1000
+                    description: Ghi chú tùy chọn.
+                  foodItemId:
+                    type: string
+                    pattern: ^[a-f\d]{24}$
+                    description: ID thực phẩm chuẩn; phải tồn tại và hợp lệ theo kiểm tra service. ObjectId gồm 24 ký tự hexadecimal.
+                required:
+                  - quantity
+                  - unit
+                  - foodItemId
+                additionalProperties: false
+                description: Trường items item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+              - type: object
+                properties:
+                  quantity:
+                    type: number
+                    exclusiveMinimum: 0
+                    maximum: 1000000
+                    description: Số lượng dương, được diễn giải cùng unit.
+                  unit:
+                    type: string
+                    enum:
+                      - g
+                      - kg
+                      - ml
+                      - l
+                      - piece
+                      - tbsp
+                      - tsp
+                      - cup
+                      - serving
+                    description: "Đơn vị quantity theo enum; không tự coi mọi đơn vị là gram. Giá trị cho phép: g, kg, ml, l, piece, tbsp, tsp, cup, serving."
+                  expiresAt:
+                    anyOf:
+                      - type: string
+                        format: date-time
+                        pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|([+-](?:[01]\d|2[0-3]):[0-5]\d)))$
+                        description: Thời điểm hết hạn ISO 8601; null khi schema cho phép không có hạn. Pantry thường dùng timestamp này thay expiryDate của AI input.
+                      - type: "null"
+                        description: Thời điểm hết hạn ISO 8601; null khi schema cho phép không có hạn. Pantry thường dùng timestamp này thay expiryDate của AI input.
                     description: Thời điểm hết hạn ISO 8601; null khi schema cho phép không có hạn. Pantry thường dùng timestamp này thay expiryDate của AI input.
-                description: Thời điểm hết hạn ISO 8601; null khi schema cho phép không có hạn. Pantry thường dùng timestamp này thay expiryDate của AI input.
-              note:
-                type: string
-                minLength: 0
-                maxLength: 1000
-                description: Ghi chú tùy chọn.
-            required:
-              - foodItemId
-              - quantity
-              - unit
-            additionalProperties: false
+                  note:
+                    type: string
+                    minLength: 0
+                    maxLength: 1000
+                    description: Ghi chú tùy chọn.
+                  personalIngredientId:
+                    type: string
+                    pattern: ^[a-f\d]{24}$
+                    description: ID tham chiếu personalIngredientId; xem resource tương ứng và kiểm tra quyền ở service. ObjectId gồm 24 ký tự hexadecimal.
+                required:
+                  - quantity
+                  - unit
+                  - personalIngredientId
+                additionalProperties: false
+                description: Trường items item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
             description: Trường items item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
           description: Danh sách mục theo schema con; giới hạn số lượng và trường bắt buộc xem items schema.
         idempotencyKey:
@@ -70616,7 +71050,6 @@ components:
             type: object
             required:
               - itemId
-              - foodItemId
               - foodNameSnapshot
               - quantity
               - unit
@@ -70627,9 +71060,17 @@ components:
                 type: string
                 description: ID tham chiếu itemId; xem resource tương ứng và kiểm tra quyền ở service.
               foodItemId:
-                type: string
+                type:
+                  - string
+                  - "null"
                 pattern: ^[A-Fa-f0-9]{24}$
                 description: ID thực phẩm chuẩn; phải tồn tại và hợp lệ theo kiểm tra service. ObjectId gồm 24 ký tự hexadecimal.
+              personalIngredientId:
+                type:
+                  - string
+                  - "null"
+                pattern: ^[A-Fa-f0-9]{24}$
+                description: ID tham chiếu personalIngredientId; xem resource tương ứng và kiểm tra quyền ở service. ObjectId gồm 24 ký tự hexadecimal.
               foodNameSnapshot:
                 type: string
                 maxLength: 200
@@ -71981,6 +72422,75 @@ components:
         - meta
       additionalProperties: false
       description: Envelope thành công của clearCheckedGroceryItems; data là kết quả nghiệp vụ, meta chứa requestId và metadata được khai báo.
+    transferCheckedGroceryItemsToPantryParams:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[a-f\d]{24}$
+          description: ID resource trong đường dẫn. ObjectId gồm 24 ký tự hexadecimal.
+      required:
+        - id
+      additionalProperties: false
+      description: Dữ liệu Params của transferCheckedGroceryItemsToPantry; required/default/enum/giới hạn theo validator thật, các quy tắc kiểm tra chéo xem description của operation.
+    transferCheckedGroceryItemsToPantryBody:
+      type: object
+      properties: {}
+      additionalProperties: false
+      description: Dữ liệu Body của transferCheckedGroceryItemsToPantry; required/default/enum/giới hạn theo validator thật, các quy tắc kiểm tra chéo xem description của operation.
+    transferCheckedGroceryItemsToPantryResponse:
+      type: object
+      properties:
+        success:
+          const: true
+          type: boolean
+          description: true ở response thành công, false ở response lỗi.
+        data:
+          type: object
+          properties:
+            groceryList:
+              $ref: "#/components/schemas/GroceryLists"
+              description: Trường grocery List trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            pantry:
+              $ref: "#/components/schemas/Pantry"
+              description: Trường pantry trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            transferredCount:
+              type: integer
+              minimum: 0
+              description: Tổng số bản ghi khớp bộ lọc.
+            skippedItems:
+              type: array
+              items:
+                type: object
+                properties:
+                  itemId:
+                    type: string
+                    description: Trường Json Value trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+                  nameSnapshot:
+                    type: string
+                    description: Trường Json Value trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+                required:
+                  - itemId
+                  - nameSnapshot
+                additionalProperties: false
+                description: Trường skipped Items item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+              description: Trường skipped Items trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+          required:
+            - groceryList
+            - pantry
+            - transferredCount
+            - skippedItems
+          additionalProperties: false
+          description: Dữ liệu kết quả theo schema riêng của operation.
+        meta:
+          $ref: "#/components/schemas/RequestMeta"
+          description: Metadata gồm requestId và thông tin phân trang/tổng hợp khi có.
+      required:
+        - success
+        - data
+        - meta
+      additionalProperties: false
+      description: Envelope thành công của transferCheckedGroceryItemsToPantry; data là kết quả nghiệp vụ, meta chứa requestId và metadata được khai báo.
     getDiaryEntriesQuery:
       type: object
       properties:

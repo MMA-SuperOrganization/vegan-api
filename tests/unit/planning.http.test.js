@@ -179,6 +179,26 @@ describe("planning HTTP routes through injected full application", () => {
       params: { ...groceryParams, itemId },
       body: { checked: true },
     });
+    const transferred = await call("transferCheckedGroceryItemsToPantry", {
+      params: groceryParams,
+      body: {},
+    });
+    expect(transferred.data.transferredCount).toBe(1);
+    expect(transferred.data.groceryList.items).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ itemId })]),
+    );
+    expect(transferred.data.pantry.items).toEqual(
+      expect.arrayContaining([expect.objectContaining({ foodItemId: FOOD, quantity: 100 })]),
+    );
+    const checkedAgain = await call("addGroceryItem", {
+      params: groceryParams,
+      body: { foodItemId: FOOD, quantity: 1, unit: "piece" },
+    });
+    const checkedAgainId = checkedAgain.data.items.at(-1).itemId;
+    await call("updateGroceryItem", {
+      params: { ...groceryParams, itemId: checkedAgainId },
+      body: { checked: true },
+    });
     await call("clearCheckedGroceryItems", { params: groceryParams, body: {} });
     await call("clearCheckedGroceryItems", { params: groceryParams, body: {} });
     await call("deleteGroceryItem", {

@@ -612,6 +612,20 @@ export function createContractRegistry(container = createContractContainer()) {
     "generateGroceryListFromPlan getGroceryList createGroceryList updateGroceryList deleteGroceryList addGroceryItem updateGroceryItem deleteGroceryItem clearCheckedGroceryItems",
     entity("GroceryListsModel"),
   );
+  assign(
+    "transferCheckedGroceryItemsToPantry",
+    object({
+      groceryList: entity("GroceryListsModel"),
+      pantry: ref("Pantry"),
+      transferredCount: count,
+      skippedItems: array(
+        object({
+          itemId: string,
+          nameSnapshot: string,
+        }),
+      ),
+    }),
+  );
   list("getGroceryLists", entity("GroceryListsModel"));
   list("getDiaryEntries", ref("DiaryEntry"));
   assign("createDiaryEntry updateDiaryEntry", ref("DiaryEntry"));

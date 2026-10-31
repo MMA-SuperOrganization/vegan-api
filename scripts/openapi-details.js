@@ -208,6 +208,8 @@ export const operationNotes = {
   deleteGroceryItem: "Bỏ một mục UUID khỏi danh sách owner, không ảnh hưởng master data.",
   clearCheckedGroceryItems:
     "Bỏ các mục checked khỏi danh sách owner, giữ các mục chưa checked; gửi {} hoặc không body.",
+  transferCheckedGroceryItemsToPantry:
+    "Đưa các mục checked có foodItemId hoặc personalIngredientId vào Pantry và xóa đúng các mục đã chuyển khỏi Grocery trong cùng transaction. Mục free-text cũ không có tham chiếu được giữ lại và trả về trong skippedItems.",
   getDiaryEntries:
     "Lấy bản ghi theo date hoặc from/to và timezone. Không kết hợp date với range; meta phân trang không thay cho tổng summary.",
   updateDiaryEntry:
