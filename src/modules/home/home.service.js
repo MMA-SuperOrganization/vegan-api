@@ -32,6 +32,9 @@ export const createHomeService = (deps) => ({
       ...summarizeContent(post),
       excerpt: post.content?.slice(0, 220),
       recipeId: post.recipeId ?? null,
+      foodItemIds: post.foodItemIds ?? [],
+      relatedRecipe: post.relatedRecipe ?? null,
+      relatedFoodItems: post.relatedFoodItems ?? [],
       reactionCount: post.reactionCount ?? 0,
       commentCount: post.commentCount ?? 0,
     }));

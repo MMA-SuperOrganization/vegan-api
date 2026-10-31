@@ -487,6 +487,33 @@ describe("Complete content modules", () => {
 
     expect(result.data.map((post) => post._id)).toEqual([related._id]);
   });
+  it("includes recipe and ingredient names in post list responses", async () => {
+    const recipeId = newId();
+    const post = published({
+      recipeId,
+      foodItemIds: [linkedFoodId],
+      postType: "community",
+    });
+    const h = createHarness({
+      recipes: [
+        {
+          _id: recipeId,
+          title: "Tofu mushroom bowl",
+          status: "published",
+          visibility: "public",
+          deletedAt: null,
+        },
+      ],
+      posts: [post],
+    });
+
+    const result = await h.call("posts", "getPosts", { actor: null });
+
+    expect(result.data[0]).toMatchObject({
+      relatedRecipe: { _id: recipeId, title: "Tofu mushroom bowl" },
+      relatedFoodItems: [{ _id: linkedFoodId, name: "Tofu" }],
+    });
+  });
   it("keeps owner edits of community posts published without review", async () => {
     const post = published({ content: "Original", publishedAt: new Date("2026-10-01") });
     const h = createHarness({ posts: [post] });

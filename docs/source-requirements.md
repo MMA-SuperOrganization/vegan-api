@@ -758,6 +758,7 @@ Không tối ưu theo một con số collection tùy ý. Tách collection khi d�
 
 - `authorId`, `title`, `content`, `mediaIds[]`, `tags[]`, `categoryIds[]`.
 - Bắt buộc liên kết ít nhất một nguyên liệu chuẩn qua `foodItemIds[]` hoặc một công thức qua `recipeId`; các tham chiếu phải tồn tại và còn hoạt động.
+- Response danh sách và chi tiết có `relatedRecipe` và `relatedFoodItems`; service tải theo lô trên mỗi trang để client hiển thị món ăn trực tiếp trên card mà không phát sinh N+1 request.
 - `postType`: `community | blog`; blog thường do admin xuất bản, community post do user tạo và gửi duyệt.
 - `status`: `draft | pending_review | published | rejected | hidden | deleted`.
 - `visibility`: `public | private`.
@@ -1108,26 +1109,26 @@ Không chấp nhận SVG ở phiên bản này. Tạo cơ chế dọn `pending` 
 
 ### 13.10 Post, comment, reaction và saved item
 
-| Method | Path                                 | Quyền                | Chức năng                              |
-| ------ | ------------------------------------ | -------------------- | -------------------------------------- |
-| GET    | `/posts`                             | public               | Feed published/public                  |
-| GET    | `/posts/mine`                        | owner                | Post/blog do mình tạo theo status/type |
-| GET    | `/posts/:id`                         | public/optional auth | Chi tiết                               |
-| POST   | `/posts`                             | user/admin           | Tạo draft                              |
-| PATCH  | `/posts/:id`                         | owner/admin          | Sửa                                    |
-| DELETE | `/posts/:id`                         | owner/admin          | Soft delete                            |
-| POST   | `/posts/:id/submit`                  | owner                | Gửi duyệt                              |
-| POST   | `/posts/:id/publish`                 | admin                | Publish                                |
-| POST   | `/posts/:id/reject`                  | admin                | Reject có lý do                        |
-| GET    | `/comments`                          | public               | List theo target                       |
-| POST   | `/comments`                          | user/admin           | Tạo comment/reply                      |
-| PATCH  | `/comments/:id`                      | owner                | Sửa comment visible                    |
-| DELETE | `/comments/:id`                      | owner/admin          | Soft delete                            |
-| PUT    | `/reactions/:targetType/:targetId`   | user/admin           | Upsert reaction                        |
-| DELETE | `/reactions/:targetType/:targetId`   | owner                | Bỏ reaction                            |
-| GET    | `/saved-items`                       | owner                | Danh sách đã lưu                       |
-| PUT    | `/saved-items/:targetType/:targetId` | owner                | Lưu idempotent                         |
-| DELETE | `/saved-items/:targetType/:targetId` | owner                | Bỏ lưu idempotent                      |
+| Method | Path                                 | Quyền                | Chức năng                           |
+| ------ | ------------------------------------ | -------------------- | ----------------------------------- |
+| GET    | `/posts`                             | public               | Feed kèm tóm tắt recipe/nguyên liệu |
+| GET    | `/posts/mine`                        | owner                | Post của mình kèm tóm tắt món ăn    |
+| GET    | `/posts/:id`                         | public/optional auth | Chi tiết kèm recipe/nguyên liệu     |
+| POST   | `/posts`                             | user/admin           | Tạo draft                           |
+| PATCH  | `/posts/:id`                         | owner/admin          | Sửa                                 |
+| DELETE | `/posts/:id`                         | owner/admin          | Soft delete                         |
+| POST   | `/posts/:id/submit`                  | owner                | Gửi duyệt                           |
+| POST   | `/posts/:id/publish`                 | admin                | Publish                             |
+| POST   | `/posts/:id/reject`                  | admin                | Reject có lý do                     |
+| GET    | `/comments`                          | public               | List theo target                    |
+| POST   | `/comments`                          | user/admin           | Tạo comment/reply                   |
+| PATCH  | `/comments/:id`                      | owner                | Sửa comment visible                 |
+| DELETE | `/comments/:id`                      | owner/admin          | Soft delete                         |
+| PUT    | `/reactions/:targetType/:targetId`   | user/admin           | Upsert reaction                     |
+| DELETE | `/reactions/:targetType/:targetId`   | owner                | Bỏ reaction                         |
+| GET    | `/saved-items`                       | owner                | Danh sách đã lưu                    |
+| PUT    | `/saved-items/:targetType/:targetId` | owner                | Lưu idempotent                      |
+| DELETE | `/saved-items/:targetType/:targetId` | owner                | Bỏ lưu idempotent                   |
 
 Counters phải nhất quán. Dùng transaction hoặc cơ chế cập nhật an toàn; có thể cung cấp script reconcile counters nếu cần.
 

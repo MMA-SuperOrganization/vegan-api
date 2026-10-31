@@ -31450,15 +31450,15 @@ paths:
     get:
       tags:
         - posts
-      summary: Feed published/public
+      summary: Feed kèm tóm tắt recipe/nguyên liệu
       description: |-
-        Feed published/public.
+        Feed kèm tóm tắt recipe/nguyên liệu.
 
         **Quyền truy cập:** Không yêu cầu token. Chỉ dữ liệu được phép công khai được trả về.
 
         **Nghiệp vụ:** Bài đăng cộng đồng được xuất bản ngay khi người dùng tạo. Nội dung công khai vẫn phụ thuộc visibility và moderation; người dùng có thể báo cáo nội dung vi phạm.
 
-        Danh sách bài đăng có quyền công khai, phân trang/bộ lọc query; bài draft/ẩn không tự xuất hiện ở public list.
+        Danh sách bài đăng có quyền công khai, phân trang/bộ lọc query; bài draft/ẩn không tự xuất hiện ở public list. Mỗi bài được batch-enrich relatedRecipe và relatedFoodItems để client hiển thị món ăn ngay trên feed mà không tạo N+1 request.
 
         **Query:** xem danh sách tham số để biết bộ lọc, default và giới hạn. page bắt đầu từ 1 nếu endpoint phân trang; không gửi chuỗi 'undefined' hoặc 'null' thay cho tham số bị bỏ qua.
 
@@ -32071,15 +32071,15 @@ paths:
     get:
       tags:
         - posts
-      summary: Post/blog do mình tạo theo status/type
+      summary: Post của mình kèm tóm tắt món ăn
       description: |-
-        Post/blog do mình tạo theo status/type.
+        Post của mình kèm tóm tắt món ăn.
 
         **Quyền truy cập:** Bắt buộc Firebase ID token, tài khoản active và quyền sở hữu resource. Backend lấy danh tính từ token; ID của người khác không cấp quyền truy cập.
 
         **Nghiệp vụ:** Bài đăng cộng đồng được xuất bản ngay khi người dùng tạo. Nội dung công khai vẫn phụ thuộc visibility và moderation; người dùng có thể báo cáo nội dung vi phạm.
 
-        Danh sách bài đăng tác giả hiện tại, lọc trạng thái để quản lý nội dung chưa xuất bản.
+        Danh sách bài đăng tác giả hiện tại, lọc trạng thái để quản lý nội dung chưa xuất bản; response có relatedRecipe và relatedFoodItems tương tự public feed.
 
         **Query:** xem danh sách tham số để biết bộ lọc, default và giới hạn. page bắt đầu từ 1 nếu endpoint phân trang; không gửi chuỗi 'undefined' hoặc 'null' thay cho tham số bị bỏ qua.
 
@@ -32365,15 +32365,15 @@ paths:
     get:
       tags:
         - posts
-      summary: Chi tiết
+      summary: Chi tiết kèm recipe/nguyên liệu
       description: |-
-        Chi tiết.
+        Chi tiết kèm recipe/nguyên liệu.
 
         **Quyền truy cập:** Có thể gọi không token. Nếu gửi Authorization: Bearer <Firebase ID token> thì token phải hợp lệ; token lỗi không được tự động coi là guest.
 
         **Nghiệp vụ:** Bài đăng cộng đồng được xuất bản ngay khi người dùng tạo. Nội dung công khai vẫn phụ thuộc visibility và moderation; người dùng có thể báo cáo nội dung vi phạm.
 
-        Đọc bằng ObjectId của bài đăng, không nhận slug. Quyền guest/owner/admin được service kiểm tra dựa trên trạng thái và visibility.
+        Đọc bằng ObjectId của bài đăng, không nhận slug. Quyền guest/owner/admin được service kiểm tra dựa trên trạng thái và visibility; response có relatedRecipe và relatedFoodItems.
 
         **Response:** HTTP 200; envelope {success:true,data,meta}. data theo schema getPostResponse; meta.requestId khớp X-Request-Id. Danh sách có metadata phân trang khi schema khai báo.
 

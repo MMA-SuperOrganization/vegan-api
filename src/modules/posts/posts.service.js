@@ -18,6 +18,49 @@ import {
 } from "../../common/content-service.js";
 export const createPostsService = (deps) => {
   const repo = deps.repositories.posts;
+  const objectId = (value) => String(value?._id ?? value ?? "");
+  const enrichFoodRelationships = async (posts) => {
+    if (!posts.length) return posts;
+    const recipeIds = [...new Set(posts.map((post) => objectId(post.recipeId)).filter(Boolean))];
+    const foodItemIds = [
+      ...new Set(posts.flatMap((post) => (post.foodItemIds ?? []).map(objectId)).filter(Boolean)),
+    ];
+    const [recipes, foodItems] = await Promise.all([
+      recipeIds.length
+        ? deps.repositories.recipes.findMany(
+            { _id: { $in: recipeIds } },
+            {
+              page: 1,
+              limit: recipeIds.length,
+              projection: { title: 1, slug: 1, coverImageUrl: 1 },
+            },
+          )
+        : { data: [] },
+      foodItemIds.length
+        ? deps.repositories.foodItems.findMany(
+            { _id: { $in: foodItemIds } },
+            {
+              page: 1,
+              limit: foodItemIds.length,
+              projection: { name: 1, slug: 1, imageUrl: 1 },
+            },
+          )
+        : { data: [] },
+    ]);
+    const recipesById = new Map(recipes.data.map((recipe) => [objectId(recipe), recipe]));
+    const foodItemsById = new Map(foodItems.data.map((foodItem) => [objectId(foodItem), foodItem]));
+    return posts.map((post) => ({
+      ...post,
+      relatedRecipe: post.recipeId ? (recipesById.get(objectId(post.recipeId)) ?? null) : null,
+      relatedFoodItems: (post.foodItemIds ?? [])
+        .map((id) => foodItemsById.get(objectId(id)))
+        .filter(Boolean),
+    }));
+  };
+  const enrichPage = async (page) => ({
+    ...page,
+    data: await enrichFoodRelationships(page.data),
+  });
   const assertRecipeExists = async (recipeId, session) => {
     if (recipeId) requireFound(await deps.repositories.recipes.findById(recipeId, { session }));
   };
@@ -45,30 +88,34 @@ export const createPostsService = (deps) => {
     await assertReferences(post, session);
     await syncMedia(deps, "post", post, post, actor, session);
   };
-  const listPublic = (query = {}, options = {}) =>
-    repo.findMany(
-      publicFilter({
-        ...listFilter(query),
-        ...(query.postType ? { postType: query.postType } : {}),
-        ...(query.recipeId ? { recipeId: query.recipeId } : {}),
-      }),
-      { ...listOptions(query), ...options },
+  const listPublic = async (query = {}, options = {}) =>
+    enrichPage(
+      await repo.findMany(
+        publicFilter({
+          ...listFilter(query),
+          ...(query.postType ? { postType: query.postType } : {}),
+          ...(query.recipeId ? { recipeId: query.recipeId } : {}),
+        }),
+        { ...listOptions(query), ...options },
+      ),
     );
-  const listMine = (userId, query = {}) =>
-    repo.findMany(
-      {
-        authorId: userId,
-        ...(query.status
-          ? { status: query.status }
-          : { deletedAt: null, status: { $ne: "deleted" } }),
-        ...(query.postType ? { postType: query.postType } : {}),
-      },
-      {
-        page: query.page ?? 1,
-        limit: query.limit ?? 20,
-        sort: { updatedAt: -1, _id: -1 },
-        projection: { viewReceipts: 0, ratingSum: 0 },
-      },
+  const listMine = async (userId, query = {}) =>
+    enrichPage(
+      await repo.findMany(
+        {
+          authorId: userId,
+          ...(query.status
+            ? { status: query.status }
+            : { deletedAt: null, status: { $ne: "deleted" } }),
+          ...(query.postType ? { postType: query.postType } : {}),
+        },
+        {
+          page: query.page ?? 1,
+          limit: query.limit ?? 20,
+          sort: { updatedAt: -1, _id: -1 },
+          projection: { viewReceipts: 0, ratingSum: 0 },
+        },
+      ),
     );
   const getById = (id, options = {}) => getReadable(repo, id, options);
   const operations = {
@@ -80,8 +127,9 @@ export const createPostsService = (deps) => {
     },
     getPost: async ({ actor, params }) => {
       const post = await getById(params.id, { actor });
+      const [enrichedPost] = await enrichFoodRelationships([post]);
       return {
-        ...safeContent(post, { actor }),
+        ...safeContent(enrichedPost, { actor }),
         ...(await userState(deps, "post", post._id, actor)),
       };
     },
