@@ -514,6 +514,27 @@ describe("Complete content modules", () => {
       relatedFoodItems: [{ _id: linkedFoodId, name: "Tofu" }],
     });
   });
+  it("includes the current user's reaction in post list responses", async () => {
+    const post = published({ postType: "community", reactionCount: 1 });
+    const h = createHarness({
+      posts: [post],
+      reactions: [
+        {
+          _id: newId(),
+          userId: owner.userId,
+          targetType: "post",
+          targetId: post._id,
+          type: "like",
+        },
+      ],
+    });
+
+    const authenticated = await h.call("posts", "getPosts", { actor: owner });
+    const anonymous = await h.call("posts", "getPosts", { actor: null });
+
+    expect(authenticated.data[0]).toMatchObject({ reactionCount: 1, reacted: "like" });
+    expect(anonymous.data[0]).toMatchObject({ reactionCount: 1, reacted: null });
+  });
   it("keeps owner edits of community posts published without review", async () => {
     const post = published({ content: "Original", publishedAt: new Date("2026-10-01") });
     const h = createHarness({ posts: [post] });

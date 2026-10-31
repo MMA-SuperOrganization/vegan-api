@@ -305,7 +305,10 @@ describe("Discovery behavior and input safety", () => {
     expect(home.featured.posts[0]._id).toBe(IDS.community);
     expect(h.deps.services.posts.listPublic).toHaveBeenCalledWith(
       expect.objectContaining({ postType: "community" }),
+      {},
+      null,
     );
+    expect(home.featured.posts[0].reacted).toBeNull();
     expect(home.featured.recipes[0]).not.toHaveProperty("ingredients");
   });
   it("fails closed on bootstrap or home dependencies rather than fabricate counts", async () => {

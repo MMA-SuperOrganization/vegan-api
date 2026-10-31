@@ -232,7 +232,7 @@ export const operationNotes = {
   getMyMedia:
     "Danh sách media owner theo status/purpose và phân trang, bao gồm pending nếu bộ lọc cho phép; pending không được coi là ready.",
   getPosts:
-    "Danh sách bài đăng có quyền công khai, phân trang/bộ lọc query; bài draft/ẩn không tự xuất hiện ở public list. Mỗi bài được batch-enrich relatedRecipe và relatedFoodItems để client hiển thị món ăn ngay trên feed mà không tạo N+1 request.",
+    "Danh sách bài đăng có quyền công khai, phân trang/bộ lọc query; bài draft/ẩn không tự xuất hiện ở public list. Mỗi trang được batch-enrich relatedRecipe, relatedFoodItems và reacted của người đang đăng nhập để client hiển thị món ăn/trạng thái thích mà không tạo N+1 request. Feed guest dùng Redis read-through cache; feed có actor không dùng chung cache cá nhân hóa.",
   getMyPosts:
     "Danh sách bài đăng tác giả hiện tại, lọc trạng thái để quản lý nội dung chưa xuất bản; response có relatedRecipe và relatedFoodItems tương tự public feed.",
   getPost:

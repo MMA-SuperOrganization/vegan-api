@@ -31450,15 +31450,15 @@ paths:
     get:
       tags:
         - posts
-      summary: Feed kèm tóm tắt recipe/nguyên liệu
+      summary: Feed kèm món ăn và reaction cá nhân
       description: |-
-        Feed kèm tóm tắt recipe/nguyên liệu.
+        Feed kèm món ăn và reaction cá nhân.
 
-        **Quyền truy cập:** Không yêu cầu token. Chỉ dữ liệu được phép công khai được trả về.
+        **Quyền truy cập:** Có thể gọi không token. Nếu gửi Authorization: Bearer <Firebase ID token> thì token phải hợp lệ; token lỗi không được tự động coi là guest.
 
         **Nghiệp vụ:** Bài đăng cộng đồng được xuất bản ngay khi người dùng tạo. Nội dung công khai vẫn phụ thuộc visibility và moderation; người dùng có thể báo cáo nội dung vi phạm.
 
-        Danh sách bài đăng có quyền công khai, phân trang/bộ lọc query; bài draft/ẩn không tự xuất hiện ở public list. Mỗi bài được batch-enrich relatedRecipe và relatedFoodItems để client hiển thị món ăn ngay trên feed mà không tạo N+1 request.
+        Danh sách bài đăng có quyền công khai, phân trang/bộ lọc query; bài draft/ẩn không tự xuất hiện ở public list. Mỗi trang được batch-enrich relatedRecipe, relatedFoodItems và reacted của người đang đăng nhập để client hiển thị món ăn/trạng thái thích mà không tạo N+1 request. Feed guest dùng Redis read-through cache; feed có actor không dùng chung cache cá nhân hóa.
 
         **Query:** xem danh sách tham số để biết bộ lọc, default và giới hạn. page bắt đầu từ 1 nếu endpoint phân trang; không gửi chuỗi 'undefined' hoặc 'null' thay cho tham số bị bỏ qua.
 
@@ -31466,11 +31466,13 @@ paths:
 
         **Lỗi:** envelope {success:false,error:{code,message,details},meta:{requestId}}. 400 là dữ liệu/điều kiện nghiệp vụ không hợp lệ; 404 có thể che resource không được phép truy cập. Xem responses cho lỗi xác thực, xung đột, giới hạn và dependency. Các mã lỗi chung là khả năng của middleware, không bảo đảm mọi nhánh xuất hiện ở mọi request.
       operationId: getPosts
-      x-auth: public
+      x-auth: optional
       x-tests:
         - tests/contract/api-contract.test.js
         - tests/integration/content-complete.test.js
-      security: []
+      security:
+        - {}
+        - bearerAuth: []
       parameters:
         - name: page
           in: query
@@ -31626,6 +31628,56 @@ paths:
                           path: exampleField
                           code: invalid_type
                           message: Invalid field value
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "401":
+          description: "Missing, expired or invalid Firebase token. Các mã có thể gặp từ middleware/service: TOKEN_MISSING, TOKEN_INVALID, TOKEN_EXPIRED, TOKEN_REVOKED, UNAUTHORIZED. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 401 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: UNAUTHORIZED
+                      message: Authentication required
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "403":
+          description: "Inactive account, insufficient role or non-owner. Các mã có thể gặp từ middleware/service: FORBIDDEN, ACCOUNT_DISABLED, ACCOUNT_SUSPENDED, ACCOUNT_DELETED. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 403 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: FORBIDDEN
+                      message: Access denied
+                      details: []
                     meta:
                       requestId: swagger-example-request
           headers:

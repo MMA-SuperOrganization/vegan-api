@@ -57,9 +57,32 @@ export const createPostsService = (deps) => {
         .filter(Boolean),
     }));
   };
-  const enrichPage = async (page) => ({
+  const enrichViewerReactions = async (posts, actor) => {
+    if (!actor?.userId || !posts.length) return posts.map((post) => ({ ...post, reacted: null }));
+    const postIds = posts.map((post) => objectId(post)).filter(Boolean);
+    const reactions = await deps.repositories.reactions.findMany(
+      {
+        userId: actor.userId,
+        targetType: "post",
+        targetId: { $in: postIds },
+      },
+      {
+        page: 1,
+        limit: postIds.length,
+        projection: { targetId: 1, type: 1 },
+      },
+    );
+    const reactionByPostId = new Map(
+      reactions.data.map((reaction) => [objectId(reaction.targetId), reaction.type]),
+    );
+    return posts.map((post) => ({
+      ...post,
+      reacted: reactionByPostId.get(objectId(post)) ?? null,
+    }));
+  };
+  const enrichPage = async (page, actor) => ({
     ...page,
-    data: await enrichFoodRelationships(page.data),
+    data: await enrichViewerReactions(await enrichFoodRelationships(page.data), actor),
   });
   const assertRecipeExists = async (recipeId, session) => {
     if (recipeId) requireFound(await deps.repositories.recipes.findById(recipeId, { session }));
@@ -88,7 +111,7 @@ export const createPostsService = (deps) => {
     await assertReferences(post, session);
     await syncMedia(deps, "post", post, post, actor, session);
   };
-  const listPublic = async (query = {}, options = {}) =>
+  const listPublic = async (query = {}, options = {}, actor) =>
     enrichPage(
       await repo.findMany(
         publicFilter({
@@ -98,12 +121,13 @@ export const createPostsService = (deps) => {
         }),
         { ...listOptions(query), ...options },
       ),
+      actor,
     );
-  const listMine = async (userId, query = {}) =>
+  const listMine = async (actor, query = {}) =>
     enrichPage(
       await repo.findMany(
         {
-          authorId: userId,
+          authorId: actor.userId,
           ...(query.status
             ? { status: query.status }
             : { deletedAt: null, status: { $ne: "deleted" } }),
@@ -116,13 +140,14 @@ export const createPostsService = (deps) => {
           projection: { viewReceipts: 0, ratingSum: 0 },
         },
       ),
+      actor,
     );
   const getById = (id, options = {}) => getReadable(repo, id, options);
   const operations = {
-    getPosts: async ({ query = {} }) => listPublic(query),
+    getPosts: async ({ actor, query = {} }) => listPublic(query, {}, actor),
     getMyPosts: async ({ actor, query = {} }) => {
       requireActor(actor);
-      const result = await listMine(actor.userId, query);
+      const result = await listMine(actor, query);
       return { ...result, data: result.data.map((item) => safeContent(item, { actor })) };
     },
     getPost: async ({ actor, params }) => {

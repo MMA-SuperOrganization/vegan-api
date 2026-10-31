@@ -6,21 +6,17 @@ export const homeValidation = {
 export const createHomeService = (deps) => ({
   async getHomeFeed({ actor, query = {} }) {
     const limit = Math.min(query.limit ?? 6, 10);
-    const loadPublic = async (key, filters = {}) =>
-      listData(
-        await service(
-          deps,
-          key,
-          "listPublic",
-        )({
-          page: 1,
-          limit,
-          sort: "popular",
-          ...filters,
-        }),
-      )
-        .filter(isPublic)
-        .slice(0, limit);
+    const loadPublic = async (key, filters = {}) => {
+      const query = {
+        page: 1,
+        limit,
+        sort: "popular",
+        ...filters,
+      };
+      const list = service(deps, key, "listPublic");
+      const page = key === "posts" ? await list(query, {}, actor) : await list(query);
+      return listData(page).filter(isPublic).slice(0, limit);
+    };
     const [recipeRows, videoRows, postRows] = await Promise.all([
       loadPublic("recipes"),
       loadPublic("videos"),
@@ -36,6 +32,7 @@ export const createHomeService = (deps) => ({
       relatedRecipe: post.relatedRecipe ?? null,
       relatedFoodItems: post.relatedFoodItems ?? [],
       reactionCount: post.reactionCount ?? 0,
+      reacted: post.reacted ?? null,
       commentCount: post.commentCount ?? 0,
     }));
     const result = { featured: { recipes, videos, posts }, personalized: null };

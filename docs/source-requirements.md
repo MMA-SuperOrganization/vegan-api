@@ -759,6 +759,7 @@ Không tối ưu theo một con số collection tùy ý. Tách collection khi d�
 - `authorId`, `title`, `content`, `mediaIds[]`, `tags[]`, `categoryIds[]`.
 - Bắt buộc liên kết ít nhất một nguyên liệu chuẩn qua `foodItemIds[]` hoặc một công thức qua `recipeId`; các tham chiếu phải tồn tại và còn hoạt động.
 - Response danh sách và chi tiết có `relatedRecipe` và `relatedFoodItems`; service tải theo lô trên mỗi trang để client hiển thị món ăn trực tiếp trên card mà không phát sinh N+1 request.
+- `GET /posts` dùng optional auth: guest nhận `reacted: null`, người đăng nhập nhận reaction của chính họ theo batch query. Feed guest dùng Redis read-through cache; response cá nhân hóa luôn bypass shared cache và reaction mutation làm mất hiệu lực cache counter.
 - `postType`: `community | blog`; blog thường do admin xuất bản, community post do user tạo và gửi duyệt.
 - `status`: `draft | pending_review | published | rejected | hidden | deleted`.
 - `visibility`: `public | private`.
@@ -1111,7 +1112,7 @@ Không chấp nhận SVG ở phiên bản này. Tạo cơ chế dọn `pending` 
 
 | Method | Path                                 | Quyền                | Chức năng                           |
 | ------ | ------------------------------------ | -------------------- | ----------------------------------- |
-| GET    | `/posts`                             | public               | Feed kèm tóm tắt recipe/nguyên liệu |
+| GET    | `/posts`                             | optional auth        | Feed kèm món ăn và reaction cá nhân |
 | GET    | `/posts/mine`                        | owner                | Post của mình kèm tóm tắt món ăn    |
 | GET    | `/posts/:id`                         | public/optional auth | Chi tiết kèm recipe/nguyên liệu     |
 | POST   | `/posts`                             | user/admin           | Tạo draft                           |

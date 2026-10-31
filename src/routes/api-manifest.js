@@ -732,7 +732,7 @@ export const apiManifest = [
   },
 
   // Post, Comment, Reaction, Saved Item
-  { method: "GET", path: "/posts", auth: "public", module: "posts", operationId: "getPosts" },
+  { method: "GET", path: "/posts", auth: "optional", module: "posts", operationId: "getPosts" },
   { method: "GET", path: "/posts/mine", auth: "owner", module: "posts", operationId: "getMyPosts" },
   { method: "GET", path: "/posts/:id", auth: "optional", module: "posts", operationId: "getPost" },
   { method: "POST", path: "/posts", auth: "user", module: "posts", operationId: "createPost" },
