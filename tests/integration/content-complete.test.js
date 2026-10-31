@@ -20,6 +20,17 @@ import {
 const owner = { userId: "111111111111111111111111", role: "user", status: "active" };
 const other = { userId: "222222222222222222222222", role: "user", status: "active" };
 const admin = { userId: "333333333333333333333333", role: "admin", status: "active" };
+const linkedFoodId = "200000000000000000000099";
+const linkedFood = {
+  _id: linkedFoodId,
+  name: "Tofu",
+  slug: "tofu-post-link",
+  status: "active",
+  isVegan: true,
+  isVegetarian: true,
+  nutritionPer100g: { caloriesKcal: 100 },
+  allergenIds: [],
+};
 const factories = {
   recipes: createRecipesModule,
   posts: createPostsModule,
@@ -32,7 +43,10 @@ const factories = {
   "view-history": createViewHistoryModule,
 };
 const createHarness = (seed = {}) => {
-  const repositories = createMemoryRepositories(seed);
+  const repositories = createMemoryRepositories({
+    ...seed,
+    foodItems: [linkedFood, ...(seed.foodItems ?? [])],
+  });
   let date = new Date("2026-10-03T12:00:00Z");
   const audit = { record: vi.fn(async () => {}) };
   const storageProvider = {
@@ -117,6 +131,7 @@ const published = (extra = {}) => ({
   ratingCount: 0,
   ratingSum: 0,
   ratingAverage: 0,
+  foodItemIds: [linkedFoodId],
   ...extra,
 });
 const ready = (extra = {}) => ({
@@ -136,7 +151,9 @@ const ready = (extra = {}) => ({
 
 describe("Complete content HTTP flows", () => {
   it("executes every owned API operation through validation/auth/envelopes", async () => {
-    const { app, repositories, storageProvider, container } = buildTestApp();
+    const { app, repositories, storageProvider, container } = buildTestApp({
+      seed: { foodItems: [linkedFood] },
+    });
     const api = async (
       method,
       path,
@@ -153,7 +170,7 @@ describe("Complete content HTTP flows", () => {
     };
     const post = (
       await api("post", "/posts", {
-        body: { title: "API post", content: "Plant based food" },
+        body: { title: "API post", content: "Plant based food", foodItemIds: [linkedFoodId] },
         status: 201,
       })
     ).data;
@@ -277,7 +294,7 @@ describe("Complete content HTTP flows", () => {
     await api("delete", `/posts/${post._id}`);
   });
   it("returns secure HTTP errors for missing auth, malformed body, wrong owner, private media and stale versions", async () => {
-    const { app } = buildTestApp();
+    const { app } = buildTestApp({ seed: { foodItems: [linkedFood] } });
     expect(
       (await request(app).post("/api/v1/posts").send({ title: "No auth", content: "x" })).status,
     ).toBe(401);
@@ -292,7 +309,7 @@ describe("Complete content HTTP flows", () => {
     const created = await request(app)
       .post("/api/v1/posts")
       .set("Authorization", `Bearer ${TEST_TOKENS.user}`)
-      .send({ title: "Owner", content: "x" });
+      .send({ title: "Owner", content: "x", foodItemIds: [linkedFoodId] });
     const id = created.body.data._id;
     expect(
       (
@@ -390,7 +407,7 @@ describe("Complete content modules", () => {
   it("publishes community posts immediately while preserving owner and moderation guards", async () => {
     const h = createHarness();
     const post = await h.call("posts", "createPost", {
-      body: { title: "A post", content: "Nutrition advice" },
+      body: { title: "A post", content: "Nutrition advice", foodItemIds: [linkedFoodId] },
     });
     expect(post.status).toBe("published");
     expect(post.publishedAt).toBeTruthy();
@@ -428,6 +445,29 @@ describe("Complete content modules", () => {
     });
     await h.call("posts", "deletePost", { params: { id: post._id } });
     expect((await h.call("posts", "getPosts", { actor: null })).data).toHaveLength(0);
+  });
+  it("requires every post to retain at least one valid ingredient or recipe link", async () => {
+    const h = createHarness();
+    await expect(
+      h.call("posts", "createPost", {
+        body: { title: "Unrelated", content: "No food context" },
+      }),
+    ).rejects.toThrow("A post must link at least one ingredient or one recipe");
+    await expect(
+      h.call("posts", "createPost", {
+        body: { title: "Missing food", content: "Food context", foodItemIds: [newId()] },
+      }),
+    ).rejects.toMatchObject({ statusCode: 404 });
+
+    const post = await h.call("posts", "createPost", {
+      body: { title: "Tofu tip", content: "Press it first", foodItemIds: [linkedFoodId] },
+    });
+    await expect(
+      h.call("posts", "updatePost", {
+        params: { id: post._id },
+        body: { foodItemIds: [], recipeId: null, version: 0 },
+      }),
+    ).rejects.toMatchObject({ statusCode: 400 });
   });
   it("filters published community posts by their related recipe", async () => {
     const recipeId = newId();

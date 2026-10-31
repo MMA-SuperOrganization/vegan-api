@@ -139,6 +139,7 @@ export const fixtureSeed = () => ({
       title: "Plant based blog",
       postType: "blog",
       content: "Plant based cooking",
+      foodItemIds: [IDS.food],
       ingredients: [],
     }),
     content({
@@ -147,6 +148,7 @@ export const fixtureSeed = () => ({
       title: "Community cooking",
       postType: "community",
       content: "Community food",
+      foodItemIds: [IDS.food],
       ingredients: [],
     }),
   ],

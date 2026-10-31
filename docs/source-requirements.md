@@ -757,6 +757,7 @@ Không tối ưu theo một con số collection tùy ý. Tách collection khi d�
 #### `posts`
 
 - `authorId`, `title`, `content`, `mediaIds[]`, `tags[]`, `categoryIds[]`.
+- Bắt buộc liên kết ít nhất một nguyên liệu chuẩn qua `foodItemIds[]` hoặc một công thức qua `recipeId`; các tham chiếu phải tồn tại và còn hoạt động.
 - `postType`: `community | blog`; blog thường do admin xuất bản, community post do user tạo và gửi duyệt.
 - `status`: `draft | pending_review | published | rejected | hidden | deleted`.
 - `visibility`: `public | private`.

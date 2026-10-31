@@ -21,9 +21,28 @@ export const createPostsService = (deps) => {
   const assertRecipeExists = async (recipeId, session) => {
     if (recipeId) requireFound(await deps.repositories.recipes.findById(recipeId, { session }));
   };
+  const assertFoodItemsExist = async (foodItemIds = [], session) => {
+    for (const foodItemId of foodItemIds) {
+      const food = requireFound(
+        await deps.repositories.foodItems.findById(foodItemId, { session }),
+        "Ingredient not found",
+      );
+      if (food.status === "inactive") throw AppError.notFound("Ingredient not found");
+    }
+  };
+  const assertFoodRelationship = (post) => {
+    if (!post.recipeId && !post.foodItemIds?.length)
+      throw AppError.badRequest("A post must link at least one ingredient or one recipe");
+  };
+  const assertReferences = async (post, session) => {
+    assertFoodRelationship(post);
+    await assertRecipeExists(post.recipeId, session);
+    await assertFoodItemsExist(post.foodItemIds, session);
+  };
   const validatePublication = async (post, actor, session) => {
     if (!post.title?.trim() || !post.content?.trim())
       throw AppError.badRequest("A post requires a title and content");
+    await assertReferences(post, session);
     await syncMedia(deps, "post", post, post, actor, session);
   };
   const listPublic = (query = {}, options = {}) =>
@@ -72,7 +91,7 @@ export const createPostsService = (deps) => {
         requireActor(actor);
         if (body.postType === "blog" && actor.role !== "admin")
           throw AppError.forbidden("Only administrators can create blogs");
-        await assertRecipeExists(body.recipeId, session);
+        await assertReferences(body, session);
         const communityPost = (body.postType ?? "community") === "community";
         const post = await repo.create(
           {
@@ -99,7 +118,6 @@ export const createPostsService = (deps) => {
         const { version, ...changes } = body;
         if (changes.postType === "blog" && actor.role !== "admin")
           throw AppError.forbidden("Only administrators can create blogs");
-        await assertRecipeExists(changes.recipeId, session);
         const communityPost = (changes.postType ?? before.postType ?? "community") === "community";
         if (communityPost)
           Object.assign(changes, {
@@ -112,6 +130,7 @@ export const createPostsService = (deps) => {
         if (!communityPost && before.status === "published" && actor.role !== "admin")
           Object.assign(changes, { status: "draft", publishedAt: null });
         const candidate = { ...before, ...changes };
+        await assertReferences(candidate, session);
         if (
           candidate.status === "published" &&
           (!candidate.title?.trim() || !candidate.content?.trim())

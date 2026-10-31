@@ -238,7 +238,7 @@ export const operationNotes = {
   getPost:
     "Đọc bằng ObjectId của bài đăng, không nhận slug. Quyền guest/owner/admin được service kiểm tra dựa trên trạng thái và visibility.",
   createPost:
-    "Tạo bài đăng cộng đồng và xuất bản ngay theo dữ liệu hợp lệ; blog nội bộ vẫn tuân theo vòng đời riêng của service.",
+    "Tạo bài đăng cộng đồng và xuất bản ngay; bắt buộc liên kết ít nhất một foodItemIds hoặc một recipeId hợp lệ. Blog nội bộ vẫn tuân theo vòng đời riêng của service.",
   deletePost:
     "Xóa bài đăng owner theo service; không xóa tài khoản tác giả hoặc media master bằng request này.",
   submitPost:
@@ -1089,6 +1089,15 @@ const curatedRequests = {
         { foodItemId: exampleId, quantity: 200, unit: "g", gramEquivalent: 200, order: 1 },
       ],
       steps: [{ order: 1, instruction: "Cắt đậu hũ và áp chảo đến vàng đều.", timerSeconds: 600 }],
+      visibility: "public",
+    },
+  },
+  createPost: {
+    Bai_viet_lien_ket_nguyen_lieu: {
+      title: "Mẹo sơ chế đậu hũ",
+      content: "Ép bớt nước trước khi áp chảo để đậu hũ giòn lâu hơn.",
+      foodItemIds: [exampleId],
+      postType: "community",
       visibility: "public",
     },
   },

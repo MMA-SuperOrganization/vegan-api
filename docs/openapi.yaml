@@ -31758,7 +31758,7 @@ paths:
 
         **Nghiệp vụ:** Bài đăng cộng đồng được xuất bản ngay khi người dùng tạo. Nội dung công khai vẫn phụ thuộc visibility và moderation; người dùng có thể báo cáo nội dung vi phạm.
 
-        Tạo bài đăng cộng đồng và xuất bản ngay theo dữ liệu hợp lệ; blog nội bộ vẫn tuân theo vòng đời riêng của service.
+        Tạo bài đăng cộng đồng và xuất bản ngay; bắt buộc liên kết ít nhất một foodItemIds hoặc một recipeId hợp lệ. Blog nội bộ vẫn tuân theo vòng đời riêng của service.
 
         **Request:** application/json; body bắt buộc, các trường bắt buộc được đánh dấu trong schema. Không gửi trường ngoài schema khi additionalProperties=false.
 
@@ -31787,6 +31787,18 @@ paths:
                 value:
                   title: Ví dụ
                   content: Ví dụ
+                  foodItemIds:
+                    - 507f1f77bcf86cd799439011
+              Bai_viet_lien_ket_nguyen_lieu:
+                summary: Bai viet lien ket nguyen lieu
+                description: Ví dụ nghiệp vụ hợp lệ theo validator. Thay ID và thời điểm bằng resource/dữ liệu thật; service vẫn kiểm tra quyền, trạng thái, dị ứng và dependency.
+                value:
+                  title: Mẹo sơ chế đậu hũ
+                  content: Ép bớt nước trước khi áp chảo để đậu hũ giòn lâu hơn.
+                  foodItemIds:
+                    - 507f1f77bcf86cd799439011
+                  postType: community
+                  visibility: public
       responses:
         "201":
           description: Created
@@ -58704,6 +58716,17 @@ components:
             pattern: ^[A-Fa-f0-9]{24}$
             description: Trường media Ids item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. ObjectId gồm 24 ký tự hexadecimal.
           description: Danh sách media liên kết với nội dung.
+        foodItemIds:
+          type:
+            - array
+            - "null"
+          items:
+            type:
+              - string
+              - "null"
+            pattern: ^[A-Fa-f0-9]{24}$
+            description: Trường food Item Ids item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. ObjectId gồm 24 ký tự hexadecimal.
+          description: ID tham chiếu foodItemIds; xem resource tương ứng và kiểm tra quyền ở service.
         recipeId:
           type:
             - string
@@ -64979,6 +65002,17 @@ components:
             pattern: ^[A-Fa-f0-9]{24}$
             description: Trường media Ids item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. ObjectId gồm 24 ký tự hexadecimal.
           description: Danh sách media liên kết với nội dung.
+        foodItemIds:
+          type:
+            - array
+            - "null"
+          items:
+            type:
+              - string
+              - "null"
+            pattern: ^[A-Fa-f0-9]{24}$
+            description: Trường food Item Ids item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. ObjectId gồm 24 ký tự hexadecimal.
+          description: ID tham chiếu foodItemIds; xem resource tương ứng và kiểm tra quyền ở service.
         recipeId:
           type:
             - string
@@ -65135,6 +65169,17 @@ components:
             pattern: ^[A-Fa-f0-9]{24}$
             description: Trường media Ids item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. ObjectId gồm 24 ký tự hexadecimal.
           description: Danh sách media liên kết với nội dung.
+        foodItemIds:
+          type:
+            - array
+            - "null"
+          items:
+            type:
+              - string
+              - "null"
+            pattern: ^[A-Fa-f0-9]{24}$
+            description: Trường food Item Ids item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. ObjectId gồm 24 ký tự hexadecimal.
+          description: ID tham chiếu foodItemIds; xem resource tương ứng và kiểm tra quyền ở service.
         recipeId:
           type:
             - string
@@ -74647,6 +74692,14 @@ components:
             pattern: ^[a-f\d]{24}$
             description: Trường category Ids item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. ObjectId gồm 24 ký tự hexadecimal.
           description: Danh sách ID danh mục master data.
+        foodItemIds:
+          maxItems: 50
+          type: array
+          items:
+            type: string
+            pattern: ^[a-f\d]{24}$
+            description: Trường food Item Ids item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. ObjectId gồm 24 ký tự hexadecimal.
+          description: ID tham chiếu foodItemIds; xem resource tương ứng và kiểm tra quyền ở service.
         recipeId:
           anyOf:
             - type: string
@@ -74740,6 +74793,14 @@ components:
             pattern: ^[a-f\d]{24}$
             description: Trường category Ids item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. ObjectId gồm 24 ký tự hexadecimal.
           description: Danh sách ID danh mục master data.
+        foodItemIds:
+          maxItems: 50
+          type: array
+          items:
+            type: string
+            pattern: ^[a-f\d]{24}$
+            description: Trường food Item Ids item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. ObjectId gồm 24 ký tự hexadecimal.
+          description: ID tham chiếu foodItemIds; xem resource tương ứng và kiểm tra quyền ở service.
         recipeId:
           anyOf:
             - type: string

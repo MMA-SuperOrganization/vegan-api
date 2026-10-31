@@ -11,18 +11,24 @@ import {
   mineQuery,
   contentPatch,
 } from "../../common/validators/content.schemas.js";
-export const postInput = z
+const postFields = z
   .object({
     title: text(200),
     content: text(30000),
     mediaIds: ids.optional(),
     tags: tags.optional(),
     categoryIds: ids.optional(),
+    foodItemIds: ids.optional(),
     recipeId: id.optional().nullable(),
     postType: z.enum(POST_TYPES.values()).optional(),
     visibility: z.enum(POST_VISIBILITIES.values()).optional(),
   })
   .strict();
+const hasFoodRelationship = (post) => Boolean(post.recipeId || post.foodItemIds?.length);
+export const postInput = postFields.refine(
+  hasFoodRelationship,
+  "A post must link at least one ingredient or one recipe",
+);
 export const createPostsValidation = () => ({
   getPosts: {
     query: contentQuery.extend({
@@ -33,7 +39,7 @@ export const createPostsValidation = () => ({
   getMyPosts: { query: mineQuery.extend({ postType: z.enum(POST_TYPES.values()).optional() }) },
   getPost: { params: idParams },
   createPost: { body: postInput },
-  updatePost: { params: idParams, body: contentPatch(postInput) },
+  updatePost: { params: idParams, body: contentPatch(postFields) },
   deletePost: { params: idParams },
   submitPost: { params: idParams, body: versionBody },
   publishPost: { params: idParams, body: versionBody },

@@ -15,6 +15,7 @@ export const PostsModel = registerModel(
     ...socialContentFields,
     content: { ...shortText(30000), required: true },
     mediaIds: [ref("Media")],
+    foodItemIds: [ref("FoodItems")],
     recipeId: ref("Recipes"),
     postType: { type: String, enum: POST_TYPES.values(), default: POST_TYPES.COMMUNITY },
     visibility: {
