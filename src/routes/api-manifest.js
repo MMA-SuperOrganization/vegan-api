@@ -244,6 +244,43 @@ export const apiManifest = [
     operationId: "deleteFoodItem",
   },
 
+  // Owner-scoped ingredients augment the shared food catalog without mutating it.
+  {
+    method: "GET",
+    path: "/ingredients/suggestions",
+    auth: "owner",
+    module: "personal-ingredients",
+    operationId: "getIngredientSuggestions",
+  },
+  {
+    method: "GET",
+    path: "/personal-ingredients",
+    auth: "owner",
+    module: "personal-ingredients",
+    operationId: "getPersonalIngredients",
+  },
+  {
+    method: "POST",
+    path: "/personal-ingredients",
+    auth: "owner",
+    module: "personal-ingredients",
+    operationId: "createPersonalIngredient",
+  },
+  {
+    method: "PATCH",
+    path: "/personal-ingredients/:id",
+    auth: "owner",
+    module: "personal-ingredients",
+    operationId: "updatePersonalIngredient",
+  },
+  {
+    method: "DELETE",
+    path: "/personal-ingredients/:id",
+    auth: "owner",
+    module: "personal-ingredients",
+    operationId: "deletePersonalIngredient",
+  },
+
   // Recipe & Search
   { method: "GET", path: "/recipes", auth: "public", module: "recipes", operationId: "getRecipes" },
   {

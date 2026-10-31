@@ -974,6 +974,11 @@ Không trả `medicalNotes` qua public profile. Kết quả BMI/calorie target p
 | POST   | `/food-items`     | admin                 | Tạo food item                                                  |
 | PATCH  | `/food-items/:id` | admin                 | Cập nhật                                                       |
 | DELETE | `/food-items/:id` | admin                 | Inactivate, không phá snapshot                                 |
+| GET    | `/ingredients/suggestions` | owner        | Gợi ý hợp nhất food item chung và nguyên liệu riêng            |
+| GET    | `/personal-ingredients` | owner            | Danh sách nguyên liệu riêng của người dùng                     |
+| POST   | `/personal-ingredients` | owner           | Tạo nguyên liệu chỉ thuộc người dùng hiện tại                  |
+| PATCH  | `/personal-ingredients/:id` | owner       | Sửa nguyên liệu riêng                                          |
+| DELETE | `/personal-ingredients/:id` | owner       | Inactivate nguyên liệu riêng                                   |
 
 Food search hỗ trợ `q`, category, allergen exclusion, vegan flag và sort whitelist.
 

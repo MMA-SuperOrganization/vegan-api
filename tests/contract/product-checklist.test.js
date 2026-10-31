@@ -12,12 +12,12 @@ const operations = [
   path: match[3],
 }));
 describe("independent product checklist endpoint baseline", () => {
-  it("implements every one of the 184 numbered product operations, without duplicates or extras", () => {
+  it("implements every one of the 189 numbered product operations, without duplicates or extras", () => {
     expect(operations.map((row) => row.number)).toEqual(
-      Array.from({ length: 184 }, (_, i) => i + 1),
+      Array.from({ length: 189 }, (_, i) => i + 1),
     );
     const keys = (rows) => rows.map((row) => `${row.method} ${row.path}`).sort();
-    expect(new Set(keys(operations)).size).toBe(184);
+    expect(new Set(keys(operations)).size).toBe(189);
     expect(keys(apiManifest)).toEqual(keys(operations));
   });
   it("has a concrete validator, controller and response contract for every checklist API", () => {

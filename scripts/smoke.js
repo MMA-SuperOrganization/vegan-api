@@ -26,7 +26,7 @@ try {
   assert.equal(auth.status, 401);
   const body = await auth.json();
   assert.equal(body.error.code, "TOKEN_MISSING");
-  assert.equal(Object.keys(runtime.container.operations).length, 184);
+  assert.equal(Object.keys(runtime.container.operations).length, 189);
   process.stdout.write(
     `Native import/listen/health/readiness/Swagger/auth smoke PASS on ${process.version}; all integrations mocked.\n`,
   );

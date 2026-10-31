@@ -38,6 +38,11 @@ GET /food-items/:id getFoodItem
 POST /food-items createFoodItem
 PATCH /food-items/:id updateFoodItem
 DELETE /food-items/:id deleteFoodItem
+GET /ingredients/suggestions getIngredientSuggestions
+GET /personal-ingredients getPersonalIngredients
+POST /personal-ingredients createPersonalIngredient
+PATCH /personal-ingredients/:id updatePersonalIngredient
+DELETE /personal-ingredients/:id deletePersonalIngredient
 GET /recipes getRecipes
 GET /recipes/mine getMyRecipes
 GET /recipes/:idOrSlug getRecipe

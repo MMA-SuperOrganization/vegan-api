@@ -65,14 +65,14 @@ const documentedOperations = (doc) =>
 // These assertions replace the previous integration test's path-only comparison.
 // Required method/path/auth comes from source chapters 11/13, NOT apiManifest.
 describe("Independent source -> mounted API -> OpenAPI -> matrix contract", () => {
-  it("reads the exact 184 required source rows and stable ID expectations", () => {
-    expect(baseline).toHaveLength(184);
+  it("reads the exact 189 required source rows and stable ID expectations", () => {
+    expect(baseline).toHaveLength(189);
     expect(
       readSourceEndpoints("## 11. API\n| GET    | `/health`     | public   | Health |"),
     ).toMatchObject([{ method: "GET", path: "/health", auth: "public", summary: "Health" }]);
-    expect(expectedOperationIds.size).toBe(184);
+    expect(expectedOperationIds.size).toBe(189);
     expect(sorted(expectedOperationIds.keys())).toEqual(sorted(baseline.map(key)));
-    expect(new Set(apiManifest.map((route) => route.operationId)).size).toBe(184);
+    expect(new Set(apiManifest.map((route) => route.operationId)).size).toBe(189);
     assertEndpointSet(apiManifest, baseline);
     for (const endpoint of baseline) {
       const actual = apiManifest.find((route) => key(route) === key(endpoint));
@@ -158,7 +158,7 @@ describe("Independent source -> mounted API -> OpenAPI -> matrix contract", () =
     expect(openapi.openapi).toBe("3.1.0");
     expect(
       new Set(documentedOperations(openapi).map((operation) => operation.operationId)).size,
-    ).toBe(184);
+    ).toBe(189);
     for (const route of registry.operations) {
       const operation = openapi.paths[openApiPath(route.path)][route.method.toLowerCase()];
       expect(operation.operationId).toBe(expectedOperationIds.get(key(route)));
@@ -210,7 +210,7 @@ describe("Independent source -> mounted API -> OpenAPI -> matrix contract", () =
       )
       .map((line) => line.replace(/ +/g, " "));
     const backendRows = rows.filter((row) => !row.includes("CLIENT_ONLY"));
-    expect(backendRows).toHaveLength(184);
+    expect(backendRows).toHaveLength(189);
     for (const route of registry.operations) {
       const row = backendRows.find((row) =>
         row.includes(`| \`${route.path}\` | \`${route.method}\` |`),

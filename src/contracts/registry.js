@@ -94,6 +94,7 @@ export const dedicatedTests = {
   categories: "tests/integration/identity-http.test.js",
   allergens: "tests/integration/identity-http.test.js",
   "food-items": "tests/integration/identity-http.test.js",
+  "personal-ingredients": "tests/unit/personal-ingredients.http.test.js",
   recipes: "tests/integration/content-complete.test.js",
   posts: "tests/integration/content-complete.test.js",
   videos: "tests/integration/content-complete.test.js",
@@ -167,6 +168,21 @@ export function createContractRegistry(container = createContractContainer()) {
   };
   const model = (key) => schemas[modelNames[key]];
   schemas.PublicFoodItem = omit(model("foodItems"), ["normalizedName", "createdBy", "updatedBy"]);
+  schemas.PublicPersonalIngredient = omit(model("personalIngredients"), [
+    "userId",
+    "normalizedName",
+  ]);
+  schemas.IngredientSuggestion = object(
+    {
+      id,
+      source: string,
+      name: string,
+      defaultUnit: string,
+      foodItemId: id,
+      personalIngredientId: id,
+    },
+    ["id", "source", "name", "defaultUnit"],
+  );
   schemas.Account = extend(
     project(model("users"), [
       "_id",
@@ -530,6 +546,12 @@ export function createContractRegistry(container = createContractContainer()) {
     assign(`create${singular} update${singular} delete${singular}`, entity(key));
   }
   assign("getFoodItem", entity("foodItems"));
+  assign("getIngredientSuggestions", array(ref("IngredientSuggestion")));
+  list("getPersonalIngredients", ref("PublicPersonalIngredient"));
+  assign(
+    "createPersonalIngredient updatePersonalIngredient deletePersonalIngredient",
+    ref("PublicPersonalIngredient"),
+  );
   for (const [key, singular, ids] of [
     ["recipes", "Recipe", "getRecipes getMyRecipes"],
     ["posts", "Post", "getPosts getMyPosts"],

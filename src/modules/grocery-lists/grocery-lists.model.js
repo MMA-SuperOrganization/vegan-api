@@ -6,6 +6,10 @@ const item = new mongoose.Schema(
   {
     itemId: { type: String, required: true },
     foodItemId: { type: mongoose.Schema.Types.ObjectId, ref: "FoodItems" },
+    personalIngredientId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "PersonalIngredients",
+    },
     nameSnapshot: { type: String, trim: true, required: true, maxlength: 200 },
     quantity: { type: Number, required: true, min: Number.EPSILON, max: 1000000 },
     unit: { type: String, enum: UNITS, required: true },

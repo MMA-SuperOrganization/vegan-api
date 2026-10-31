@@ -449,6 +449,7 @@ export const REPOSITORY_KEYS = [
   "categories",
   "allergens",
   "foodItems",
+  "personalIngredients",
   "mediaAssets",
   "recipes",
   "posts",

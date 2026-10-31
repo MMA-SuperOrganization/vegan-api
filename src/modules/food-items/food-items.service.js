@@ -107,94 +107,96 @@ export const createFoodItemsService = ({ deps, repository }) => {
       return publicFood(after);
     });
   };
-  return {
-    operations: {
-      async searchFoodItems({ query = {}, actor }) {
-        const filter = { status: actor?.role === "admin" ? (query.status ?? "active") : "active" };
-        if (query.q)
-          filter.$or = ["name", "normalizedName", "aliases"].map((key) => ({
-            [key]: fuzzyMongoRegex(query.q),
-          }));
-        if (query.categoryId ?? query.category)
-          filter.categoryId = query.categoryId ?? query.category;
-        const exclude = [
-          ...new Set([...(query.excludeAllergenIds ?? []), ...(query.allergenExclusion ?? [])]),
-        ];
-        if (exclude.length) filter.allergenIds = { $nin: exclude };
-        if (query.isVegan !== undefined) filter.isVegan = query.isVegan;
-        if (query.isVegetarian !== undefined) filter.isVegetarian = query.isVegetarian;
-        const sorts = {
-          name: { normalizedName: 1, _id: 1 },
-          "-name": { normalizedName: -1, _id: -1 },
-          createdAt: { createdAt: 1, _id: 1 },
-          "-createdAt": { createdAt: -1, _id: -1 },
-          calories: { "nutritionPer100g.caloriesKcal": 1, _id: 1 },
-          "-calories": { "nutritionPer100g.caloriesKcal": -1, _id: -1 },
-        };
-        const result = await repository.findMany(filter, {
-          page: query.page,
-          limit: query.limit,
-          sort: sorts[query.sort ?? "name"],
-        });
-        return { ...result, data: result.data.map(publicFood) };
-      },
-      async getFoodItem({ params }) {
-        return publicFood(await getById(params.id));
-      },
-      createFoodItem: (context) =>
-        mutate(context, "foodItem.create", async (session) => {
-          const data = {
-            ...context.body,
-            normalizedName: context.body.name.normalize("NFKC").toLowerCase(),
-            slug: context.body.slug ?? slug(context.body.name),
-            aliases: context.body.aliases ?? [],
-            allergenIds: context.body.allergenIds ?? [],
-            status: context.body.status ?? "active",
-            createdBy: context.actor.userId,
-            updatedBy: context.actor.userId,
-          };
-          await references(data, session);
-          await unique(data.slug, null, session);
-          return { before: null, after: await repository.create(data, { session }) };
-        }),
-      updateFoodItem: (context) =>
-        mutate(context, "foodItem.update", async (session) => {
-          const before = await getById(context.params.id, { session, allowInactive: true });
-          const data = { ...context.body, updatedBy: context.actor.userId };
-          if (data.name) data.normalizedName = data.name.normalize("NFKC").toLowerCase();
-          if ((data.isVegan ?? before.isVegan) && !(data.isVegetarian ?? before.isVegetarian))
-            throw AppError.badRequest("A vegan food must also be vegetarian");
-          const candidate = { ...before, ...data };
-          if (candidate.isVegan && (candidate.containsEggs || candidate.containsDairy))
-            throw AppError.badRequest("Vegan foods cannot contain eggs or dairy");
-          await references(data, session);
-          if (data.slug) await unique(data.slug, before._id, session);
-          return {
-            before,
-            after: requireFound(
-              await repository.updateOne(
-                { _id: before._id },
-                { $set: data },
-                { session, new: true },
-              ),
-            ),
-          };
-        }),
-      deleteFoodItem: (context) =>
-        mutate(context, "foodItem.inactivate", async (session) => {
-          const before = await getById(context.params.id, { session, allowInactive: true });
-          return {
-            before,
-            after: requireFound(
-              await repository.updateOne(
-                { _id: before._id },
-                { $set: { status: "inactive", updatedBy: context.actor.userId } },
-                { session, new: true },
-              ),
-            ),
-          };
-        }),
+  const operations = {
+    async searchFoodItems({ query = {}, actor }) {
+      const filter = { status: actor?.role === "admin" ? (query.status ?? "active") : "active" };
+      if (query.q)
+        filter.$or = ["name", "normalizedName", "aliases"].map((key) => ({
+          [key]: fuzzyMongoRegex(query.q),
+        }));
+      if (query.categoryId ?? query.category)
+        filter.categoryId = query.categoryId ?? query.category;
+      const exclude = [
+        ...new Set([...(query.excludeAllergenIds ?? []), ...(query.allergenExclusion ?? [])]),
+      ];
+      if (exclude.length) filter.allergenIds = { $nin: exclude };
+      if (query.isVegan !== undefined) filter.isVegan = query.isVegan;
+      if (query.isVegetarian !== undefined) filter.isVegetarian = query.isVegetarian;
+      const sorts = {
+        name: { normalizedName: 1, _id: 1 },
+        "-name": { normalizedName: -1, _id: -1 },
+        createdAt: { createdAt: 1, _id: 1 },
+        "-createdAt": { createdAt: -1, _id: -1 },
+        calories: { "nutritionPer100g.caloriesKcal": 1, _id: 1 },
+        "-calories": { "nutritionPer100g.caloriesKcal": -1, _id: -1 },
+      };
+      const result = await repository.findMany(filter, {
+        page: query.page,
+        limit: query.limit,
+        sort: sorts[query.sort ?? "name"],
+      });
+      return { ...result, data: result.data.map(publicFood) };
     },
-    services: { getById, getMany, getUnsafeIds },
+    async getFoodItem({ params }) {
+      return publicFood(await getById(params.id));
+    },
+    createFoodItem: (context) =>
+      mutate(context, "foodItem.create", async (session) => {
+        const data = {
+          ...context.body,
+          normalizedName: context.body.name.normalize("NFKC").toLowerCase(),
+          slug: context.body.slug ?? slug(context.body.name),
+          aliases: context.body.aliases ?? [],
+          allergenIds: context.body.allergenIds ?? [],
+          status: context.body.status ?? "active",
+          createdBy: context.actor.userId,
+          updatedBy: context.actor.userId,
+        };
+        await references(data, session);
+        await unique(data.slug, null, session);
+        return { before: null, after: await repository.create(data, { session }) };
+      }),
+    updateFoodItem: (context) =>
+      mutate(context, "foodItem.update", async (session) => {
+        const before = await getById(context.params.id, { session, allowInactive: true });
+        const data = { ...context.body, updatedBy: context.actor.userId };
+        if (data.name) data.normalizedName = data.name.normalize("NFKC").toLowerCase();
+        if ((data.isVegan ?? before.isVegan) && !(data.isVegetarian ?? before.isVegetarian))
+          throw AppError.badRequest("A vegan food must also be vegetarian");
+        const candidate = { ...before, ...data };
+        if (candidate.isVegan && (candidate.containsEggs || candidate.containsDairy))
+          throw AppError.badRequest("Vegan foods cannot contain eggs or dairy");
+        await references(data, session);
+        if (data.slug) await unique(data.slug, before._id, session);
+        return {
+          before,
+          after: requireFound(
+            await repository.updateOne({ _id: before._id }, { $set: data }, { session, new: true }),
+          ),
+        };
+      }),
+    deleteFoodItem: (context) =>
+      mutate(context, "foodItem.inactivate", async (session) => {
+        const before = await getById(context.params.id, { session, allowInactive: true });
+        return {
+          before,
+          after: requireFound(
+            await repository.updateOne(
+              { _id: before._id },
+              { $set: { status: "inactive", updatedBy: context.actor.userId } },
+              { session, new: true },
+            ),
+          ),
+        };
+      }),
+  };
+  return {
+    operations,
+    services: {
+      getById,
+      getMany,
+      getUnsafeIds,
+      search: (query) => operations.searchFoodItems({ query, actor: undefined }),
+    },
   };
 };

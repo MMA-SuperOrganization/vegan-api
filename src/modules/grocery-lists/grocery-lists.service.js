@@ -46,6 +46,16 @@ export function createGroceryListsService({ groceryListsRepository: repo, servic
         });
         categorySnapshot = category?.name;
       }
+    } else if (parsed.personalIngredientId) {
+      if (!services.personalIngredients?.getOwned)
+        throw AppError.serviceUnavailable("Personal ingredient service is unavailable");
+      const ingredient = await services.personalIngredients.getOwned(
+        userId,
+        parsed.personalIngredientId,
+        { session: options.session },
+      );
+      if (ingredient.status !== "active") throw AppError.notFound("Personal ingredient not found");
+      nameSnapshot = ingredient.name;
     }
     return { ...parsed, itemId: randomUUID(), nameSnapshot, categorySnapshot, checked: false };
   }

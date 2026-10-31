@@ -18,6 +18,7 @@ import { createOnboardingModule } from "./modules/onboarding/index.js";
 import { createCategoriesModule } from "./modules/categories/index.js";
 import { createAllergensModule } from "./modules/allergens/index.js";
 import { createFoodItemsModule } from "./modules/food-items/index.js";
+import { createPersonalIngredientsModule } from "./modules/personal-ingredients/index.js";
 import { createMediaModule } from "./modules/media/index.js";
 import { createRecipesModule } from "./modules/recipes/index.js";
 import { createPostsModule } from "./modules/posts/index.js";
@@ -54,6 +55,7 @@ const FACTORIES = [
   createCategoriesModule,
   createAllergensModule,
   createFoodItemsModule,
+  createPersonalIngredientsModule,
   createMediaModule,
   createRecipesModule,
   createPostsModule,

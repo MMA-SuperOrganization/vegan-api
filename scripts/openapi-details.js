@@ -18,6 +18,8 @@ export const moduleNotes = {
     "Danh mục chất gây dị ứng: public đọc, admin quản lý. ID được tham chiếu bởi thực phẩm và hồ sơ dinh dưỡng.",
   "food-items":
     "Thực phẩm chuẩn và dinh dưỡng trên 100 g. isVegan=true phải tương thích isVegetarian và không được chứa trứng/sữa; PATCH kiểm tra cả trạng thái sau khi ghép dữ liệu cũ.",
+  "personal-ingredients":
+    "Nguyên liệu tùy chỉnh thuộc riêng từng người dùng. Tìm kiếm gợi ý hợp nhất dữ liệu cá nhân với catalog chung nhưng không ghi dữ liệu cá nhân vào food-items.",
   recipes:
     "Công thức gồm nguyên liệu, bước thực hiện và dinh dưỡng tính từ thực phẩm chuẩn. Luồng nội dung sử dụng draft, pending_review, published và các trạng thái kiểm duyệt.",
   search:
@@ -131,6 +133,16 @@ export const operationNotes = {
     "Admin gửi ít nhất một trường; kiểm tra vegan/vegetarian/trứng/sữa trên trạng thái ghép mới, không chỉ các trường trong payload.",
   deleteFoodItem:
     "Admin chuyển status sang inactive, cập nhật updatedBy và ghi audit; không xóa cứng thực phẩm. Snapshot lịch sử không tự sửa theo request này.",
+  getIngredientSuggestions:
+    "Tìm theo q trong catalog chung và nguyên liệu riêng của người gọi. Mỗi kết quả có source cùng foodItemId hoặc personalIngredientId để client lưu đúng loại tham chiếu.",
+  getPersonalIngredients:
+    "Liệt kê nguyên liệu active chỉ thuộc người gọi, có phân trang và tìm kiếm theo tên.",
+  createPersonalIngredient:
+    "Tạo nguyên liệu riêng với tên và đơn vị mặc định. Tên được chuẩn hóa không dấu để chống trùng trong phạm vi cùng một người dùng.",
+  updatePersonalIngredient:
+    "Owner sửa tên hoặc đơn vị mặc định; không thể truy cập nguyên liệu của người dùng khác.",
+  deletePersonalIngredient:
+    "Owner chuyển nguyên liệu riêng sang inactive. Grocery item đã lưu vẫn giữ nameSnapshot lịch sử.",
   getRecipes:
     "Danh sách công thức công khai có phân trang và bộ lọc chế độ ăn, dị ứng, độ khó, thời gian và ẩm thực theo query. Tên công thức hỗ trợ tìm gần đúng có giới hạn và bỏ dấu tiếng Việt.",
   getMyRecipes:

@@ -3,7 +3,7 @@ info:
   title: Vegan Support API (MMA302)
   version: 0.1.0
   description: |-
-    Tài liệu 184 API backend, sinh từ route registry và Zod validator.
+    Tài liệu 189 API backend, sinh từ route registry và Zod validator.
 
     Đăng nhập bằng Firebase client SDK, lấy ID token, bấm Authorize và nhập token (không thêm chữ Bearer trong ô Swagger). Gọi POST /auth/sync trước API cá nhân. Optional auth cho phép guest nhưng từ chối token đã gửi mà không hợp lệ.
 
@@ -65,6 +65,8 @@ tags:
     description: Đọc và cập nhật lựa chọn ban đầu về chế độ ăn, dị ứng, mục tiêu và thông tin cơ thể; hoàn tất yêu cầu các trường bắt buộc đã có.
   - name: pantries
     description: Kho thực phẩm của chính người dùng; quantity đi cùng unit. Gợi ý công thức dựa trên nguyên liệu trong kho và ràng buộc chế độ ăn/dị ứng.
+  - name: personal-ingredients
+    description: Nguyên liệu tùy chỉnh thuộc riêng từng người dùng. Tìm kiếm gợi ý hợp nhất dữ liệu cá nhân với catalog chung nhưng không ghi dữ liệu cá nhân vào food-items.
   - name: posts
     description: Bài đăng cộng đồng được xuất bản ngay khi người dùng tạo. Nội dung công khai vẫn phụ thuộc visibility và moderation; người dùng có thể báo cáo nội dung vi phạm.
   - name: ratings
@@ -10230,6 +10232,1445 @@ paths:
                     error:
                       code: PAYLOAD_TOO_LARGE
                       message: Request payload too large
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "429":
+          description: "Request rate exceeded. Các mã có thể gặp từ middleware/service: TOO_MANY_REQUESTS. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 429 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: TOO_MANY_REQUESTS
+                      message: Too many requests
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+            RateLimit:
+              description: Thông tin quota và thời gian reset của limiter (draft-8); tên policy/quota phụ thuộc cấu hình.
+              schema:
+                type: string
+            RateLimit-Policy:
+              description: Chính sách quota/window hiện áp dụng (draft-8).
+              schema:
+                type: string
+            Retry-After:
+              description: Số giây trước khi nên retry request bị giới hạn; chỉ có khi limiter phát header.
+              schema:
+                type: string
+        "500":
+          description: "Sanitized internal server error. Các mã có thể gặp từ middleware/service: INTERNAL_ERROR. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 500 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: INTERNAL_ERROR
+                      message: Internal server error
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "503":
+          description: "Required dependency unavailable or feature disabled. Các mã có thể gặp từ middleware/service: SERVICE_UNAVAILABLE, DEPENDENCY_UNAVAILABLE, TRANSACTIONS_REQUIRED; Firebase: AUTH_PROVIDER_ERROR; AI: AI_DISABLED/AI_UNAVAILABLE; storage: STORAGE_PROVIDER_ERROR; readiness: DATABASE_UNAVAILABLE. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 503 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: SERVICE_UNAVAILABLE
+                      message: Required dependency unavailable
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+  /ingredients/suggestions:
+    get:
+      tags:
+        - personal-ingredients
+      summary: Gợi ý hợp nhất food item chung và nguyên liệu riêng
+      description: |-
+        Gợi ý hợp nhất food item chung và nguyên liệu riêng.
+
+        **Quyền truy cập:** Bắt buộc Firebase ID token, tài khoản active và quyền sở hữu resource. Backend lấy danh tính từ token; ID của người khác không cấp quyền truy cập.
+
+        **Nghiệp vụ:** Nguyên liệu tùy chỉnh thuộc riêng từng người dùng. Tìm kiếm gợi ý hợp nhất dữ liệu cá nhân với catalog chung nhưng không ghi dữ liệu cá nhân vào food-items.
+
+        Tìm theo q trong catalog chung và nguyên liệu riêng của người gọi. Mỗi kết quả có source cùng foodItemId hoặc personalIngredientId để client lưu đúng loại tham chiếu.
+
+        **Query:** xem danh sách tham số để biết bộ lọc, default và giới hạn. page bắt đầu từ 1 nếu endpoint phân trang; không gửi chuỗi 'undefined' hoặc 'null' thay cho tham số bị bỏ qua.
+
+        **Response:** HTTP 200; envelope {success:true,data,meta}. data theo schema getIngredientSuggestionsResponse; meta.requestId khớp X-Request-Id. Danh sách có metadata phân trang khi schema khai báo.
+
+        **Lỗi:** envelope {success:false,error:{code,message,details},meta:{requestId}}. 400 là dữ liệu/điều kiện nghiệp vụ không hợp lệ; 404 có thể che resource không được phép truy cập. Xem responses cho lỗi xác thực, xung đột, giới hạn và dependency. Các mã lỗi chung là khả năng của middleware, không bảo đảm mọi nhánh xuất hiện ở mọi request.
+      operationId: getIngredientSuggestions
+      x-auth: owner
+      x-tests:
+        - tests/contract/api-contract.test.js
+        - tests/unit/personal-ingredients.http.test.js
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Từ khóa tìm kiếm; chuỗi được trim và giới hạn độ dài.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+          example: Ví dụ
+        - name: limit
+          in: query
+          required: false
+          description: "Số bản ghi tối đa mỗi trang; default và giới hạn nằm trong schema. Mặc định: 20."
+          schema:
+            default: 20
+            type: integer
+            minimum: 1
+            maximum: 50
+          example: 20
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/getIngredientSuggestionsResponse"
+              examples:
+                example:
+                  summary: Kết quả thành công minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: true
+                    data:
+                      - id: 507f1f77bcf86cd799439011
+                        source: Ví dụ
+                        name: Ví dụ
+                        defaultUnit: Ví dụ
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "400":
+          description: "Invalid request / business validation. Các mã có thể gặp từ middleware/service: BAD_REQUEST, VALIDATION_ERROR, INVALID_JSON, INVALID_ID. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 400 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: VALIDATION_ERROR
+                      message: Validation failed
+                      details:
+                        - location: body
+                          path: exampleField
+                          code: invalid_type
+                          message: Invalid field value
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "401":
+          description: "Missing, expired or invalid Firebase token. Các mã có thể gặp từ middleware/service: TOKEN_MISSING, TOKEN_INVALID, TOKEN_EXPIRED, TOKEN_REVOKED, UNAUTHORIZED. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 401 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: UNAUTHORIZED
+                      message: Authentication required
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "403":
+          description: "Inactive account, insufficient role or non-owner. Các mã có thể gặp từ middleware/service: FORBIDDEN, ACCOUNT_DISABLED, ACCOUNT_SUSPENDED, ACCOUNT_DELETED. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 403 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: FORBIDDEN
+                      message: Access denied
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "404":
+          description: "Resource not found or unavailable to this actor. Các mã có thể gặp từ middleware/service: NOT_FOUND, USER_NOT_FOUND, ROUTE_NOT_FOUND. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 404 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: NOT_FOUND
+                      message: Resource not found
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "429":
+          description: "Request rate exceeded. Các mã có thể gặp từ middleware/service: TOO_MANY_REQUESTS. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 429 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: TOO_MANY_REQUESTS
+                      message: Too many requests
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+            RateLimit:
+              description: Thông tin quota và thời gian reset của limiter (draft-8); tên policy/quota phụ thuộc cấu hình.
+              schema:
+                type: string
+            RateLimit-Policy:
+              description: Chính sách quota/window hiện áp dụng (draft-8).
+              schema:
+                type: string
+            Retry-After:
+              description: Số giây trước khi nên retry request bị giới hạn; chỉ có khi limiter phát header.
+              schema:
+                type: string
+        "500":
+          description: "Sanitized internal server error. Các mã có thể gặp từ middleware/service: INTERNAL_ERROR. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 500 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: INTERNAL_ERROR
+                      message: Internal server error
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "503":
+          description: "Required dependency unavailable or feature disabled. Các mã có thể gặp từ middleware/service: SERVICE_UNAVAILABLE, DEPENDENCY_UNAVAILABLE, TRANSACTIONS_REQUIRED; Firebase: AUTH_PROVIDER_ERROR; AI: AI_DISABLED/AI_UNAVAILABLE; storage: STORAGE_PROVIDER_ERROR; readiness: DATABASE_UNAVAILABLE. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 503 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: SERVICE_UNAVAILABLE
+                      message: Required dependency unavailable
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+  /personal-ingredients:
+    get:
+      tags:
+        - personal-ingredients
+      summary: Danh sách nguyên liệu riêng của người dùng
+      description: |-
+        Danh sách nguyên liệu riêng của người dùng.
+
+        **Quyền truy cập:** Bắt buộc Firebase ID token, tài khoản active và quyền sở hữu resource. Backend lấy danh tính từ token; ID của người khác không cấp quyền truy cập.
+
+        **Nghiệp vụ:** Nguyên liệu tùy chỉnh thuộc riêng từng người dùng. Tìm kiếm gợi ý hợp nhất dữ liệu cá nhân với catalog chung nhưng không ghi dữ liệu cá nhân vào food-items.
+
+        Liệt kê nguyên liệu active chỉ thuộc người gọi, có phân trang và tìm kiếm theo tên.
+
+        **Query:** xem danh sách tham số để biết bộ lọc, default và giới hạn. page bắt đầu từ 1 nếu endpoint phân trang; không gửi chuỗi 'undefined' hoặc 'null' thay cho tham số bị bỏ qua.
+
+        **Response:** HTTP 200; envelope {success:true,data,meta}. data theo schema getPersonalIngredientsResponse; meta.requestId khớp X-Request-Id. Danh sách có metadata phân trang khi schema khai báo.
+
+        **Lỗi:** envelope {success:false,error:{code,message,details},meta:{requestId}}. 400 là dữ liệu/điều kiện nghiệp vụ không hợp lệ; 404 có thể che resource không được phép truy cập. Xem responses cho lỗi xác thực, xung đột, giới hạn và dependency. Các mã lỗi chung là khả năng của middleware, không bảo đảm mọi nhánh xuất hiện ở mọi request.
+      operationId: getPersonalIngredients
+      x-auth: owner
+      x-tests:
+        - tests/contract/api-contract.test.js
+        - tests/unit/personal-ingredients.http.test.js
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          required: false
+          description: "Trang bắt đầu từ 1; bỏ qua dùng default trong schema. Mặc định: 1."
+          schema:
+            default: 1
+            type: integer
+            minimum: 1
+            maximum: 100000
+          example: 1
+        - name: limit
+          in: query
+          required: false
+          description: "Số bản ghi tối đa mỗi trang; default và giới hạn nằm trong schema. Mặc định: 20."
+          schema:
+            default: 20
+            type: integer
+            minimum: 1
+            maximum: 100
+          example: 20
+        - name: q
+          in: query
+          required: false
+          description: Từ khóa tìm kiếm; chuỗi được trim và giới hạn độ dài.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+          example: Ví dụ
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/getPersonalIngredientsResponse"
+              examples:
+                example:
+                  summary: Kết quả thành công minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: true
+                    data:
+                      - name: Ví dụ
+                        defaultUnit: g
+                        _id: 507f1f77bcf86cd799439011
+                    meta:
+                      page: 1
+                      limit: 1
+                      total: 1
+                      totalPages: 1
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "400":
+          description: "Invalid request / business validation. Các mã có thể gặp từ middleware/service: BAD_REQUEST, VALIDATION_ERROR, INVALID_JSON, INVALID_ID. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 400 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: VALIDATION_ERROR
+                      message: Validation failed
+                      details:
+                        - location: body
+                          path: exampleField
+                          code: invalid_type
+                          message: Invalid field value
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "401":
+          description: "Missing, expired or invalid Firebase token. Các mã có thể gặp từ middleware/service: TOKEN_MISSING, TOKEN_INVALID, TOKEN_EXPIRED, TOKEN_REVOKED, UNAUTHORIZED. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 401 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: UNAUTHORIZED
+                      message: Authentication required
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "403":
+          description: "Inactive account, insufficient role or non-owner. Các mã có thể gặp từ middleware/service: FORBIDDEN, ACCOUNT_DISABLED, ACCOUNT_SUSPENDED, ACCOUNT_DELETED. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 403 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: FORBIDDEN
+                      message: Access denied
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "404":
+          description: "Resource not found or unavailable to this actor. Các mã có thể gặp từ middleware/service: NOT_FOUND, USER_NOT_FOUND, ROUTE_NOT_FOUND. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 404 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: NOT_FOUND
+                      message: Resource not found
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "429":
+          description: "Request rate exceeded. Các mã có thể gặp từ middleware/service: TOO_MANY_REQUESTS. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 429 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: TOO_MANY_REQUESTS
+                      message: Too many requests
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+            RateLimit:
+              description: Thông tin quota và thời gian reset của limiter (draft-8); tên policy/quota phụ thuộc cấu hình.
+              schema:
+                type: string
+            RateLimit-Policy:
+              description: Chính sách quota/window hiện áp dụng (draft-8).
+              schema:
+                type: string
+            Retry-After:
+              description: Số giây trước khi nên retry request bị giới hạn; chỉ có khi limiter phát header.
+              schema:
+                type: string
+        "500":
+          description: "Sanitized internal server error. Các mã có thể gặp từ middleware/service: INTERNAL_ERROR. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 500 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: INTERNAL_ERROR
+                      message: Internal server error
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "503":
+          description: "Required dependency unavailable or feature disabled. Các mã có thể gặp từ middleware/service: SERVICE_UNAVAILABLE, DEPENDENCY_UNAVAILABLE, TRANSACTIONS_REQUIRED; Firebase: AUTH_PROVIDER_ERROR; AI: AI_DISABLED/AI_UNAVAILABLE; storage: STORAGE_PROVIDER_ERROR; readiness: DATABASE_UNAVAILABLE. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 503 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: SERVICE_UNAVAILABLE
+                      message: Required dependency unavailable
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+    post:
+      tags:
+        - personal-ingredients
+      summary: Tạo nguyên liệu chỉ thuộc người dùng hiện tại
+      description: |-
+        Tạo nguyên liệu chỉ thuộc người dùng hiện tại.
+
+        **Quyền truy cập:** Bắt buộc Firebase ID token, tài khoản active và quyền sở hữu resource. Backend lấy danh tính từ token; ID của người khác không cấp quyền truy cập.
+
+        **Nghiệp vụ:** Nguyên liệu tùy chỉnh thuộc riêng từng người dùng. Tìm kiếm gợi ý hợp nhất dữ liệu cá nhân với catalog chung nhưng không ghi dữ liệu cá nhân vào food-items.
+
+        Tạo nguyên liệu riêng với tên và đơn vị mặc định. Tên được chuẩn hóa không dấu để chống trùng trong phạm vi cùng một người dùng.
+
+        **Request:** application/json; body bắt buộc, các trường bắt buộc được đánh dấu trong schema. Không gửi trường ngoài schema khi additionalProperties=false.
+
+        **Response:** HTTP 201; envelope {success:true,data,meta}. data theo schema createPersonalIngredientResponse; meta.requestId khớp X-Request-Id. Danh sách có metadata phân trang khi schema khai báo.
+
+        **Lỗi:** envelope {success:false,error:{code,message,details},meta:{requestId}}. 400 là dữ liệu/điều kiện nghiệp vụ không hợp lệ; 404 có thể che resource không được phép truy cập. Xem responses cho lỗi xác thực, xung đột, giới hạn và dependency. Các mã lỗi chung là khả năng của middleware, không bảo đảm mọi nhánh xuất hiện ở mọi request.
+      operationId: createPersonalIngredient
+      x-auth: owner
+      x-tests:
+        - tests/contract/api-contract.test.js
+        - tests/unit/personal-ingredients.http.test.js
+      security:
+        - bearerAuth: []
+      parameters: []
+      requestBody:
+        required: true
+        description: JSON theo schema. Trường không có trong schema bị từ chối khi additionalProperties=false; bỏ qua trường optional khác với gửi null. Thay ID ví dụ bằng resource thật có quyền truy cập.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/createPersonalIngredientBody"
+            examples:
+              example1:
+                summary: Payload hợp lệ
+                description: Dữ liệu minh họa qua validator; thay ID bằng bản ghi thật có quyền truy cập. Ví dụ không chứng minh resource/provider tồn tại.
+                value:
+                  name: Ví dụ
+                  defaultUnit: g
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/createPersonalIngredientResponse"
+              examples:
+                example:
+                  summary: Kết quả thành công minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: true
+                    data:
+                      name: Ví dụ
+                      defaultUnit: g
+                      _id: 507f1f77bcf86cd799439011
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "400":
+          description: "Invalid request / business validation. Các mã có thể gặp từ middleware/service: BAD_REQUEST, VALIDATION_ERROR, INVALID_JSON, INVALID_ID. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 400 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: VALIDATION_ERROR
+                      message: Validation failed
+                      details:
+                        - location: body
+                          path: exampleField
+                          code: invalid_type
+                          message: Invalid field value
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "401":
+          description: "Missing, expired or invalid Firebase token. Các mã có thể gặp từ middleware/service: TOKEN_MISSING, TOKEN_INVALID, TOKEN_EXPIRED, TOKEN_REVOKED, UNAUTHORIZED. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 401 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: UNAUTHORIZED
+                      message: Authentication required
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "403":
+          description: "Inactive account, insufficient role or non-owner. Các mã có thể gặp từ middleware/service: FORBIDDEN, ACCOUNT_DISABLED, ACCOUNT_SUSPENDED, ACCOUNT_DELETED. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 403 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: FORBIDDEN
+                      message: Access denied
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "404":
+          description: "Resource not found or unavailable to this actor. Các mã có thể gặp từ middleware/service: NOT_FOUND, USER_NOT_FOUND, ROUTE_NOT_FOUND. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 404 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: NOT_FOUND
+                      message: Resource not found
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "409":
+          description: "Duplicate, invalid state or concurrent update conflict. Các mã có thể gặp từ middleware/service: CONFLICT, DUPLICATE_KEY, VERSION_CONFLICT, COUNTER_CONFLICT. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 409 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: CONFLICT
+                      message: Resource state conflict
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "413":
+          description: "Request exceeds JSON body limit. Các mã có thể gặp từ middleware/service: PAYLOAD_TOO_LARGE. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 413 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: PAYLOAD_TOO_LARGE
+                      message: Request payload too large
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "429":
+          description: "Request rate exceeded. Các mã có thể gặp từ middleware/service: TOO_MANY_REQUESTS. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 429 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: TOO_MANY_REQUESTS
+                      message: Too many requests
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+            RateLimit:
+              description: Thông tin quota và thời gian reset của limiter (draft-8); tên policy/quota phụ thuộc cấu hình.
+              schema:
+                type: string
+            RateLimit-Policy:
+              description: Chính sách quota/window hiện áp dụng (draft-8).
+              schema:
+                type: string
+            Retry-After:
+              description: Số giây trước khi nên retry request bị giới hạn; chỉ có khi limiter phát header.
+              schema:
+                type: string
+        "500":
+          description: "Sanitized internal server error. Các mã có thể gặp từ middleware/service: INTERNAL_ERROR. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 500 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: INTERNAL_ERROR
+                      message: Internal server error
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "503":
+          description: "Required dependency unavailable or feature disabled. Các mã có thể gặp từ middleware/service: SERVICE_UNAVAILABLE, DEPENDENCY_UNAVAILABLE, TRANSACTIONS_REQUIRED; Firebase: AUTH_PROVIDER_ERROR; AI: AI_DISABLED/AI_UNAVAILABLE; storage: STORAGE_PROVIDER_ERROR; readiness: DATABASE_UNAVAILABLE. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 503 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: SERVICE_UNAVAILABLE
+                      message: Required dependency unavailable
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+  /personal-ingredients/{id}:
+    patch:
+      tags:
+        - personal-ingredients
+      summary: Sửa nguyên liệu riêng
+      description: |-
+        Sửa nguyên liệu riêng.
+
+        **Quyền truy cập:** Bắt buộc Firebase ID token, tài khoản active và quyền sở hữu resource. Backend lấy danh tính từ token; ID của người khác không cấp quyền truy cập.
+
+        **Nghiệp vụ:** Nguyên liệu tùy chỉnh thuộc riêng từng người dùng. Tìm kiếm gợi ý hợp nhất dữ liệu cá nhân với catalog chung nhưng không ghi dữ liệu cá nhân vào food-items.
+
+        Owner sửa tên hoặc đơn vị mặc định; không thể truy cập nguyên liệu của người dùng khác.
+
+        **Request:** application/json; body bắt buộc, các trường bắt buộc được đánh dấu trong schema. Không gửi trường ngoài schema khi additionalProperties=false.
+
+        PATCH phải gửi ít nhất một trường được chỉnh sửa; bỏ qua trường để giữ nguyên, null chỉ hợp lệ khi schema cho phép.
+
+        **Response:** HTTP 200; envelope {success:true,data,meta}. data theo schema updatePersonalIngredientResponse; meta.requestId khớp X-Request-Id. Danh sách có metadata phân trang khi schema khai báo.
+
+        **Lỗi:** envelope {success:false,error:{code,message,details},meta:{requestId}}. 400 là dữ liệu/điều kiện nghiệp vụ không hợp lệ; 404 có thể che resource không được phép truy cập. Xem responses cho lỗi xác thực, xung đột, giới hạn và dependency. Các mã lỗi chung là khả năng của middleware, không bảo đảm mọi nhánh xuất hiện ở mọi request.
+      operationId: updatePersonalIngredient
+      x-auth: owner
+      x-tests:
+        - tests/contract/api-contract.test.js
+        - tests/unit/personal-ingredients.http.test.js
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID resource trong đường dẫn. ObjectId gồm 24 ký tự hexadecimal.
+          schema:
+            type: string
+            pattern: ^[a-f\d]{24}$
+          example: 507f1f77bcf86cd799439011
+      requestBody:
+        required: true
+        description: JSON theo schema. Trường không có trong schema bị từ chối khi additionalProperties=false; bỏ qua trường optional khác với gửi null. Thay ID ví dụ bằng resource thật có quyền truy cập.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/updatePersonalIngredientBody"
+            examples:
+              example1:
+                summary: Payload hợp lệ
+                description: Dữ liệu minh họa qua validator; thay ID bằng bản ghi thật có quyền truy cập. Ví dụ không chứng minh resource/provider tồn tại.
+                value:
+                  name: Ví dụ
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/updatePersonalIngredientResponse"
+              examples:
+                example:
+                  summary: Kết quả thành công minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: true
+                    data:
+                      name: Ví dụ
+                      defaultUnit: g
+                      _id: 507f1f77bcf86cd799439011
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "400":
+          description: "Invalid request / business validation. Các mã có thể gặp từ middleware/service: BAD_REQUEST, VALIDATION_ERROR, INVALID_JSON, INVALID_ID. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 400 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: VALIDATION_ERROR
+                      message: Validation failed
+                      details:
+                        - location: body
+                          path: exampleField
+                          code: invalid_type
+                          message: Invalid field value
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "401":
+          description: "Missing, expired or invalid Firebase token. Các mã có thể gặp từ middleware/service: TOKEN_MISSING, TOKEN_INVALID, TOKEN_EXPIRED, TOKEN_REVOKED, UNAUTHORIZED. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 401 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: UNAUTHORIZED
+                      message: Authentication required
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "403":
+          description: "Inactive account, insufficient role or non-owner. Các mã có thể gặp từ middleware/service: FORBIDDEN, ACCOUNT_DISABLED, ACCOUNT_SUSPENDED, ACCOUNT_DELETED. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 403 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: FORBIDDEN
+                      message: Access denied
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "404":
+          description: "Resource not found or unavailable to this actor. Các mã có thể gặp từ middleware/service: NOT_FOUND, USER_NOT_FOUND, ROUTE_NOT_FOUND. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 404 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: NOT_FOUND
+                      message: Resource not found
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "409":
+          description: "Duplicate, invalid state or concurrent update conflict. Các mã có thể gặp từ middleware/service: CONFLICT, DUPLICATE_KEY, VERSION_CONFLICT, COUNTER_CONFLICT. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 409 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: CONFLICT
+                      message: Resource state conflict
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "413":
+          description: "Request exceeds JSON body limit. Các mã có thể gặp từ middleware/service: PAYLOAD_TOO_LARGE. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 413 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: PAYLOAD_TOO_LARGE
+                      message: Request payload too large
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "429":
+          description: "Request rate exceeded. Các mã có thể gặp từ middleware/service: TOO_MANY_REQUESTS. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 429 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: TOO_MANY_REQUESTS
+                      message: Too many requests
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+            RateLimit:
+              description: Thông tin quota và thời gian reset của limiter (draft-8); tên policy/quota phụ thuộc cấu hình.
+              schema:
+                type: string
+            RateLimit-Policy:
+              description: Chính sách quota/window hiện áp dụng (draft-8).
+              schema:
+                type: string
+            Retry-After:
+              description: Số giây trước khi nên retry request bị giới hạn; chỉ có khi limiter phát header.
+              schema:
+                type: string
+        "500":
+          description: "Sanitized internal server error. Các mã có thể gặp từ middleware/service: INTERNAL_ERROR. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 500 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: INTERNAL_ERROR
+                      message: Internal server error
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "503":
+          description: "Required dependency unavailable or feature disabled. Các mã có thể gặp từ middleware/service: SERVICE_UNAVAILABLE, DEPENDENCY_UNAVAILABLE, TRANSACTIONS_REQUIRED; Firebase: AUTH_PROVIDER_ERROR; AI: AI_DISABLED/AI_UNAVAILABLE; storage: STORAGE_PROVIDER_ERROR; readiness: DATABASE_UNAVAILABLE. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 503 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: SERVICE_UNAVAILABLE
+                      message: Required dependency unavailable
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+    delete:
+      tags:
+        - personal-ingredients
+      summary: Inactivate nguyên liệu riêng
+      description: |-
+        Inactivate nguyên liệu riêng.
+
+        **Quyền truy cập:** Bắt buộc Firebase ID token, tài khoản active và quyền sở hữu resource. Backend lấy danh tính từ token; ID của người khác không cấp quyền truy cập.
+
+        **Nghiệp vụ:** Nguyên liệu tùy chỉnh thuộc riêng từng người dùng. Tìm kiếm gợi ý hợp nhất dữ liệu cá nhân với catalog chung nhưng không ghi dữ liệu cá nhân vào food-items.
+
+        Owner chuyển nguyên liệu riêng sang inactive. Grocery item đã lưu vẫn giữ nameSnapshot lịch sử.
+
+        **Response:** HTTP 200; envelope {success:true,data,meta}. data theo schema deletePersonalIngredientResponse; meta.requestId khớp X-Request-Id. Danh sách có metadata phân trang khi schema khai báo.
+
+        **Lỗi:** envelope {success:false,error:{code,message,details},meta:{requestId}}. 400 là dữ liệu/điều kiện nghiệp vụ không hợp lệ; 404 có thể che resource không được phép truy cập. Xem responses cho lỗi xác thực, xung đột, giới hạn và dependency. Các mã lỗi chung là khả năng của middleware, không bảo đảm mọi nhánh xuất hiện ở mọi request.
+      operationId: deletePersonalIngredient
+      x-auth: owner
+      x-tests:
+        - tests/contract/api-contract.test.js
+        - tests/unit/personal-ingredients.http.test.js
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID resource trong đường dẫn. ObjectId gồm 24 ký tự hexadecimal.
+          schema:
+            type: string
+            pattern: ^[a-f\d]{24}$
+          example: 507f1f77bcf86cd799439011
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/deletePersonalIngredientResponse"
+              examples:
+                example:
+                  summary: Kết quả thành công minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: true
+                    data:
+                      name: Ví dụ
+                      defaultUnit: g
+                      _id: 507f1f77bcf86cd799439011
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "400":
+          description: "Invalid request / business validation. Các mã có thể gặp từ middleware/service: BAD_REQUEST, VALIDATION_ERROR, INVALID_JSON, INVALID_ID. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 400 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: VALIDATION_ERROR
+                      message: Validation failed
+                      details:
+                        - location: body
+                          path: exampleField
+                          code: invalid_type
+                          message: Invalid field value
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "401":
+          description: "Missing, expired or invalid Firebase token. Các mã có thể gặp từ middleware/service: TOKEN_MISSING, TOKEN_INVALID, TOKEN_EXPIRED, TOKEN_REVOKED, UNAUTHORIZED. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 401 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: UNAUTHORIZED
+                      message: Authentication required
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "403":
+          description: "Inactive account, insufficient role or non-owner. Các mã có thể gặp từ middleware/service: FORBIDDEN, ACCOUNT_DISABLED, ACCOUNT_SUSPENDED, ACCOUNT_DELETED. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 403 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: FORBIDDEN
+                      message: Access denied
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "404":
+          description: "Resource not found or unavailable to this actor. Các mã có thể gặp từ middleware/service: NOT_FOUND, USER_NOT_FOUND, ROUTE_NOT_FOUND. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 404 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: NOT_FOUND
+                      message: Resource not found
+                      details: []
+                    meta:
+                      requestId: swagger-example-request
+          headers:
+            X-Request-Id:
+              description: ID đối chiếu request/log, bằng meta.requestId. Server giữ X-Request-Id đầu vào nếu hợp lệ (1–64 ký tự chữ/số/gạch dưới/gạch nối), nếu không tạo ID mới.
+              schema:
+                type: string
+                maxLength: 64
+              example: swagger-example-request
+        "409":
+          description: "Duplicate, invalid state or concurrent update conflict. Các mã có thể gặp từ middleware/service: CONFLICT, DUPLICATE_KEY, VERSION_CONFLICT, COUNTER_CONFLICT. Mã cụ thể phụ thuộc nhánh thực thi."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                example:
+                  summary: Lỗi HTTP 409 minh họa
+                  description: Ví dụ tổng hợp; giá trị/mã lỗi thực tế phụ thuộc nhánh nghiệp vụ. Schema là hợp đồng cấu trúc.
+                  value:
+                    success: false
+                    error:
+                      code: CONFLICT
+                      message: Resource state conflict
                       details: []
                     meta:
                       requestId: swagger-example-request
@@ -55933,6 +57374,67 @@ components:
           description: Timestamp updatedAt, ISO 8601 khi schema khai báo date-time.
       additionalProperties: false
       description: Trường Food Items trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+    PersonalIngredients:
+      type: object
+      required:
+        - userId
+        - name
+        - normalizedName
+        - defaultUnit
+        - _id
+      properties:
+        userId:
+          type: string
+          pattern: ^[A-Fa-f0-9]{24}$
+          description: ID tham chiếu userId; xem resource tương ứng và kiểm tra quyền ở service. ObjectId gồm 24 ký tự hexadecimal.
+        name:
+          type: string
+          maxLength: 150
+          description: Tên hiển thị.
+        normalizedName:
+          type: string
+          maxLength: 150
+          description: Tên được chuẩn hóa phục vụ tìm kiếm/chống trùng.
+        defaultUnit:
+          type: string
+          enum:
+            - g
+            - kg
+            - ml
+            - l
+            - piece
+            - tbsp
+            - tsp
+            - cup
+            - serving
+          description: "Trường default Unit trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. Giá trị cho phép: g, kg, ml, l, piece, tbsp, tsp, cup, serving."
+        status:
+          type:
+            - string
+            - "null"
+          enum:
+            - active
+            - inactive
+            - null
+          description: "Trạng thái resource; chỉ dùng các enum cho phép ở endpoint này. Giá trị cho phép: active, inactive, ."
+        _id:
+          type: string
+          pattern: ^[A-Fa-f0-9]{24}$
+          description: MongoDB ObjectId của bản ghi. ObjectId gồm 24 ký tự hexadecimal.
+        createdAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+          description: Timestamp createdAt, ISO 8601 khi schema khai báo date-time.
+        updatedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+          description: Timestamp updatedAt, ISO 8601 khi schema khai báo date-time.
+      additionalProperties: false
+      description: Trường Personal Ingredients trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
     Media:
       type: object
       required:
@@ -57974,6 +59476,12 @@ components:
                   - "null"
                 pattern: ^[A-Fa-f0-9]{24}$
                 description: ID thực phẩm chuẩn; phải tồn tại và hợp lệ theo kiểm tra service. ObjectId gồm 24 ký tự hexadecimal.
+              personalIngredientId:
+                type:
+                  - string
+                  - "null"
+                pattern: ^[A-Fa-f0-9]{24}$
+                description: ID tham chiếu personalIngredientId; xem resource tương ứng và kiểm tra quyền ở service. ObjectId gồm 24 ký tự hexadecimal.
               nameSnapshot:
                 type: string
                 maxLength: 200
@@ -59702,6 +61210,88 @@ components:
           description: Timestamp updatedAt, ISO 8601 khi schema khai báo date-time.
       additionalProperties: false
       description: Trường Public Food Item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+    PublicPersonalIngredient:
+      type: object
+      required:
+        - name
+        - defaultUnit
+        - _id
+      properties:
+        name:
+          type: string
+          maxLength: 150
+          description: Tên hiển thị.
+        defaultUnit:
+          type: string
+          enum:
+            - g
+            - kg
+            - ml
+            - l
+            - piece
+            - tbsp
+            - tsp
+            - cup
+            - serving
+          description: "Trường default Unit trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. Giá trị cho phép: g, kg, ml, l, piece, tbsp, tsp, cup, serving."
+        status:
+          type:
+            - string
+            - "null"
+          enum:
+            - active
+            - inactive
+            - null
+          description: "Trạng thái resource; chỉ dùng các enum cho phép ở endpoint này. Giá trị cho phép: active, inactive, ."
+        _id:
+          type: string
+          pattern: ^[A-Fa-f0-9]{24}$
+          description: MongoDB ObjectId của bản ghi. ObjectId gồm 24 ký tự hexadecimal.
+        createdAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+          description: Timestamp createdAt, ISO 8601 khi schema khai báo date-time.
+        updatedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+          description: Timestamp updatedAt, ISO 8601 khi schema khai báo date-time.
+      additionalProperties: false
+      description: Trường Public Personal Ingredient trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+    IngredientSuggestion:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[a-fA-F0-9]{24}$
+          description: ID resource trong đường dẫn. ObjectId gồm 24 ký tự hexadecimal.
+        source:
+          type: string
+          description: Trường Json Value trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+        name:
+          type: string
+          description: Trường Json Value trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+        defaultUnit:
+          type: string
+          description: Trường Json Value trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+        foodItemId:
+          type: string
+          pattern: ^[a-fA-F0-9]{24}$
+          description: ID resource trong đường dẫn. ObjectId gồm 24 ký tự hexadecimal.
+        personalIngredientId:
+          type: string
+          pattern: ^[a-fA-F0-9]{24}$
+          description: ID resource trong đường dẫn. ObjectId gồm 24 ký tự hexadecimal.
+      required:
+        - id
+        - source
+        - name
+        - defaultUnit
+      additionalProperties: false
+      description: Trường Ingredient Suggestion trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
     Account:
       type: object
       required:
@@ -59736,7 +61326,7 @@ components:
           anyOf:
             - type: string
               pattern: ^[a-fA-F0-9]{24}$
-              description: ID ảnh avatar sẵn sàng thuộc người dùng; null để bỏ liên kết khi schema cho phép. ObjectId gồm 24 ký tự hexadecimal.
+              description: ID resource trong đường dẫn. ObjectId gồm 24 ký tự hexadecimal.
             - type: "null"
               description: ID ảnh avatar sẵn sàng thuộc người dùng; null để bỏ liên kết khi schema cho phép.
           description: ID ảnh avatar sẵn sàng thuộc người dùng; null để bỏ liên kết khi schema cho phép.
@@ -59785,7 +61375,7 @@ components:
         userId:
           type: string
           pattern: ^[a-fA-F0-9]{24}$
-          description: ID ảnh avatar sẵn sàng thuộc người dùng; null để bỏ liên kết khi schema cho phép. ObjectId gồm 24 ký tự hexadecimal.
+          description: ID resource trong đường dẫn. ObjectId gồm 24 ký tự hexadecimal.
         avatarExpiresAt:
           type: string
           format: date-time
@@ -59798,7 +61388,7 @@ components:
         userId:
           type: string
           pattern: ^[a-fA-F0-9]{24}$
-          description: ID ảnh avatar sẵn sàng thuộc người dùng; null để bỏ liên kết khi schema cho phép. ObjectId gồm 24 ký tự hexadecimal.
+          description: ID resource trong đường dẫn. ObjectId gồm 24 ký tự hexadecimal.
         displayName:
           type: string
           description: Trường Json Value trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
@@ -59813,7 +61403,7 @@ components:
           anyOf:
             - type: string
               pattern: ^[a-fA-F0-9]{24}$
-              description: ID ảnh avatar sẵn sàng thuộc người dùng; null để bỏ liên kết khi schema cho phép. ObjectId gồm 24 ký tự hexadecimal.
+              description: ID resource trong đường dẫn. ObjectId gồm 24 ký tự hexadecimal.
             - type: "null"
               description: ID ảnh avatar sẵn sàng thuộc người dùng; null để bỏ liên kết khi schema cho phép.
           description: ID ảnh avatar sẵn sàng thuộc người dùng; null để bỏ liên kết khi schema cho phép.
@@ -60196,14 +61786,14 @@ components:
                 id:
                   type: string
                   pattern: ^[a-fA-F0-9]{24}$
-                  description: ID ảnh avatar sẵn sàng thuộc người dùng; null để bỏ liên kết khi schema cho phép. ObjectId gồm 24 ký tự hexadecimal.
+                  description: ID resource trong đường dẫn. ObjectId gồm 24 ký tự hexadecimal.
                 displayName:
                   type: string
                   description: Trường Json Value trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
                 avatarMediaId:
                   type: string
                   pattern: ^[a-fA-F0-9]{24}$
-                  description: ID ảnh avatar sẵn sàng thuộc người dùng; null để bỏ liên kết khi schema cho phép. ObjectId gồm 24 ký tự hexadecimal.
+                  description: ID resource trong đường dẫn. ObjectId gồm 24 ký tự hexadecimal.
                 role:
                   type: string
                   description: Trường Json Value trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
@@ -64781,11 +66371,11 @@ components:
         proposalId:
           type: string
           pattern: ^[a-fA-F0-9]{24}$
-          description: ID ảnh avatar sẵn sàng thuộc người dùng; null để bỏ liên kết khi schema cho phép. ObjectId gồm 24 ký tự hexadecimal.
+          description: ID resource trong đường dẫn. ObjectId gồm 24 ký tự hexadecimal.
         runId:
           type: string
           pattern: ^[a-fA-F0-9]{24}$
-          description: ID ảnh avatar sẵn sàng thuộc người dùng; null để bỏ liên kết khi schema cho phép. ObjectId gồm 24 ký tự hexadecimal.
+          description: ID resource trong đường dẫn. ObjectId gồm 24 ký tự hexadecimal.
         status:
           const: pending
           type: string
@@ -64862,11 +66452,11 @@ components:
         proposalId:
           type: string
           pattern: ^[a-fA-F0-9]{24}$
-          description: ID ảnh avatar sẵn sàng thuộc người dùng; null để bỏ liên kết khi schema cho phép. ObjectId gồm 24 ký tự hexadecimal.
+          description: ID resource trong đường dẫn. ObjectId gồm 24 ký tự hexadecimal.
         runId:
           type: string
           pattern: ^[a-fA-F0-9]{24}$
-          description: ID ảnh avatar sẵn sàng thuộc người dùng; null để bỏ liên kết khi schema cho phép. ObjectId gồm 24 ký tự hexadecimal.
+          description: ID resource trong đường dẫn. ObjectId gồm 24 ký tự hexadecimal.
         status:
           const: pending
           type: string
@@ -64935,7 +66525,7 @@ components:
         runId:
           type: string
           pattern: ^[a-fA-F0-9]{24}$
-          description: ID ảnh avatar sẵn sàng thuộc người dùng; null để bỏ liên kết khi schema cho phép. ObjectId gồm 24 ký tự hexadecimal.
+          description: ID resource trong đường dẫn. ObjectId gồm 24 ký tự hexadecimal.
         disclaimer:
           type: string
           description: Trường Json Value trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
@@ -65057,7 +66647,7 @@ components:
         runId:
           type: string
           pattern: ^[a-fA-F0-9]{24}$
-          description: ID ảnh avatar sẵn sàng thuộc người dùng; null để bỏ liên kết khi schema cho phép. ObjectId gồm 24 ký tự hexadecimal.
+          description: ID resource trong đường dẫn. ObjectId gồm 24 ký tự hexadecimal.
         disclaimer:
           type: string
           description: Trường Json Value trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
@@ -65569,7 +67159,7 @@ components:
             userId:
               type: string
               pattern: ^[a-fA-F0-9]{24}$
-              description: ID ảnh avatar sẵn sàng thuộc người dùng; null để bỏ liên kết khi schema cho phép. ObjectId gồm 24 ký tự hexadecimal.
+              description: ID resource trong đường dẫn. ObjectId gồm 24 ký tự hexadecimal.
             status:
               const: deleted
               type: string
@@ -65700,7 +67290,7 @@ components:
             userId:
               type: string
               pattern: ^[a-fA-F0-9]{24}$
-              description: ID ảnh avatar sẵn sàng thuộc người dùng; null để bỏ liên kết khi schema cho phép. ObjectId gồm 24 ký tự hexadecimal.
+              description: ID resource trong đường dẫn. ObjectId gồm 24 ký tự hexadecimal.
             counts:
               type: object
               properties:
@@ -67081,6 +68671,218 @@ components:
         - meta
       additionalProperties: false
       description: Envelope thành công của deleteFoodItem; data là kết quả nghiệp vụ, meta chứa requestId và metadata được khai báo.
+    getIngredientSuggestionsQuery:
+      type: object
+      properties:
+        q:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Từ khóa tìm kiếm; chuỗi được trim và giới hạn độ dài.
+        limit:
+          default: 20
+          type: integer
+          minimum: 1
+          maximum: 50
+          description: "Số bản ghi tối đa mỗi trang; default và giới hạn nằm trong schema. Mặc định: 20."
+      required:
+        - q
+      additionalProperties: false
+      description: Dữ liệu Query của getIngredientSuggestions; required/default/enum/giới hạn theo validator thật, các quy tắc kiểm tra chéo xem description của operation.
+    getIngredientSuggestionsResponse:
+      type: object
+      properties:
+        success:
+          const: true
+          type: boolean
+          description: true ở response thành công, false ở response lỗi.
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/IngredientSuggestion"
+            description: Trường data item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+          description: Dữ liệu kết quả theo schema riêng của operation.
+        meta:
+          $ref: "#/components/schemas/RequestMeta"
+          description: Metadata gồm requestId và thông tin phân trang/tổng hợp khi có.
+      required:
+        - success
+        - data
+        - meta
+      additionalProperties: false
+      description: Envelope thành công của getIngredientSuggestions; data là kết quả nghiệp vụ, meta chứa requestId và metadata được khai báo.
+    getPersonalIngredientsQuery:
+      type: object
+      properties:
+        page:
+          default: 1
+          type: integer
+          minimum: 1
+          maximum: 100000
+          description: "Trang bắt đầu từ 1; bỏ qua dùng default trong schema. Mặc định: 1."
+        limit:
+          default: 20
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: "Số bản ghi tối đa mỗi trang; default và giới hạn nằm trong schema. Mặc định: 20."
+        q:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Từ khóa tìm kiếm; chuỗi được trim và giới hạn độ dài.
+      additionalProperties: false
+      description: Dữ liệu Query của getPersonalIngredients; required/default/enum/giới hạn theo validator thật, các quy tắc kiểm tra chéo xem description của operation.
+    getPersonalIngredientsResponse:
+      type: object
+      properties:
+        success:
+          const: true
+          type: boolean
+          description: true ở response thành công, false ở response lỗi.
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicPersonalIngredient"
+            description: Trường data item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+          description: Dữ liệu kết quả theo schema riêng của operation.
+        meta:
+          $ref: "#/components/schemas/PaginationMeta"
+          description: Metadata gồm requestId và thông tin phân trang/tổng hợp khi có.
+      required:
+        - success
+        - data
+        - meta
+      additionalProperties: false
+      description: Envelope thành công của getPersonalIngredients; data là kết quả nghiệp vụ, meta chứa requestId và metadata được khai báo.
+    createPersonalIngredientBody:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 150
+          description: Tên hiển thị.
+        defaultUnit:
+          type: string
+          enum:
+            - g
+            - kg
+            - ml
+            - l
+            - piece
+            - tbsp
+            - tsp
+            - cup
+            - serving
+          description: "Trường default Unit trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. Giá trị cho phép: g, kg, ml, l, piece, tbsp, tsp, cup, serving."
+      required:
+        - name
+        - defaultUnit
+      additionalProperties: false
+      description: Dữ liệu Body của createPersonalIngredient; required/default/enum/giới hạn theo validator thật, các quy tắc kiểm tra chéo xem description của operation.
+    createPersonalIngredientResponse:
+      type: object
+      properties:
+        success:
+          const: true
+          type: boolean
+          description: true ở response thành công, false ở response lỗi.
+        data:
+          $ref: "#/components/schemas/PublicPersonalIngredient"
+          description: Dữ liệu kết quả theo schema riêng của operation.
+        meta:
+          $ref: "#/components/schemas/RequestMeta"
+          description: Metadata gồm requestId và thông tin phân trang/tổng hợp khi có.
+      required:
+        - success
+        - data
+        - meta
+      additionalProperties: false
+      description: Envelope thành công của createPersonalIngredient; data là kết quả nghiệp vụ, meta chứa requestId và metadata được khai báo.
+    updatePersonalIngredientParams:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[a-f\d]{24}$
+          description: ID resource trong đường dẫn. ObjectId gồm 24 ký tự hexadecimal.
+      required:
+        - id
+      additionalProperties: false
+      description: Dữ liệu Params của updatePersonalIngredient; required/default/enum/giới hạn theo validator thật, các quy tắc kiểm tra chéo xem description của operation.
+    updatePersonalIngredientBody:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 150
+          description: Tên hiển thị.
+        defaultUnit:
+          type: string
+          enum:
+            - g
+            - kg
+            - ml
+            - l
+            - piece
+            - tbsp
+            - tsp
+            - cup
+            - serving
+          description: "Trường default Unit trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. Giá trị cho phép: g, kg, ml, l, piece, tbsp, tsp, cup, serving."
+      additionalProperties: false
+      description: Dữ liệu Body của updatePersonalIngredient; required/default/enum/giới hạn theo validator thật, các quy tắc kiểm tra chéo xem description của operation.
+    updatePersonalIngredientResponse:
+      type: object
+      properties:
+        success:
+          const: true
+          type: boolean
+          description: true ở response thành công, false ở response lỗi.
+        data:
+          $ref: "#/components/schemas/PublicPersonalIngredient"
+          description: Dữ liệu kết quả theo schema riêng của operation.
+        meta:
+          $ref: "#/components/schemas/RequestMeta"
+          description: Metadata gồm requestId và thông tin phân trang/tổng hợp khi có.
+      required:
+        - success
+        - data
+        - meta
+      additionalProperties: false
+      description: Envelope thành công của updatePersonalIngredient; data là kết quả nghiệp vụ, meta chứa requestId và metadata được khai báo.
+    deletePersonalIngredientParams:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[a-f\d]{24}$
+          description: ID resource trong đường dẫn. ObjectId gồm 24 ký tự hexadecimal.
+      required:
+        - id
+      additionalProperties: false
+      description: Dữ liệu Params của deletePersonalIngredient; required/default/enum/giới hạn theo validator thật, các quy tắc kiểm tra chéo xem description của operation.
+    deletePersonalIngredientResponse:
+      type: object
+      properties:
+        success:
+          const: true
+          type: boolean
+          description: true ở response thành công, false ở response lỗi.
+        data:
+          $ref: "#/components/schemas/PublicPersonalIngredient"
+          description: Dữ liệu kết quả theo schema riêng của operation.
+        meta:
+          $ref: "#/components/schemas/RequestMeta"
+          description: Metadata gồm requestId và thông tin phân trang/tổng hợp khi có.
+      required:
+        - success
+        - data
+        - meta
+      additionalProperties: false
+      description: Envelope thành công của deletePersonalIngredient; data là kết quả nghiệp vụ, meta chứa requestId và metadata được khai báo.
     getRecipesQuery:
       type: object
       properties:
@@ -67880,7 +69682,7 @@ components:
             recipeId:
               type: string
               pattern: ^[a-fA-F0-9]{24}$
-              description: ID ảnh avatar sẵn sàng thuộc người dùng; null để bỏ liên kết khi schema cho phép. ObjectId gồm 24 ký tự hexadecimal.
+              description: ID resource trong đường dẫn. ObjectId gồm 24 ký tự hexadecimal.
             servings:
               type: number
               description: Trường Json Value trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
@@ -67962,7 +69764,7 @@ components:
               items:
                 type: string
                 pattern: ^[a-fA-F0-9]{24}$
-                description: ID ảnh avatar sẵn sàng thuộc người dùng; null để bỏ liên kết khi schema cho phép. ObjectId gồm 24 ký tự hexadecimal.
+                description: ID resource trong đường dẫn. ObjectId gồm 24 ký tự hexadecimal.
               description: Danh sách ID chất gây dị ứng trong master data.
           required:
             - recipeId
@@ -68138,7 +69940,7 @@ components:
               id:
                 type: string
                 pattern: ^[a-fA-F0-9]{24}$
-                description: ID ảnh avatar sẵn sàng thuộc người dùng; null để bỏ liên kết khi schema cho phép. ObjectId gồm 24 ký tự hexadecimal.
+                description: ID resource trong đường dẫn. ObjectId gồm 24 ký tự hexadecimal.
               type:
                 type: string
                 description: Trường Json Value trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
@@ -69824,6 +71626,10 @@ components:
                 type: string
                 pattern: ^[a-f\d]{24}$
                 description: ID thực phẩm chuẩn; phải tồn tại và hợp lệ theo kiểm tra service. ObjectId gồm 24 ký tự hexadecimal.
+              personalIngredientId:
+                type: string
+                pattern: ^[a-f\d]{24}$
+                description: ID tham chiếu personalIngredientId; xem resource tương ứng và kiểm tra quyền ở service. ObjectId gồm 24 ký tự hexadecimal.
               nameSnapshot:
                 type: string
                 minLength: 1
@@ -69976,6 +71782,10 @@ components:
           type: string
           pattern: ^[a-f\d]{24}$
           description: ID thực phẩm chuẩn; phải tồn tại và hợp lệ theo kiểm tra service. ObjectId gồm 24 ký tự hexadecimal.
+        personalIngredientId:
+          type: string
+          pattern: ^[a-f\d]{24}$
+          description: ID tham chiếu personalIngredientId; xem resource tương ứng và kiểm tra quyền ở service. ObjectId gồm 24 ký tự hexadecimal.
         nameSnapshot:
           type: string
           minLength: 1
@@ -70563,7 +72373,7 @@ components:
             id:
               type: string
               pattern: ^[a-fA-F0-9]{24}$
-              description: ID ảnh avatar sẵn sàng thuộc người dùng; null để bỏ liên kết khi schema cho phép. ObjectId gồm 24 ký tự hexadecimal.
+              description: ID resource trong đường dẫn. ObjectId gồm 24 ký tự hexadecimal.
             deleted:
               type: boolean
               description: Trường Json Value trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
@@ -71399,7 +73209,7 @@ components:
             id:
               type: string
               pattern: ^[a-fA-F0-9]{24}$
-              description: ID ảnh avatar sẵn sàng thuộc người dùng; null để bỏ liên kết khi schema cho phép. ObjectId gồm 24 ký tự hexadecimal.
+              description: ID resource trong đường dẫn. ObjectId gồm 24 ký tự hexadecimal.
             deleted:
               type: boolean
               description: Trường Json Value trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
@@ -71811,7 +73621,7 @@ components:
             id:
               type: string
               pattern: ^[a-fA-F0-9]{24}$
-              description: ID ảnh avatar sẵn sàng thuộc người dùng; null để bỏ liên kết khi schema cho phép. ObjectId gồm 24 ký tự hexadecimal.
+              description: ID resource trong đường dẫn. ObjectId gồm 24 ký tự hexadecimal.
             deleted:
               type: boolean
               description: Trường Json Value trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
@@ -71884,15 +73694,15 @@ components:
             assetId:
               type: string
               pattern: ^[a-fA-F0-9]{24}$
-              description: ID ảnh avatar sẵn sàng thuộc người dùng; null để bỏ liên kết khi schema cho phép. ObjectId gồm 24 ký tự hexadecimal.
+              description: ID resource trong đường dẫn. ObjectId gồm 24 ký tự hexadecimal.
             mediaAssetId:
               type: string
               pattern: ^[a-fA-F0-9]{24}$
-              description: ID ảnh avatar sẵn sàng thuộc người dùng; null để bỏ liên kết khi schema cho phép. ObjectId gồm 24 ký tự hexadecimal.
+              description: ID resource trong đường dẫn. ObjectId gồm 24 ký tự hexadecimal.
             _id:
               type: string
               pattern: ^[a-fA-F0-9]{24}$
-              description: ID ảnh avatar sẵn sàng thuộc người dùng; null để bỏ liên kết khi schema cho phép. ObjectId gồm 24 ký tự hexadecimal.
+              description: ID resource trong đường dẫn. ObjectId gồm 24 ký tự hexadecimal.
             status:
               const: pending
               type: string
@@ -72096,7 +73906,7 @@ components:
             _id:
               type: string
               pattern: ^[a-fA-F0-9]{24}$
-              description: ID ảnh avatar sẵn sàng thuộc người dùng; null để bỏ liên kết khi schema cho phép. ObjectId gồm 24 ký tự hexadecimal.
+              description: ID resource trong đường dẫn. ObjectId gồm 24 ký tự hexadecimal.
             status:
               const: deleted
               type: string
@@ -72808,7 +74618,7 @@ components:
             _id:
               type: string
               pattern: ^[a-fA-F0-9]{24}$
-              description: ID ảnh avatar sẵn sàng thuộc người dùng; null để bỏ liên kết khi schema cho phép. ObjectId gồm 24 ký tự hexadecimal.
+              description: ID resource trong đường dẫn. ObjectId gồm 24 ký tự hexadecimal.
             status:
               const: deleted
               type: string
@@ -73418,7 +75228,7 @@ components:
             proposalId:
               type: string
               pattern: ^[a-fA-F0-9]{24}$
-              description: ID ảnh avatar sẵn sàng thuộc người dùng; null để bỏ liên kết khi schema cho phép. ObjectId gồm 24 ký tự hexadecimal.
+              description: ID resource trong đường dẫn. ObjectId gồm 24 ký tự hexadecimal.
             status:
               const: confirmed
               type: string
@@ -73540,7 +75350,7 @@ components:
             proposalId:
               type: string
               pattern: ^[a-fA-F0-9]{24}$
-              description: ID ảnh avatar sẵn sàng thuộc người dùng; null để bỏ liên kết khi schema cho phép. ObjectId gồm 24 ký tự hexadecimal.
+              description: ID resource trong đường dẫn. ObjectId gồm 24 ký tự hexadecimal.
             status:
               const: confirmed
               type: string
@@ -75963,7 +77773,7 @@ components:
             videoId:
               type: string
               pattern: ^[a-fA-F0-9]{24}$
-              description: ID ảnh avatar sẵn sàng thuộc người dùng; null để bỏ liên kết khi schema cho phép. ObjectId gồm 24 ký tự hexadecimal.
+              description: ID resource trong đường dẫn. ObjectId gồm 24 ký tự hexadecimal.
             transcript:
               anyOf:
                 - type: string
@@ -76189,7 +77999,7 @@ components:
             targetId:
               type: string
               pattern: ^[a-fA-F0-9]{24}$
-              description: ID ảnh avatar sẵn sàng thuộc người dùng; null để bỏ liên kết khi schema cho phép. ObjectId gồm 24 ký tự hexadecimal.
+              description: ID resource trong đường dẫn. ObjectId gồm 24 ký tự hexadecimal.
             count:
               type: integer
               minimum: 0

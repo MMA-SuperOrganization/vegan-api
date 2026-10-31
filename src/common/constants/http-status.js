@@ -5,6 +5,7 @@ export const CREATED = new Set([
   "createCategory",
   "createAllergen",
   "createFoodItem",
+  "createPersonalIngredient",
   "createUploadRequest",
   "createMealPlan",
   "createGroceryList",

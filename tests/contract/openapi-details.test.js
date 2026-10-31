@@ -10,7 +10,7 @@ const registry = createContractRegistry();
 const doc = generateOpenApi(registry);
 describe("Detailed Swagger documentation stays usable and accurate", () => {
   it("documents all operations, parameters, tags and schema fields", () => {
-    expect(registry.operations).toHaveLength(184);
+    expect(registry.operations).toHaveLength(189);
     expect(Object.keys(operationNotes).sort()).toEqual(
       registry.operations.map((route) => route.operationId).sort(),
     );

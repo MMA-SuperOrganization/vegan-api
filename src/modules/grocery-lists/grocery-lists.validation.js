@@ -14,13 +14,21 @@ import { GROCERY_LIST_STATUSES } from "../../common/constants/enums/planning.enu
 export const groceryItemInput = z
   .object({
     foodItemId: id.optional(),
+    personalIngredientId: id.optional(),
     nameSnapshot: text(200).optional(),
     quantity: positive(),
     unit: units,
     note: text(1000, 0).optional(),
   })
   .strict()
-  .refine((body) => body.foodItemId || body.nameSnapshot, "Food item or item name is required");
+  .refine(
+    (body) => !body.foodItemId || !body.personalIngredientId,
+    "Choose either a catalog food or a personal ingredient",
+  )
+  .refine(
+    (body) => body.foodItemId || body.personalIngredientId || body.nameSnapshot,
+    "Catalog food, personal ingredient or item name is required",
+  );
 export const groceryListInput = z
   .object({ name: text(200), items: z.array(groceryItemInput).max(500).default([]) })
   .strict();
