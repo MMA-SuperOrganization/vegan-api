@@ -107,6 +107,22 @@ describe("planning HTTP routes through injected full application", () => {
     });
     await call("generateGroceryListFromPlan", { params, body: {}, token: null, expected: 401 });
   });
+  it("requires whole-number meal-plan servings", async () => {
+    const { call } = fixture();
+    await call("createMealPlan", {
+      body: {
+        weekStartDate: "2026-10-05",
+        days: [{ date: "2026-10-05", meals: [{ type: "lunch", recipeId: RECIPE, servings: 1.5 }] }],
+      },
+      expected: 400,
+    });
+    const plan = await call("createMealPlan", { body: { weekStartDate: "2026-10-05" } });
+    await call("addMealToPlan", {
+      params: { id: plan.data._id },
+      body: { date: "2026-10-05", type: "lunch", recipeId: RECIPE, servings: 0.5 },
+      expected: 400,
+    });
+  });
   it("exercises every owned manifest operation with real validation and owner CRUD flows", async () => {
     const { call, exercised } = fixture();
     await call("getPantry");

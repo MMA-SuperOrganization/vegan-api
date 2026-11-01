@@ -3,7 +3,6 @@ import {
   id,
   uuid,
   text,
-  positive,
   dateOnly,
   pagination,
   patch,
@@ -11,11 +10,13 @@ import {
 } from "../../common/validators/domain.schemas.js";
 import { MEAL_TYPES, MEAL_PLAN_STATUSES } from "../../common/constants/enums/planning.enums.js";
 
+const mealServings = z.number().finite().int().min(1).max(100);
+
 export const mealInput = z
   .object({
     type: z.enum(MEAL_TYPES.values()),
     recipeId: id,
-    servings: positive(100).default(1),
+    servings: mealServings.default(1),
     note: text(1000, 0).optional(),
   })
   .strict();
@@ -82,7 +83,7 @@ export const createMealPlansValidation = () => ({
   addMealToPlan: { params, body: mealInput.extend({ date: dateOnly }).strict() },
   updateMealInPlan: {
     params: mealParams,
-    body: patch(mealInput.extend({ servings: positive(100), completed: z.boolean() })),
+    body: patch(mealInput.extend({ servings: mealServings, completed: z.boolean() })),
   },
   deleteMealFromPlan: { params: mealParams },
   activateMealPlan: { params, body: emptyBody },

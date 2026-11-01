@@ -207,7 +207,7 @@ try {
   await ui.scrollTap("Tăng khẩu phần của Native Tofu Plate");
   await poll(
     () => models.MealPlansModel.findOne({ userId }).lean(),
-    (value) => value?.days.some((day) => day.meals.some((meal) => meal.servings === 1.5)),
+    (value) => value?.days.some((day) => day.meals.some((meal) => meal.servings === 2)),
     "serving increase before replacing the recipe",
   );
   await ui.scrollTap("Thay Native Tofu Plate bằng công thức khác");
@@ -217,7 +217,7 @@ try {
     (value) =>
       value?.days.some((day) =>
         day.meals.some(
-          (meal) => meal.recipeSnapshot.title === "Native Tofu Bowl" && meal.servings === 1.5,
+          (meal) => meal.recipeSnapshot.title === "Native Tofu Bowl" && meal.servings === 2,
         ),
       ),
     "meal replacement and servings",
