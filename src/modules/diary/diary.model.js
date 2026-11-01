@@ -15,6 +15,8 @@ const schema = new mongoose.Schema(
     sourceType: { type: String, enum: DIARY_SOURCE_TYPES.values(), required: true },
     recipeId: { type: mongoose.Schema.Types.ObjectId, ref: "Recipes" },
     foodItemId: { type: mongoose.Schema.Types.ObjectId, ref: "FoodItems" },
+    sourceMealPlanId: { type: mongoose.Schema.Types.ObjectId, ref: "MealPlans" },
+    sourceMealId: { type: String },
     nameSnapshot: { type: String, required: true, trim: true, maxlength: 200 },
     servings: { type: Number, min: Number.EPSILON, max: 100 },
     quantity: { type: Number, min: Number.EPSILON, max: 1000000 },
@@ -30,4 +32,14 @@ const schema = new mongoose.Schema(
   { timestamps: true, versionKey: false, collection: "diaries" },
 );
 schema.index({ userId: 1, date: -1, consumedAt: -1 });
+schema.index(
+  { userId: 1, sourceMealPlanId: 1, sourceMealId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      sourceMealPlanId: { $exists: true },
+      sourceMealId: { $exists: true },
+    },
+  },
+);
 export const DiaryModel = mongoose.models.Diary ?? mongoose.model("Diary", schema);

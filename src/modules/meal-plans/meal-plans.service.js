@@ -88,6 +88,21 @@ export function createMealPlansService({
       options,
     );
   }
+  async function markMealUncompleted(userId, planId, mealId, options = {}) {
+    return change(
+      userId,
+      planId,
+      (plan) => {
+        const meal = plan.days
+          .flatMap((day) => day.meals)
+          .find((candidate) => candidate.mealId === String(mealId));
+        if (!meal) throw AppError.notFound("Meal not found");
+        meal.completed = false;
+        return { days: plan.days };
+      },
+      options,
+    );
+  }
   async function change(userId, id, fn, options = {}) {
     const plan = await getOwned(userId, id, options);
     const set = await fn({ ...plan, days: copyDays(plan.days) });
@@ -332,32 +347,88 @@ export function createMealPlansService({
     },
     updateMealInPlan: async ({ actor, params, body }) => {
       const userId = owner(actor);
-      return change(userId, params.id, async (plan) => {
-        if (["archived", "completed"].includes(plan.status))
-          throw AppError.conflict("Archived meal plans cannot be edited");
-        const meal = plan.days
-          .flatMap((day) => day.meals)
-          .find((meal) => meal.mealId === params.mealId);
-        if (!meal) throw AppError.notFound("Meal not found");
-        if (body.recipeId && body.recipeId !== String(meal.recipeId)) {
-          const replacement = await snapshotMeal(userId, { ...meal, ...body });
-          meal.recipeSnapshot = replacement.recipeSnapshot;
-        }
-        Object.assign(meal, body);
-        // Completing a meal never consumes pantry without a separately confirmed request.
-        return { days: plan.days };
-      });
+      const update = async (session) =>
+        change(
+          userId,
+          params.id,
+          async (plan) => {
+            if (["archived", "completed"].includes(plan.status))
+              throw AppError.conflict("Archived meal plans cannot be edited");
+            const day = plan.days.find((candidate) =>
+              candidate.meals.some((meal) => meal.mealId === params.mealId),
+            );
+            const meal = day?.meals.find((candidate) => candidate.mealId === params.mealId);
+            if (!meal) throw AppError.notFound("Meal not found");
+            const wasCompleted = meal.completed;
+            if (
+              wasCompleted &&
+              body.completed !== false &&
+              Object.keys(body).some((key) => key !== "completed")
+            )
+              throw AppError.conflict("Logged meals must be edited from the diary");
+            if (body.recipeId && body.recipeId !== String(meal.recipeId)) {
+              const replacement = await snapshotMeal(userId, { ...meal, ...body }, { session });
+              meal.recipeSnapshot = replacement.recipeSnapshot;
+            }
+            Object.assign(meal, body);
+            if (typeof body.completed === "boolean" && body.completed !== wasCompleted) {
+              if (!services.diary?.createFromMealPlan || !services.diary?.removeMealPlanEntry)
+                throw AppError.serviceUnavailable("Diary service is unavailable");
+              if (body.completed) {
+                await services.diary.createFromMealPlan(
+                  userId,
+                  {
+                    sourceMealPlanId: plan._id,
+                    sourceMealId: meal.mealId,
+                    date: dateString(day.date),
+                    mealType: meal.type,
+                    recipeId: meal.recipeId,
+                    nameSnapshot: meal.recipeSnapshot.title,
+                    servings: meal.servings,
+                    nutritionPerServing: meal.recipeSnapshot.nutritionPerServing,
+                    consumedAt: now(),
+                  },
+                  { session },
+                );
+              } else {
+                await services.diary.removeMealPlanEntry(userId, plan._id, meal.mealId, {
+                  session,
+                });
+              }
+            }
+            // Logging a meal never consumes pantry without a separately confirmed request.
+            return { days: plan.days };
+          },
+          { session },
+        );
+      return typeof body.completed === "boolean" ? runTransaction(update) : update(undefined);
     },
-    deleteMealFromPlan: async ({ actor, params }) =>
-      change(owner(actor), params.id, (plan) => {
-        if (["archived", "completed"].includes(plan.status))
-          throw AppError.conflict("Archived meal plans cannot be edited");
-        if (!plan.days.some((day) => day.meals.some((meal) => meal.mealId === params.mealId)))
-          throw AppError.notFound("Meal not found");
-        for (const day of plan.days)
-          day.meals = day.meals.filter((meal) => meal.mealId !== params.mealId);
-        return { days: plan.days };
-      }),
+    deleteMealFromPlan: async ({ actor, params }) => {
+      const userId = owner(actor);
+      return runTransaction((session) =>
+        change(
+          userId,
+          params.id,
+          async (plan) => {
+            if (["archived", "completed"].includes(plan.status))
+              throw AppError.conflict("Archived meal plans cannot be edited");
+            const meal = plan.days
+              .flatMap((day) => day.meals)
+              .find((candidate) => candidate.mealId === params.mealId);
+            if (!meal) throw AppError.notFound("Meal not found");
+            if (meal.completed) {
+              if (!services.diary?.removeMealPlanEntry)
+                throw AppError.serviceUnavailable("Diary service is unavailable");
+              await services.diary.removeMealPlanEntry(userId, plan._id, meal.mealId, { session });
+            }
+            for (const day of plan.days)
+              day.meals = day.meals.filter((meal) => meal.mealId !== params.mealId);
+            return { days: plan.days };
+          },
+          { session },
+        ),
+      );
+    },
     activateMealPlan: async ({ actor, params }) => activate(owner(actor), params.id),
     cloneMealPlan: async ({ actor, params, body }) => {
       const userId = owner(actor);
@@ -389,6 +460,7 @@ export function createMealPlansService({
       createForUser,
       activate,
       getOwned,
+      markMealUncompleted,
       generateGroceryList,
       generateGroceryListFromPlan: generateGroceryList,
       groceryIngredients,

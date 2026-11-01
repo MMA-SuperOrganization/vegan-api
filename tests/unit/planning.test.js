@@ -303,12 +303,49 @@ describe("meal plans and grocery child isolation", () => {
     const updated = await ops.getMealPlan({ actor, params: { id: plan._id } });
     expect(updated.nutritionSummary.caloriesKcal).toBe(250);
     expect(updated.days[0].meals[0].completed).toBe(true);
+    expect(repositories.diaryEntries.records).toHaveLength(1);
+    expect(repositories.diaryEntries.records[0]).toMatchObject({
+      userId,
+      sourceMealPlanId: plan._id,
+      sourceMealId: mealId,
+      mealType: "lunch",
+      servings: 1,
+      nameSnapshot: "Tofu plate",
+      nutritionSnapshot: expect.objectContaining({ caloriesKcal: 250, proteinG: 25 }),
+    });
     expect(repositories.pantries.records).toHaveLength(0);
     const removed = await ops.deleteMealFromPlan({ actor, params: { id: plan._id, mealId } });
     expect(removed._id).toBe(plan._id);
     expect(removed.days[0].meals).toHaveLength(0);
     expect(removed.nutritionSummary.caloriesKcal).toBe(0);
+    expect(repositories.diaryEntries.records).toHaveLength(0);
     expect(repositories.mealPlans.calls.some((call) => call.method === "deleteOne")).toBe(false);
+  });
+  it("logs meal completion once and unlinks the plan when its diary entry is deleted", async () => {
+    const { modules, repositories } = setup();
+    const plan = await modules.mealPlans.operations.createMealPlan({ actor, body: planBody });
+    const mealId = plan.days[0].meals[0].mealId;
+
+    for (let attempt = 0; attempt < 2; attempt++) {
+      await modules.mealPlans.operations.updateMealInPlan({
+        actor,
+        params: { id: plan._id, mealId },
+        body: { completed: true },
+      });
+    }
+    expect(repositories.diaryEntries.records).toHaveLength(1);
+
+    const diaryEntry = repositories.diaryEntries.records[0];
+    await modules.diary.operations.deleteDiaryEntry({
+      actor,
+      params: { id: diaryEntry._id },
+    });
+    const reloaded = await modules.mealPlans.operations.getMealPlan({
+      actor,
+      params: { id: plan._id },
+    });
+    expect(reloaded.days[0].meals[0].completed).toBe(false);
+    expect(repositories.diaryEntries.records).toHaveLength(0);
   });
   it("switches active plans sequentially through one stable owner/week slot", async () => {
     const { modules, repositories } = setup();

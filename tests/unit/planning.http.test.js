@@ -163,6 +163,17 @@ describe("planning HTTP routes through injected full application", () => {
       body: { completed: true },
     });
     expect(completion.data.days[0].meals[0].servings).toBe(2);
+    const loggedMeal = await call("getDiaryEntries", {
+      query: { date: "2026-10-05" },
+    });
+    expect(loggedMeal.data).toHaveLength(1);
+    expect(loggedMeal.data[0]).toMatchObject({
+      sourceMealPlanId: plan._id,
+      sourceMealId: plan.days[0].meals[0].mealId,
+      mealType: "lunch",
+      servings: 2,
+      nameSnapshot: "Tofu plate",
+    });
     await call("deleteMealFromPlan", { params: { ...planParams, mealId } });
     await call("activateMealPlan", { params: planParams, body: {} });
     const current = await call("getCurrentMealPlan", { query: { date: "2026-10-06" } });

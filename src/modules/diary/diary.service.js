@@ -52,6 +52,7 @@ export function createDiaryService({
   diaryRepository: repo,
   services = {},
   clock = () => new Date(),
+  transaction,
 }) {
   const now = () => new Date(typeof clock === "function" ? clock() : clock.now());
   function range(query = {}) {
@@ -138,6 +139,39 @@ export function createDiaryService({
     );
     return publicEntry(entry);
   }
+  async function createFromMealPlan(userId, input, options = {}) {
+    if (!userId) throw AppError.unauthorized();
+    const filter = {
+      userId,
+      sourceMealPlanId: input.sourceMealPlanId,
+      sourceMealId: input.sourceMealId,
+    };
+    const existing = await repo.findOne(filter, options);
+    if (existing) return publicEntry(existing);
+    const nutritionBasis = normalizeNutrition(input.nutritionPerServing);
+    const entry = await repo.create(
+      {
+        ...filter,
+        date: new Date(`${input.date}T00:00:00Z`),
+        mealType: input.mealType,
+        sourceType: "recipe",
+        recipeId: input.recipeId,
+        nameSnapshot: input.nameSnapshot,
+        servings: input.servings,
+        nutritionSnapshot: scaleNutrition(nutritionBasis, input.servings),
+        nutritionBasis,
+        basisQuantity: 1,
+        basisUnit: "serving",
+        consumedAt: input.consumedAt ? new Date(input.consumedAt) : now(),
+        version: 0,
+      },
+      options,
+    );
+    return publicEntry(entry);
+  }
+  async function removeMealPlanEntry(userId, sourceMealPlanId, sourceMealId, options = {}) {
+    return repo.deleteOne({ userId, sourceMealPlanId, sourceMealId }, options);
+  }
   async function getOwned(userId, id, options = {}) {
     const entry = await repo.findOne(
       { _id: id, userId },
@@ -193,9 +227,24 @@ export function createDiaryService({
       return publicEntry(updated);
     },
     deleteDiaryEntry: async ({ actor, params }) => {
-      const deleted = await repo.deleteOne({ _id: params.id, userId: owner(actor) });
-      if (!deleted) throw AppError.notFound("Diary entry not found");
-      return { id: String(deleted._id), deleted: true };
+      const userId = owner(actor);
+      const entry = await getOwned(userId, params.id);
+      const remove = async (session) => {
+        if (entry.sourceMealPlanId && entry.sourceMealId) {
+          if (!services.mealPlans?.markMealUncompleted)
+            throw AppError.serviceUnavailable("Meal plan service is unavailable");
+          await services.mealPlans.markMealUncompleted(
+            userId,
+            entry.sourceMealPlanId,
+            entry.sourceMealId,
+            { session },
+          );
+        }
+        const deleted = await repo.deleteOne({ _id: params.id, userId }, { session });
+        if (!deleted) throw AppError.notFound("Diary entry not found");
+        return { id: String(deleted._id), deleted: true };
+      };
+      return transaction ? transaction(remove) : remove(undefined);
     },
     getDiarySummary: async ({ actor, query = {} }) => {
       const userId = owner(actor);
@@ -240,6 +289,8 @@ export function createDiaryService({
     operations,
     publicService: {
       createForUser,
+      createFromMealPlan,
+      removeMealPlanEntry,
       getSummary: async (userId, query) => operations.getDiarySummary({ actor: { userId }, query }),
     },
   };
