@@ -89502,7 +89502,8 @@
       ],
       "difficulty": "medium",
       "prepMinutes": 45,
-      "totalMinutes": 2,
+      "totalMinutes": 120,
+      "cookMinutes": 75,
       "servings": 4,
       "ingredients": [
         {

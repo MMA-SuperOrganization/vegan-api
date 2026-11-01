@@ -122,8 +122,13 @@ export const listFilter = (query = {}) => {
       { summary: exactRegex },
     ];
   }
-  if (query.category ?? query.categoryId) filter.categoryIds = query.category ?? query.categoryId;
-  if (query.tags?.length) filter.tags = { $all: query.tags };
+  const categoryIds = query.categoryIds?.length
+    ? query.categoryIds
+    : (query.category ?? query.categoryId)
+      ? [query.category ?? query.categoryId]
+      : [];
+  if (categoryIds.length) filter.categoryIds = { $in: categoryIds };
+  if (query.tags?.length) filter.tags = { $in: query.tags };
   if (query.difficulty) filter.difficulty = query.difficulty;
   return filter;
 };

@@ -335,6 +335,23 @@ describe("Discovery behavior and input safety", () => {
     expect(() => h.validation.updateModerationCase.body.parse({})).toThrow();
     expect(() => h.validation.updateAdminReport.body.parse({})).toThrow();
   });
+  it("supports multi-category and multi-tag recipe discovery", async () => {
+    const h = harness({
+      recipes: [
+        content({ _id: IDS.recipe, tags: ["quick", "open-catalog"] }),
+        content({ _id: IDS.allergicRecipe, tags: ["fermented"] }),
+      ],
+    });
+    const query = h.validation.searchContent.query.parse({
+      type: "recipe",
+      categoryIds: `${IDS.category},${IDS.missing}`,
+      tags: "quick,fermented",
+    });
+    const result = await h.call("searchContent", { actor: null, query });
+    expect(result.data.map((item) => item._id).sort()).toEqual(
+      [IDS.recipe, IDS.allergicRecipe].sort(),
+    );
+  });
   it("filters active/public content and applies diet/category/allergens and aliases", async () => {
     const h = harness();
     const query = {

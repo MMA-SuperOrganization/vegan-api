@@ -375,7 +375,7 @@ export const operationNotes = {
   completeOnboarding:
     "Chỉ hoàn tất khi hồ sơ đáp ứng các trường onboarding bắt buộc. Đọc status để biết missingFields/readyToComplete trước khi gọi.",
   upsertMyProfile:
-    "Ít nhất một trường hồ sơ phải được gửi. dateOfBirth không được nằm trong tương lai; timezone phải là tên IANA hợp lệ.",
+    "Các trường hồ sơ đều tùy chọn; chuỗi trống được bỏ qua. Giá trị không rỗng vẫn phải đúng định dạng, dateOfBirth không được nằm trong tương lai và timezone phải là tên IANA hợp lệ.",
   upsertMyNutritionProfile:
     "Ít nhất một trường phải được gửi; allergenIds là ID master data. Các mục tiêu dinh dưỡng dùng đơn vị ghi trong tên trường.",
   recalculateNutritionTarget:

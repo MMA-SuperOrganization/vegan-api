@@ -31,6 +31,7 @@ const filters = {
   q: text(120).optional(),
   type: z.enum(types).default(SEARCH_SCOPE_TYPES.ALL),
   category: id.optional(),
+  categoryIds: boundedList(id).optional(),
   cuisine: text(80).optional(),
   difficulty: z.enum(RECIPE_DIFFICULTIES.values()).optional(),
   maxTotalMinutes: z.coerce.number().int().min(1).max(1440).optional(),
@@ -75,9 +76,15 @@ const makeFilter = (type, query) => {
       filter.$or = [{ title: regex }, { summary: regex }, { tags: regex }];
     else filter.$or = [{ title: regex }, { description: regex }, { tags: regex }];
   }
-  if (query.category) filter[type === "food-item" ? "categoryId" : "categoryIds"] = query.category;
+  const categoryIds = query.categoryIds?.length
+    ? query.categoryIds
+    : query.category
+      ? [query.category]
+      : [];
+  if (categoryIds.length)
+    filter[type === "food-item" ? "categoryId" : "categoryIds"] = { $in: categoryIds };
   if (query.excludeAllergenIds?.length) filter.allergenIds = { $nin: query.excludeAllergenIds };
-  if (query.tags?.length && type !== "food-item") filter.tags = { $all: query.tags };
+  if (query.tags?.length && type !== "food-item") filter.tags = { $in: query.tags };
   if (type === "recipe") {
     if (query.cuisine) filter.cuisine = query.cuisine;
     if (query.difficulty) filter.difficulty = query.difficulty;

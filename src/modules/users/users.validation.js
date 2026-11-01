@@ -15,16 +15,23 @@ import { GENDERS, USER_ROLES, USER_STATUSES } from "../../common/constants/enums
 import { CONTENT_STATUSES } from "../../common/constants/enums/content.enums.js";
 import { VIEW_HISTORY_TARGET_TYPES } from "../../common/constants/enums/engagement.enums.js";
 
+const optionalNonBlank = (schema) =>
+  z.preprocess(
+    (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+    schema.optional(),
+  );
+
 export const profileSchema = z
   .object({
-    bio: text(500, 0).optional(),
-    username: text(30)
-      .min(3)
-      .regex(/^[a-zA-Z0-9_]+$/)
-      .transform((value) => value.toLowerCase())
-      .optional(),
-    city: text(100, 0).optional(),
-    country: text(100, 0).optional(),
+    bio: optionalNonBlank(text(500)),
+    username: optionalNonBlank(
+      text(30)
+        .min(3)
+        .regex(/^[a-zA-Z0-9_]+$/)
+        .transform((value) => value.toLowerCase()),
+    ),
+    city: optionalNonBlank(text(100)),
+    country: optionalNonBlank(text(100)),
     preferredFoodItemIds: z
       .array(id)
       .max(50)
@@ -35,11 +42,12 @@ export const profileSchema = z
       .max(50)
       .transform((values) => [...new Set(values)])
       .optional(),
-    dateOfBirth: z
-      .union([dateOnly, dateTime])
-      .refine((v) => new Date(v) <= new Date(), "Birth date cannot be in the future")
-      .nullable()
-      .optional(),
+    dateOfBirth: optionalNonBlank(
+      z
+        .union([dateOnly, dateTime])
+        .refine((v) => new Date(v) <= new Date(), "Birth date cannot be in the future")
+        .nullable(),
+    ),
     gender: z.enum(GENDERS.values()).nullable().optional(),
     dietType: dietTypes.optional(),
     preferredCuisines: z
@@ -52,12 +60,13 @@ export const profileSchema = z
       .max(50)
       .transform((v) => [...new Set(v)])
       .optional(),
-    locale: text(35)
-      .regex(/^[a-zA-Z]{2,3}(?:[-_][a-zA-Z0-9]{2,8})*$/)
-      .optional(),
-    timezone: timezone.optional(),
+    locale: optionalNonBlank(text(35).regex(/^[a-zA-Z]{2,3}(?:[-_][a-zA-Z0-9]{2,8})*$/)),
+    timezone: optionalNonBlank(timezone),
   })
-  .strict();
+  .strict()
+  .transform((profile) =>
+    Object.fromEntries(Object.entries(profile).filter(([, value]) => value !== undefined)),
+  );
 export const updateMeBodySchema = patch(
   z.object({ displayName: text(100), avatarMediaId: id.nullable(), avatarUrl: z.null() }),
 ).refine(
@@ -81,10 +90,7 @@ export const createUsersValidation = () => ({
   getMyActivity: {},
   getMyFullProfile: {},
   upsertMyProfile: {
-    body: profileSchema.refine(
-      (v) => Object.keys(v).length > 0,
-      "At least one profile field is required",
-    ),
+    body: profileSchema,
   },
   suspendUser: { params: idParams, body: z.object({ reason: text(500).optional() }).strict() },
   activateUser: { params: idParams, body: emptyBody },

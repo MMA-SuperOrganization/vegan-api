@@ -131,6 +131,23 @@ describe("product expansion contracts", () => {
       ).status,
     ).toBe(404);
   });
+  it("ignores blank optional profile fields instead of returning validation errors", async () => {
+    const { app } = fixture();
+    const response = await request(app).put("/api/v1/profiles/me").set(auth()).send({
+      username: "  ",
+      bio: "",
+      city: " ",
+      country: "",
+      dateOfBirth: "",
+      locale: "",
+      timezone: "",
+    });
+
+    expect(response.status, JSON.stringify(response.body)).toBe(200);
+    expect(response.body.data).not.toHaveProperty("username");
+    expect(response.body.data).not.toHaveProperty("city");
+    expect(response.body.data).not.toHaveProperty("country");
+  });
   it("allows same-type category trees and rejects self/ancestor cycles and cross-type parents", async () => {
     const { app } = fixture();
     const created = await request(app)
