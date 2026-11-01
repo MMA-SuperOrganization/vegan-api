@@ -51,14 +51,15 @@ export const createR2StorageProvider = ({
     destroy() {
       s3Client.destroy?.();
     },
-    async createUploadUrl({ key, contentType, contentLength, expiresIn = defaultExpiresIn }) {
-      // ContentType/ContentLength được ký vào URL: client phải PUT đúng header,
-      // nếu không R2 trả SignatureDoesNotMatch. Nhờ vậy giới hạn được loại và dung lượng file.
+    async createUploadUrl({ key, contentType, expiresIn = defaultExpiresIn }) {
+      // React Native and browsers do not reliably allow callers to set Content-Length.
+      // Signing that header makes otherwise valid mobile uploads fail with
+      // SignatureDoesNotMatch. Size is still verified from R2 metadata before the
+      // asset can transition from pending to ready.
       const command = new PutObjectCommand({
         Bucket: bucketName,
         Key: key,
         ContentType: contentType,
-        ...(contentLength && { ContentLength: contentLength }),
       });
       try {
         // Mặc định presigner không ký Content-Type; signableHeaders buộc nó vào SignedHeaders

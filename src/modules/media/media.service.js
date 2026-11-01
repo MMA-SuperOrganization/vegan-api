@@ -295,9 +295,8 @@ export const createMediaService = (deps) => {
         expiresIn: expires(),
         requiredHeaders: {
           "Content-Type": body.mimeType,
-          "Content-Length": String(body.sizeBytes),
         },
-        headers: { "Content-Type": body.mimeType, "Content-Length": String(body.sizeBytes) },
+        headers: { "Content-Type": body.mimeType },
       };
     },
     getMyMedia: async ({ actor, query = {} }) => {

@@ -62,7 +62,7 @@ describe("R2 storage provider", () => {
     expect(endpoint.hostname).toBe("acc123.r2.cloudflarestorage.com");
   });
 
-  it("signs a real PUT URL locally with content type and expiry, without exposing the secret", async () => {
+  it("signs a mobile-safe PUT URL with content type and expiry", async () => {
     const provider = createR2StorageProvider({
       s3Client,
       bucketName: "bucket",
@@ -81,7 +81,7 @@ describe("R2 storage provider", () => {
     expect(parsed.pathname).toBe("/users/u1/avatars/x.webp");
     expect(parsed.searchParams.get("X-Amz-Expires")).toBe("300");
     expect(parsed.searchParams.get("X-Amz-SignedHeaders")).toContain("content-type");
-    expect(parsed.searchParams.get("X-Amz-SignedHeaders")).toContain("content-length");
+    expect(parsed.searchParams.get("X-Amz-SignedHeaders")).not.toContain("content-length");
     expect(url).not.toContain("fake-secret");
     expect(expiresAt).toEqual(new Date(300_000));
   });

@@ -34,7 +34,7 @@ describe("POST /api/v1/media/upload-requests", () => {
       method: "PUT",
       status: "pending",
       expiresIn: 300,
-      requiredHeaders: { "Content-Type": "image/webp", "Content-Length": "204800" },
+      requiredHeaders: { "Content-Type": "image/webp" },
     });
     expect(data.uploadUrl).toContain(asset.objectKey);
     expect(data.objectKey).toBeUndefined();
