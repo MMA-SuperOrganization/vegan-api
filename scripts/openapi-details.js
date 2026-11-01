@@ -271,7 +271,7 @@ export const operationNotes = {
   getAiMessages:
     "Lấy messages trong conversation id thuộc owner, phân trang; conversation ngoài owner bị từ chối/không tìm thấy.",
   sendAiMessage:
-    "Gửi content và tùy chọn mediaId ảnh purpose ai_chat vào conversation owner; backend kiểm tra ảnh ready/đúng owner rồi dùng vision model. AI chạy theo safety/structured-output policy và lưu kết quả/run. Provider lỗi có thể trả 502; không gửi secret trong nội dung.",
+    "Gửi content và tùy chọn mediaId ảnh purpose ai_chat vào conversation owner; backend luôn bổ sung hồ sơ dinh dưỡng hiện có của owner vào ngữ cảnh, còn useProfile chỉ được giữ để tương thích client cũ và không thể tắt hành vi này. Backend kiểm tra ảnh ready/đúng owner rồi dùng vision model. AI chạy theo safety/structured-output policy và lưu kết quả/run. Provider lỗi có thể trả 502; không gửi secret trong nội dung.",
   getNotifications:
     "Inbox owner có phân trang; unread nhận chuỗi true/false. Mỗi notification có thông tin liên kết/route khi được service tạo.",
   getUnreadNotificationCount: "Trả unreadCount của owner, không cần lấy toàn bộ inbox để đếm.",

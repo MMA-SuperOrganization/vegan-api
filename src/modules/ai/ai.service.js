@@ -726,7 +726,7 @@ export function createAiService({
             {
               role: "user",
               content: JSON.stringify({
-                ...(body.useProfile === true ? { userContext: await context(userId) } : {}),
+                userContext: await context(userId),
                 catalog,
               }),
             },
@@ -742,6 +742,7 @@ export function createAiService({
               retrievalMode: catalog.retrieval.mode,
               recipeCount: catalog.recipes.length,
               foodCount: catalog.foods.length,
+              usesProfile: true,
             },
           },
         );

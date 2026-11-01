@@ -274,7 +274,7 @@ describe("product expansion contracts", () => {
     expect(result.status, JSON.stringify(result.body)).toBe(200);
     expect(result.body.data).toEqual([]);
   });
-  it("sends nutrition context to the AI provider only with explicit consent", async () => {
+  it("always sends nutrition context to the AI chat provider", async () => {
     const aiProvider = {
       enabled: true,
       generate: vi.fn(async () => ({ data: { content: "Try a vegetable bowl." } })),
@@ -301,13 +301,13 @@ describe("product expansion contracts", () => {
     expect(
       (await request(app).post(path).set(auth()).send({ content: "Suggest a lunch" })).status,
     ).toBe(200);
-    expect(JSON.stringify(aiProvider.generate.mock.calls[0][0])).not.toContain("2345");
+    expect(JSON.stringify(aiProvider.generate.mock.calls[0][0])).toContain("2345");
     expect(
       (
         await request(app)
           .post(path)
           .set(auth())
-          .send({ content: "Suggest a dinner", useProfile: true })
+          .send({ content: "Suggest a dinner", useProfile: false })
       ).status,
     ).toBe(200);
     expect(JSON.stringify(aiProvider.generate.mock.calls[1][0])).toContain("2345");

@@ -37731,7 +37731,7 @@ paths:
 
         **Nghiệp vụ:** Kết quả AI phải qua kiểm tra cấu trúc và tham chiếu. Tạo proposal chưa ghi kế hoạch/kho thực phẩm; chỉ confirm mới ghi. Proposal có hạn 1 giờ, xác nhận lại proposal đã consumed trả kết quả trước đó. Các thao tác gọi provider có thể trả 503 khi AI tắt/chưa cấu hình.
 
-        Gửi content và tùy chọn mediaId ảnh purpose ai_chat vào conversation owner; backend kiểm tra ảnh ready/đúng owner rồi dùng vision model. AI chạy theo safety/structured-output policy và lưu kết quả/run. Provider lỗi có thể trả 502; không gửi secret trong nội dung.
+        Gửi content và tùy chọn mediaId ảnh purpose ai_chat vào conversation owner; backend luôn bổ sung hồ sơ dinh dưỡng hiện có của owner vào ngữ cảnh, còn useProfile chỉ được giữ để tương thích client cũ và không thể tắt hành vi này. Backend kiểm tra ảnh ready/đúng owner rồi dùng vision model. AI chạy theo safety/structured-output policy và lưu kết quả/run. Provider lỗi có thể trả 502; không gửi secret trong nội dung.
 
         **Request:** application/json; body bắt buộc, các trường bắt buộc được đánh dấu trong schema. Không gửi trường ngoài schema khi additionalProperties=false.
 
