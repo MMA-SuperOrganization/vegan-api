@@ -153,9 +153,9 @@ export function createGroceryListsService({
         const pantry = await services.pantries.addItems(
           userId,
           transferable.map((item) => ({
-            ...(item.foodItemId ? { foodItemId: item.foodItemId } : {}),
+            ...(item.foodItemId ? { foodItemId: String(item.foodItemId) } : {}),
             ...(item.personalIngredientId
-              ? { personalIngredientId: item.personalIngredientId }
+              ? { personalIngredientId: String(item.personalIngredientId) }
               : {}),
             quantity: item.quantity,
             unit: item.unit,
