@@ -16,6 +16,10 @@ const r2Env = {
 };
 
 describe("loadEnv", () => {
+  it("keeps backend rate limiting disabled by default and allows explicitly enabling it", () => {
+    expect(loadEnv({ NODE_ENV: "test" }).rateLimits.enabled).toBe(false);
+    expect(loadEnv({ NODE_ENV: "test", RATE_LIMIT_ENABLED: "true" }).rateLimits.enabled).toBe(true);
+  });
   it("rejects malformed or reversed app versions", () => {
     expect(() =>
       loadEnv({ NODE_ENV: "test", APP_MINIMUM_VERSION: "2.0.0", APP_LATEST_VERSION: "1.9.9" }),
