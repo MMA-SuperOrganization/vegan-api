@@ -59720,7 +59720,7 @@ components:
                       description: Thông tin công thức được chụp khi thêm bữa ăn/nhật ký.
                     servings:
                       type: number
-                      minimum: 2.220446049250313e-16
+                      minimum: 1
                       maximum: 100
                       description: Số khẩu phần công thức được sử dụng.
                     note:
@@ -59734,6 +59734,12 @@ components:
                         - boolean
                         - "null"
                       description: Trạng thái hoàn tất bữa ăn/video theo endpoint.
+                    diaryEntryId:
+                      type:
+                        - string
+                        - "null"
+                      pattern: ^[A-Fa-f0-9]{24}$
+                      description: ID tham chiếu diaryEntryId; xem resource tương ứng và kiểm tra quyền ở service. ObjectId gồm 24 ký tự hexadecimal.
                   additionalProperties: false
                   description: Trường meals item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
                 description: Các bữa ăn của ngày; gồm loại bữa, công thức và số khẩu phần.
@@ -60006,6 +60012,17 @@ components:
             - "null"
           pattern: ^[A-Fa-f0-9]{24}$
           description: ID thực phẩm chuẩn; phải tồn tại và hợp lệ theo kiểm tra service. ObjectId gồm 24 ký tự hexadecimal.
+        sourceMealPlanId:
+          type:
+            - string
+            - "null"
+          pattern: ^[A-Fa-f0-9]{24}$
+          description: ID tham chiếu sourceMealPlanId; xem resource tương ứng và kiểm tra quyền ở service. ObjectId gồm 24 ký tự hexadecimal.
+        sourceMealId:
+          type:
+            - string
+            - "null"
+          description: ID tham chiếu sourceMealId; xem resource tương ứng và kiểm tra quyền ở service.
         nameSnapshot:
           type: string
           maxLength: 200
@@ -65963,6 +65980,17 @@ components:
             - "null"
           pattern: ^[A-Fa-f0-9]{24}$
           description: ID thực phẩm chuẩn; phải tồn tại và hợp lệ theo kiểm tra service. ObjectId gồm 24 ký tự hexadecimal.
+        sourceMealPlanId:
+          type:
+            - string
+            - "null"
+          pattern: ^[A-Fa-f0-9]{24}$
+          description: ID tham chiếu sourceMealPlanId; xem resource tương ứng và kiểm tra quyền ở service. ObjectId gồm 24 ký tự hexadecimal.
+        sourceMealId:
+          type:
+            - string
+            - "null"
+          description: ID tham chiếu sourceMealId; xem resource tương ứng và kiểm tra quyền ở service.
         nameSnapshot:
           type: string
           maxLength: 200
@@ -71647,8 +71675,8 @@ components:
                       description: ID công thức; quyền truy cập và trạng thái được kiểm tra trước khi dùng. ObjectId gồm 24 ký tự hexadecimal.
                     servings:
                       default: 1
-                      type: number
-                      exclusiveMinimum: 0
+                      type: integer
+                      minimum: 1
                       maximum: 100
                       description: "Số khẩu phần công thức được sử dụng. Mặc định: 1."
                     note:
@@ -71796,8 +71824,8 @@ components:
           description: ID công thức; quyền truy cập và trạng thái được kiểm tra trước khi dùng. ObjectId gồm 24 ký tự hexadecimal.
         servings:
           default: 1
-          type: number
-          exclusiveMinimum: 0
+          type: integer
+          minimum: 1
           maximum: 100
           description: "Số khẩu phần công thức được sử dụng. Mặc định: 1."
         note:
@@ -71867,8 +71895,8 @@ components:
           pattern: ^[a-f\d]{24}$
           description: ID công thức; quyền truy cập và trạng thái được kiểm tra trước khi dùng. ObjectId gồm 24 ký tự hexadecimal.
         servings:
-          type: number
-          exclusiveMinimum: 0
+          type: integer
+          minimum: 1
           maximum: 100
           description: Số khẩu phần công thức được sử dụng.
         note:

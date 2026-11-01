@@ -42,6 +42,7 @@ const meal = new mongoose.Schema(
     },
     note: { type: String, trim: true, maxlength: 1000 },
     completed: { type: Boolean, default: false },
+    diaryEntryId: { type: mongoose.Schema.Types.ObjectId, ref: "Diary" },
   },
   { _id: false },
 );

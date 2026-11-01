@@ -303,6 +303,7 @@ describe("meal plans and grocery child isolation", () => {
     const updated = await ops.getMealPlan({ actor, params: { id: plan._id } });
     expect(updated.nutritionSummary.caloriesKcal).toBe(250);
     expect(updated.days[0].meals[0].completed).toBe(true);
+    expect(updated.days[0].meals[0].diaryEntryId).toBe(repositories.diaryEntries.records[0]._id);
     expect(repositories.diaryEntries.records).toHaveLength(1);
     expect(repositories.diaryEntries.records[0]).toMatchObject({
       userId,
@@ -345,7 +346,26 @@ describe("meal plans and grocery child isolation", () => {
       params: { id: plan._id },
     });
     expect(reloaded.days[0].meals[0].completed).toBe(false);
+    expect(reloaded.days[0].meals[0].diaryEntryId).toBeUndefined();
     expect(repositories.diaryEntries.records).toHaveLength(0);
+  });
+  it("repairs a legacy completed meal whose diary entry is missing", async () => {
+    const { modules, repositories } = setup();
+    const plan = await modules.mealPlans.operations.createMealPlan({ actor, body: planBody });
+    const legacyMeal = repositories.mealPlans.records[0].days[0].meals[0];
+    legacyMeal.completed = true;
+
+    const repaired = await modules.mealPlans.operations.updateMealInPlan({
+      actor,
+      params: { id: plan._id, mealId: legacyMeal.mealId },
+      body: { completed: true },
+    });
+
+    expect(repositories.diaryEntries.records).toHaveLength(1);
+    expect(repaired.days[0].meals[0]).toMatchObject({
+      completed: true,
+      diaryEntryId: repositories.diaryEntries.records[0]._id,
+    });
   });
   it("switches active plans sequentially through one stable owner/week slot", async () => {
     const { modules, repositories } = setup();
@@ -522,6 +542,7 @@ describe("meal plans and grocery child isolation", () => {
     expect(cloned.status).toBe("draft");
     expect(cloned.days[0].date).toEqual(new Date("2026-10-12T00:00:00Z"));
     expect(cloned.days[0].meals[0].completed).toBe(false);
+    expect(cloned.days[0].meals[0].diaryEntryId).toBeUndefined();
     expect(cloned.days[0].meals[0].mealId).not.toBe(mealId);
     expect(services.recipes.getById).toHaveBeenCalledTimes(1);
   });

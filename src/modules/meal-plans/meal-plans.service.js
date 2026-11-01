@@ -98,6 +98,7 @@ export function createMealPlansService({
           .find((candidate) => candidate.mealId === String(mealId));
         if (!meal) throw AppError.notFound("Meal not found");
         meal.completed = false;
+        delete meal.diaryEntryId;
         return { days: plan.days };
       },
       options,
@@ -371,11 +372,13 @@ export function createMealPlansService({
               meal.recipeSnapshot = replacement.recipeSnapshot;
             }
             Object.assign(meal, body);
-            if (typeof body.completed === "boolean" && body.completed !== wasCompleted) {
+            // Always reconcile the linked diary entry when completion is explicitly sent.
+            // This repairs legacy plans whose completed flag was saved before diary sync existed.
+            if (typeof body.completed === "boolean") {
               if (!services.diary?.createFromMealPlan || !services.diary?.removeMealPlanEntry)
                 throw AppError.serviceUnavailable("Diary service is unavailable");
               if (body.completed) {
-                await services.diary.createFromMealPlan(
+                const diaryEntry = await services.diary.createFromMealPlan(
                   userId,
                   {
                     sourceMealPlanId: plan._id,
@@ -390,10 +393,12 @@ export function createMealPlansService({
                   },
                   { session },
                 );
+                meal.diaryEntryId = diaryEntry._id;
               } else {
                 await services.diary.removeMealPlanEntry(userId, plan._id, meal.mealId, {
                   session,
                 });
+                delete meal.diaryEntryId;
               }
             }
             // Logging a meal never consumes pantry without a separately confirmed request.
@@ -416,7 +421,7 @@ export function createMealPlansService({
               .flatMap((day) => day.meals)
               .find((candidate) => candidate.mealId === params.mealId);
             if (!meal) throw AppError.notFound("Meal not found");
-            if (meal.completed) {
+            if (meal.completed || meal.diaryEntryId) {
               if (!services.diary?.removeMealPlanEntry)
                 throw AppError.serviceUnavailable("Diary service is unavailable");
               await services.diary.removeMealPlanEntry(userId, plan._id, meal.mealId, { session });
@@ -439,7 +444,11 @@ export function createMealPlansService({
       const shift = weekStartDate - new Date(plan.weekStartDate);
       const days = copyDays(plan.days).map((day) => ({
         date: new Date(new Date(day.date).getTime() + shift),
-        meals: day.meals.map((meal) => ({ ...meal, mealId: randomUUID(), completed: false })),
+        meals: day.meals.map(({ diaryEntryId: _diaryEntryId, ...meal }) => ({
+          ...meal,
+          mealId: randomUUID(),
+          completed: false,
+        })),
       }));
       return repo.create({
         userId,
