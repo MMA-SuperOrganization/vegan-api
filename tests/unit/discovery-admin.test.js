@@ -970,6 +970,40 @@ describe("Real aggregation pipeline contracts (stubbed responses, no Mongo calcu
         .data,
     ).toEqual([]);
   });
+  it("excludes posts from pending review statistics and inventory", async () => {
+    const fixtures = fixtureSeed();
+    const legacyPendingPostId = "200000000000000000000099";
+    const h = harness({
+      posts: [
+        ...fixtures.posts,
+        content({
+          _id: legacyPendingPostId,
+          slug: "legacy-pending-post",
+          title: "Legacy pending community post",
+          postType: "community",
+          content: "Published posts must not enter the review queue",
+          status: "pending_review",
+          foodItemIds: [IDS.food],
+          ingredients: [],
+        }),
+      ],
+    });
+
+    const summary = await h.call("getDashboardSummary", { actor: administrator, query });
+    expect(summary.content.post.pending).toBe(0);
+
+    const pending = await h.call("getPendingContent", {
+      actor: administrator,
+      query: { ...query, type: "all" },
+    });
+    expect(pending.data.map((row) => row._id)).not.toContain(legacyPendingPostId);
+    await expect(
+      h.call("getPendingContent", {
+        actor: administrator,
+        query: { ...query, type: "post" },
+      }),
+    ).rejects.toThrow();
+  });
 });
 
 describe("Audit and AI read privacy", () => {

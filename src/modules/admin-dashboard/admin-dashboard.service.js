@@ -13,7 +13,7 @@ import {
   service,
   summarizeContent,
 } from "../app-config/index.js";
-const type = z.enum(["all", "recipe", "post", "video"]);
+const pendingType = z.enum(["all", "recipe", "video"]);
 const trendsQuery = rangeSchema({ interval: z.enum(["day", "week", "month"]).default("day") });
 export const dashboardValidation = {
   getDashboardSummary: { query: rangeSchema() },
@@ -23,13 +23,14 @@ export const dashboardValidation = {
     query: rangeSchema({
       page: pagination.page,
       limit: integer(50, 20),
-      type: type.default("all"),
+      type: pendingType.default("all"),
       q: text(120).optional(),
       authorId: id.optional(),
     }),
   },
 };
 const keys = { recipe: "recipes", post: "posts", video: "videos" };
+const reviewableKeys = { recipe: "recipes", video: "videos" };
 const buckets = (deps, query, field, category) => [
   { $match: { [field]: range(deps, query).filter, ...category.filter } },
   {
@@ -67,7 +68,9 @@ export const createAdminDashboardService = (deps) => ({
               deletedAt: null,
               publishedAt: selectedRange.filter,
             }),
-            repo.count({ status: "pending_review", deletedAt: null }),
+            type === "post"
+              ? Promise.resolve(0)
+              : repo.count({ status: "pending_review", deletedAt: null }),
             repo.count({ status: "hidden", deletedAt: null }),
           ]);
           return [type, { publishedInRange: published, pending, hidden }];
@@ -167,7 +170,7 @@ export const createAdminDashboardService = (deps) => ({
     admin(actor);
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
-    const types = query.type && query.type !== "all" ? [query.type] : Object.keys(keys);
+    const types = query.type && query.type !== "all" ? [query.type] : Object.keys(reviewableKeys);
     const result = await unionPage(
       types.map((type) => {
         const filter = { status: "pending_review", deletedAt: null };
@@ -182,7 +185,7 @@ export const createAdminDashboardService = (deps) => ({
         if (query.q)
           filter.title = { $regex: query.q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), $options: "i" };
         return {
-          repository: repository(deps, keys[type]),
+          repository: repository(deps, reviewableKeys[type]),
           filter,
           type,
           projection: contentCardProjection,
