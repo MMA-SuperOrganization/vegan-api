@@ -469,6 +469,50 @@ describe("Complete content modules", () => {
       }),
     ).rejects.toMatchObject({ statusCode: 400 });
   });
+  it("rejects unavailable recipes and invalid post categories", async () => {
+    const draftRecipeId = newId();
+    const recipeCategoryId = newId();
+    const inactivePostCategoryId = newId();
+    const h = createHarness({
+      recipes: [
+        {
+          _id: draftRecipeId,
+          authorId: owner.userId,
+          title: "Private draft",
+          status: "draft",
+          visibility: "private",
+          deletedAt: null,
+        },
+      ],
+      categories: [
+        { _id: recipeCategoryId, name: "Lunch", type: "recipe", status: "active" },
+        {
+          _id: inactivePostCategoryId,
+          name: "Old community",
+          type: "post",
+          status: "inactive",
+        },
+      ],
+    });
+
+    await expect(
+      h.call("posts", "createPost", {
+        body: { title: "Draft leak", content: "Do not expose it", recipeId: draftRecipeId },
+      }),
+    ).rejects.toMatchObject({ statusCode: 404 });
+    for (const categoryId of [recipeCategoryId, inactivePostCategoryId, newId()]) {
+      await expect(
+        h.call("posts", "createPost", {
+          body: {
+            title: "Bad category",
+            content: "Category integrity",
+            foodItemIds: [linkedFoodId],
+            categoryIds: [categoryId],
+          },
+        }),
+      ).rejects.toMatchObject({ statusCode: 404 });
+    }
+  });
   it("filters published community posts by their related recipe", async () => {
     const recipeId = newId();
     const otherRecipeId = newId();
@@ -514,6 +558,27 @@ describe("Complete content modules", () => {
       relatedFoodItems: [{ _id: linkedFoodId, name: "Tofu" }],
     });
   });
+  it("does not expose unavailable relationship metadata from legacy posts", async () => {
+    const recipeId = newId();
+    const post = published({ recipeId, postType: "community" });
+    const h = createHarness({
+      recipes: [
+        {
+          _id: recipeId,
+          authorId: owner.userId,
+          title: "Hidden recipe title",
+          status: "draft",
+          visibility: "private",
+          deletedAt: null,
+        },
+      ],
+      posts: [post],
+    });
+
+    const result = await h.call("posts", "getPosts", { actor: null });
+
+    expect(result.data[0]).toMatchObject({ relatedRecipe: null });
+  });
   it("includes the current user's reaction in post list responses", async () => {
     const post = published({ postType: "community", reactionCount: 1 });
     const h = createHarness({
@@ -551,6 +616,44 @@ describe("Complete content modules", () => {
       version: 1,
     });
     expect((await h.call("posts", "getPosts", { actor: null })).data).toHaveLength(1);
+  });
+  it("uploads, confirms, links and publicly serves a post image end to end", async () => {
+    const h = createHarness();
+    const upload = await h.call("media", "createUploadRequest", {
+      body: {
+        filename: "tofu-tip.png",
+        mimeType: "image/png",
+        sizeBytes: 100,
+        purpose: "post",
+      },
+    });
+    await h.call("media", "confirmMediaUpload", { params: { id: upload.assetId } });
+
+    const post = await h.call("posts", "createPost", {
+      body: {
+        title: "Crispy tofu tip",
+        content: "Press tofu before cooking.",
+        foodItemIds: [linkedFoodId],
+        mediaIds: [upload.assetId],
+      },
+    });
+
+    expect(post).toMatchObject({
+      status: "published",
+      visibility: "public",
+      mediaIds: [upload.assetId],
+    });
+    expect(await h.repositories.mediaAssets.findById(upload.assetId)).toMatchObject({
+      status: "ready",
+      references: [{ entityType: "post", entityId: post._id }],
+    });
+    await expect(
+      h.call("posts", "getPost", { actor: null, params: { id: post._id } }),
+    ).resolves.toMatchObject({ _id: post._id, mediaIds: [upload.assetId] });
+    await expect(
+      h.call("media", "getMediaAsset", { actor: null, params: { id: upload.assetId } }),
+    ).resolves.toMatchObject({ _id: upload.assetId, status: "ready" });
+    expect((await h.call("posts", "getPosts", { actor: null })).data[0]._id).toBe(post._id);
   });
   it("never overlaps repository calls on the same transaction session", async () => {
     const foods = [newId(), newId()];
