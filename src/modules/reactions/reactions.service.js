@@ -1,4 +1,5 @@
 import { requireActor, transaction, casUpdate } from "../../common/content-service.js";
+import { NOTIFICATION_TYPES } from "../../common/constants/enums/notification.enums.js";
 export const createReactionsService = (deps) => {
   const repo = deps.repositories.reactions;
   const persistWithStandaloneFallback = async (work) => {
@@ -24,10 +25,10 @@ export const createReactionsService = (deps) => {
   };
 
   const operations = {
-    upsertReaction: ({ actor, params, body }) =>
-      persistWithStandaloneFallback(async (session) => {
+    upsertReaction: async ({ actor, params, body }) => {
+      const result = await persistWithStandaloneFallback(async (session) => {
         requireActor(actor);
-        await deps.services.content.getTarget(params.targetType, params.targetId, {
+        const target = await deps.services.content.getTarget(params.targetType, params.targetId, {
           publicOnly: true,
           session,
         });
@@ -37,7 +38,11 @@ export const createReactionsService = (deps) => {
           targetId: params.targetId,
         };
         const before = await repo.findOne(filter, { session });
-        if (before) return updateReactionType(before, body.type, params, session);
+        if (before)
+          return {
+            reaction: await updateReactionType(before, body.type, params, session),
+            created: false,
+          };
 
         let after;
         const coordinated = Boolean(session || deps.standalone);
@@ -49,7 +54,10 @@ export const createReactionsService = (deps) => {
           if (error?.code !== 11000 || coordinated) throw error;
           const concurrent = await repo.findOne(filter, { session });
           if (!concurrent) throw error;
-          return updateReactionType(concurrent, body.type, params, session);
+          return {
+            reaction: await updateReactionType(concurrent, body.type, params, session),
+            created: false,
+          };
         }
         try {
           await deps.services.content.adjustCounters(
@@ -58,12 +66,26 @@ export const createReactionsService = (deps) => {
             { reactionCount: 1 },
             { session },
           );
-          return after;
+          return { reaction: after, created: true, recipientId: target.authorId, target };
         } catch (error) {
           if (!coordinated) await repo.deleteOne({ ...filter, _id: after._id });
           throw error;
         }
-      }),
+      });
+      if (result.created)
+        await deps.services.notifications?.deliverActivity?.({
+          recipientId: result.recipientId,
+          actorId: actor.userId,
+          type: NOTIFICATION_TYPES.REACTION_CREATED,
+          targetType:
+            params.targetType === "comment" ? result.target.targetType : params.targetType,
+          targetId: params.targetType === "comment" ? result.target.targetId : params.targetId,
+          subjectType: params.targetType,
+          reactionType: body.type,
+          deliveryKey: `reaction:${result.reaction._id}:created`,
+        });
+      return result.reaction;
+    },
     deleteReaction: ({ actor, params }) =>
       persistWithStandaloneFallback(async (session) => {
         requireActor(actor);

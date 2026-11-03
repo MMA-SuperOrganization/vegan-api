@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { AppError } from "../../common/errors/app-error.js";
+import { NOTIFICATION_TYPES } from "../../common/constants/enums/notification.enums.js";
 import { preferencesSchema } from "./notifications.validation.js";
 const owner = (actor) => {
   if (!actor?.userId) throw AppError.unauthorized();
@@ -35,6 +36,17 @@ export function createNotificationsService({
     userId,
   });
   const unreadCount = (userId) => repos.notifications.count({ ...visible(userId), readAt: null });
+  const contentTypes = new Set([
+    NOTIFICATION_TYPES.RECIPE_APPROVED,
+    NOTIFICATION_TYPES.RECIPE_REJECTED,
+    NOTIFICATION_TYPES.COMMENT_CREATED,
+    NOTIFICATION_TYPES.COMMENT_REPLIED,
+    NOTIFICATION_TYPES.REACTION_CREATED,
+    "content",
+    "post",
+    "recipe",
+    "video",
+  ]);
   const operations = {
     getNotifications: ({ actor, query = {} }) =>
       repos.notifications.findMany(
@@ -117,6 +129,7 @@ export function createNotificationsService({
   }) {
     await assertClaim();
     const key = deliveryKey || randomUUID();
+    const notificationData = { event: type, ...data };
     let notification;
     try {
       notification = await repos.notifications.updateOne(
@@ -127,7 +140,7 @@ export function createNotificationsService({
             type,
             title,
             body,
-            data,
+            data: notificationData,
             deliveryKey: key,
             channel: "in_app",
             status: "sent",
@@ -194,7 +207,7 @@ export function createNotificationsService({
           ? preferences.mealReminderEnabled
           : type === "water"
             ? preferences.waterReminderEnabled
-            : ["content", "post", "recipe", "video"].includes(type)
+            : contentTypes.has(type)
               ? preferences.contentEnabled
               : true;
       if (
@@ -234,7 +247,11 @@ export function createNotificationsService({
               tokens: tokens.slice(i, i + 500),
               title,
               body,
-              data: { ...data, notificationId: String(notification._id), deliveryKey: key },
+              data: {
+                ...notificationData,
+                notificationId: String(notification._id),
+                deliveryKey: key,
+              },
             }),
             new Promise((_, reject) => {
               timeout = setTimeout(
@@ -275,5 +292,76 @@ export function createNotificationsService({
       );
     }
   }
-  return { ...operations, getPreferences, unreadCount, deliver };
+  async function deliverActivity({
+    recipientId,
+    actorId,
+    type,
+    targetType,
+    targetId,
+    subjectType,
+    targetTitle,
+    reactionType,
+    reason,
+    deliveryKey,
+  }) {
+    if (!recipientId || String(recipientId) === String(actorId)) return null;
+    let actorName = "Someone";
+    try {
+      const actor = actorId
+        ? await services.users?.getById?.(actorId, { allowInactive: true })
+        : null;
+      actorName = actor?.displayName?.trim() || actorName;
+    } catch {
+      // The activity is still useful if the actor was removed after creating it.
+    }
+    const label = targetTitle?.trim() || targetType || "content";
+    const copy = {
+      [NOTIFICATION_TYPES.RECIPE_APPROVED]: {
+        title: "Recipe approved",
+        body: `Your recipe “${label}” has been approved.`,
+      },
+      [NOTIFICATION_TYPES.RECIPE_REJECTED]: {
+        title: "Recipe needs changes",
+        body: reason
+          ? `Your recipe “${label}” was not approved: ${reason}`
+          : `Your recipe “${label}” was not approved.`,
+      },
+      [NOTIFICATION_TYPES.COMMENT_CREATED]: {
+        title: "New comment",
+        body: `${actorName} commented on your ${targetType}.`,
+      },
+      [NOTIFICATION_TYPES.COMMENT_REPLIED]: {
+        title: "New reply",
+        body: `${actorName} replied to your comment.`,
+      },
+      [NOTIFICATION_TYPES.REACTION_CREATED]: {
+        title: "New reaction",
+        body: `${actorName} reacted ${reactionType || "like"} to your ${subjectType || targetType}.`,
+      },
+    }[type];
+    if (!copy) throw AppError.badRequest("Unsupported notification activity type");
+    try {
+      return await deliver({
+        userId: recipientId,
+        type,
+        ...copy,
+        data: {
+          event: type,
+          targetType: String(targetType || ""),
+          targetId: String(targetId || ""),
+          ...(subjectType ? { subjectType: String(subjectType) } : {}),
+          actorId: String(actorId || ""),
+          ...(reactionType ? { reactionType: String(reactionType) } : {}),
+        },
+        deliveryKey,
+      });
+    } catch (error) {
+      logger?.warn?.(
+        { type, targetType, targetId: String(targetId), code: error.code || "NOTIFY_FAILED" },
+        "Activity notification delivery failed",
+      );
+      return null;
+    }
+  }
+  return { ...operations, getPreferences, unreadCount, deliver, deliverActivity };
 }

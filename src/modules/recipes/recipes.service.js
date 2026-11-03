@@ -1,6 +1,7 @@
 import { dietFilter } from "../../common/utils/diet.js";
 import { randomUUID } from "node:crypto";
 import { AppError } from "../../common/errors/app-error.js";
+import { NOTIFICATION_TYPES } from "../../common/constants/enums/notification.enums.js";
 import { requireFound, publicFilter, slug, objectIdString } from "../../common/domain.js";
 import { calculateRecipeNutrition } from "../../common/utils/nutrition.js";
 import { quantityToGrams } from "../../common/utils/units.js";
@@ -207,16 +208,33 @@ export const createRecipesService = (deps) => {
         await lifecycle(deps, repo, "recipe", context, "submit", validatePublication),
         context.actor,
       ),
-    publishRecipe: async (context) =>
-      presentRecipe(
-        await lifecycle(deps, repo, "recipe", context, "publish", validatePublication),
-        context.actor,
-      ),
-    rejectRecipe: async (context) =>
-      presentRecipe(
-        await lifecycle(deps, repo, "recipe", context, "reject", validatePublication),
-        context.actor,
-      ),
+    publishRecipe: async (context) => {
+      const recipe = await lifecycle(deps, repo, "recipe", context, "publish", validatePublication);
+      await deps.services.notifications?.deliverActivity?.({
+        recipientId: recipe.authorId,
+        actorId: context.actor.userId,
+        type: NOTIFICATION_TYPES.RECIPE_APPROVED,
+        targetType: "recipe",
+        targetId: recipe._id,
+        targetTitle: recipe.title,
+        deliveryKey: `recipe:${recipe._id}:approved:${recipe.version ?? 0}`,
+      });
+      return presentRecipe(recipe, context.actor);
+    },
+    rejectRecipe: async (context) => {
+      const recipe = await lifecycle(deps, repo, "recipe", context, "reject", validatePublication);
+      await deps.services.notifications?.deliverActivity?.({
+        recipientId: recipe.authorId,
+        actorId: context.actor.userId,
+        type: NOTIFICATION_TYPES.RECIPE_REJECTED,
+        targetType: "recipe",
+        targetId: recipe._id,
+        targetTitle: recipe.title,
+        reason: recipe.rejectionReason,
+        deliveryKey: `recipe:${recipe._id}:rejected:${recipe.version ?? 0}`,
+      });
+      return presentRecipe(recipe, context.actor);
+    },
     getRecipeNutrition: async ({ params }) => {
       const recipe = await getById(params.id, { publicOnly: true });
       return {
