@@ -56,9 +56,7 @@ export const createPostsService = (deps) => {
         : { data: [] },
     ]);
     const recipesById = new Map(
-      recipes.data
-        .filter(isPublic)
-        .map((recipe) => [objectId(recipe), recipe]),
+      recipes.data.filter(isPublic).map((recipe) => [objectId(recipe), recipe]),
     );
     const foodItemsById = new Map(
       foodItems.data
