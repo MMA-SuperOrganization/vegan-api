@@ -72168,6 +72168,16 @@ components:
           default: false
           type: boolean
           description: "Nếu true, tạo danh sách mua sắm có trừ nguyên liệu trong kho khi chuyển đổi được đơn vị. Mặc định: false."
+        scope:
+          type: string
+          enum:
+            - day
+            - week
+          description: "Trường scope trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. Giá trị cho phép: day, week."
+        date:
+          type: string
+          pattern: ^\d{4}-\d{2}-\d{2}$
+          description: Ngày lịch YYYY-MM-DD; không phải timestamp UTC.
         from:
           type: string
           pattern: ^\d{4}-\d{2}-\d{2}$

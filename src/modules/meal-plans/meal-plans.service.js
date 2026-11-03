@@ -279,7 +279,13 @@ export function createMealPlansService({
   async function generateGroceryList(userId, id, body = {}, options = {}) {
     body = groceryGenerationInput.parse(body);
     const plan = await getOwned(userId, id, options);
-    let items = await groceryIngredients(userId, id, { ...options, from: body.from, to: body.to });
+    const generationRange =
+      body.scope === "day"
+        ? { from: body.date, to: body.date }
+        : body.scope === "week"
+          ? {}
+          : { from: body.from, to: body.to };
+    let items = await groceryIngredients(userId, id, { ...options, ...generationRange });
     if (body.subtractPantry) {
       if (!services.pantries?.getForUser)
         throw AppError.serviceUnavailable("Pantry service is unavailable");

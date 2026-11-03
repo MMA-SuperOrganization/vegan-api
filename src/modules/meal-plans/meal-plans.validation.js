@@ -45,6 +45,8 @@ export const groceryGenerationInput = z
   .object({
     name: text(200).optional(),
     subtractPantry: z.boolean().default(false),
+    scope: z.enum(["day", "week"]).optional(),
+    date: dateOnly.optional(),
     from: dateOnly.optional(),
     to: dateOnly.optional(),
   })
@@ -52,6 +54,29 @@ export const groceryGenerationInput = z
   .refine((body) => !body.from || !body.to || body.from <= body.to, {
     message: "Start date must not be after end date",
     path: ["to"],
+  })
+  .superRefine((body, context) => {
+    if (body.scope === "day" && !body.date) {
+      context.addIssue({
+        code: "custom",
+        message: "A date is required when grocery scope is day",
+        path: ["date"],
+      });
+    }
+    if (body.scope && (body.from || body.to)) {
+      context.addIssue({
+        code: "custom",
+        message: "Use scope instead of a custom date range",
+        path: ["scope"],
+      });
+    }
+    if (body.scope === "week" && body.date) {
+      context.addIssue({
+        code: "custom",
+        message: "Week scope does not accept a single date",
+        path: ["date"],
+      });
+    }
   });
 const params = z.object({ id }).strict();
 const mealParams = params.extend({ mealId: uuid });

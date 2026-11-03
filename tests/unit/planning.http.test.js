@@ -92,10 +92,24 @@ describe("planning HTTP routes through injected full application", () => {
     });
     expect(list.data.items).toHaveLength(1);
     expect(list.data.items[0].quantity).toBe(600);
+    const scopedDay = await call("generateGroceryListFromPlan", {
+      params,
+      body: { scope: "day", date: "2026-10-06" },
+    });
+    expect(scopedDay.data.items).toHaveLength(1);
+    expect(scopedDay.data.items[0].quantity).toBe(600);
+    const scopedWeek = await call("generateGroceryListFromPlan", {
+      params,
+      body: { scope: "week" },
+    });
+    expect(scopedWeek.data.items).toHaveLength(1);
+    expect(scopedWeek.data.items[0].quantity).toBe(800);
     for (const body of [
       { from: "2026-02-30" },
       { from: "2026-10-07", to: "2026-10-06" },
       { to: "2026-10-12" },
+      { scope: "day" },
+      { scope: "week", date: "2026-10-05" },
     ]) {
       await call("generateGroceryListFromPlan", { params, body, expected: 400 });
     }

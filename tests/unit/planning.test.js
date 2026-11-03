@@ -116,6 +116,17 @@ describe("Sprint 2 grocery date selection", () => {
       categorySnapshot: "Protein",
       checked: false,
     });
+    const day = await services.mealPlans.generateGroceryList(userId, plan._id, {
+      scope: "day",
+      date: "2026-10-06",
+    });
+    expect(day.items).toHaveLength(1);
+    expect(day.items[0]).toMatchObject({ quantity: 250, unit: "g" });
+    const week = await services.mealPlans.generateGroceryList(userId, plan._id, {
+      scope: "week",
+    });
+    expect(week.items).toHaveLength(1);
+    expect(week.items[0]).toMatchObject({ quantity: 1750, unit: "g" });
     await modules.groceryLists.operations.updateGroceryItem({
       actor,
       params: { id: list._id, itemId: list.items[0].itemId },
@@ -150,6 +161,15 @@ describe("Sprint 2 grocery date selection", () => {
     await expect(services.mealPlans.generateGroceryList(otherId, plan._id)).rejects.toMatchObject({
       statusCode: 404,
     });
+    await expect(
+      services.mealPlans.generateGroceryList(userId, plan._id, { scope: "day" }),
+    ).rejects.toThrow();
+    await expect(
+      services.mealPlans.generateGroceryList(userId, plan._id, {
+        scope: "week",
+        date: "2026-10-05",
+      }),
+    ).rejects.toThrow();
   });
 });
 
