@@ -68,6 +68,9 @@ function fixture(overrides = {}) {
       })),
     },
     foodItems: { getById: vi.fn(async () => ({ _id: foodId, status: "active", isVegan: true })) },
+    allergens: {
+      getMany: vi.fn(async (ids) => ids.map((id) => ({ _id: id, name: "Soy", slug: "soy" }))),
+    },
     media: {
       getOwnedReady: vi.fn(async (uid, id, { type }) => ({
         _id: id,
@@ -537,6 +540,11 @@ describe("AI complete domain", () => {
       expect.objectContaining({ code: "ALLERGEN_CAUTION", severity: "warning" }),
     ]);
     expect(JSON.stringify(result.safetyNotices)).not.toContain(allergenId);
+    const providerCall = f.provider.generate.mock.calls[0][0];
+    const userContext = JSON.parse(providerCall.messages[0].content).userContext;
+    expect(userContext.profile.allergens).toEqual(["Soy"]);
+    expect(userContext.nutrition.allergens).toEqual(["Soy"]);
+    expect(JSON.stringify(userContext)).not.toContain(allergenId);
     expect(f.repos.aiMessages.records.at(-1).safetyNotices).toEqual(result.safetyNotices);
     const history = await f.operations.getAiMessages({
       actor,

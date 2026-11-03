@@ -22,12 +22,11 @@ const invalidOutput = () =>
     code: "AI_INVALID_OUTPUT",
     message: "AI returned an invalid structured response",
   });
-const safeProfile = (profile) =>
+const safeProfile = (profile, allergenNames = []) =>
   Object.fromEntries(
     [
       "dietType",
       "allergies",
-      "allergenIds",
       "dietaryRestrictions",
       "goal",
       "dailyCalorieTarget",
@@ -40,7 +39,8 @@ const safeProfile = (profile) =>
       "excludedFoodItemIds",
     ]
       .filter((k) => profile?.[k] !== undefined)
-      .map((k) => [k, profile[k]]),
+      .map((k) => [k, profile[k]])
+      .concat(allergenNames.length ? [["allergens", allergenNames]] : []),
   );
 const resultData = (result) => result?.data ?? result;
 const dateString = (value) => new Date(value).toISOString().slice(0, 10);
@@ -178,7 +178,18 @@ export function createAiService({
       services.users?.getProfile?.(userId),
       services.users?.getNutrition?.(userId),
     ]);
-    return { profile: safeProfile(profile), nutrition: safeProfile(nutrition) };
+    const allergenIds = [
+      ...new Set([...(profile?.allergenIds ?? []), ...(nutrition?.allergenIds ?? [])].map(String)),
+    ];
+    let allergenNames = [];
+    if (allergenIds.length && services.allergens?.getMany) {
+      const allergens = await services.allergens.getMany(allergenIds);
+      allergenNames = allergens.map((allergen) => allergen.name).filter(Boolean);
+    }
+    return {
+      profile: safeProfile(profile, allergenNames),
+      nutrition: safeProfile(nutrition, allergenNames),
+    };
   }
   async function nutritionTargets(userId, session) {
     const [profile, nutrition] = await Promise.all([
@@ -778,9 +789,16 @@ export function createAiService({
     async createMealPlanProposal({ actor, body, requestId }) {
       enabled();
       const userId = own(actor);
+      const safety = await dietarySafety(userId);
       const catalog = repositories.recipes
         ? await repositories.recipes.findMany(
-            { status: "published", visibility: "public" },
+            {
+              status: "published",
+              visibility: "public",
+              ...(safety.allergenIds.size
+                ? { allergenIds: { $nin: [...safety.allergenIds] } }
+                : {}),
+            },
             { page: 1, limit: 40, projection: { _id: 1, title: 1, ingredients: 1 } },
           )
         : { data: [] };

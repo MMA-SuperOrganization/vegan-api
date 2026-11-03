@@ -127,6 +127,7 @@ export const envSchema = z
     REMINDER_POLL_INTERVAL_MS: integer(60000, 100, 3600000),
     REMINDER_BATCH_SIZE: integer(50, 1, 500),
     REMINDER_LOCK_TTL_MS: integer(120000, 1000, 3600000),
+    RATE_LIMIT_ENABLED: boolean(false),
     RATE_LIMIT_WINDOW_MS: integer(900000, 100, 86400000),
     RATE_LIMIT_MAX: integer(200, 1, 100000),
     AUTH_RATE_LIMIT_MAX: integer(30, 1, 100000),
@@ -309,6 +310,7 @@ export const loadEnv = (source = process.env) => {
       lockTtlMs: e.REMINDER_LOCK_TTL_MS,
     },
     rateLimits: {
+      enabled: e.RATE_LIMIT_ENABLED,
       windowMs: e.RATE_LIMIT_WINDOW_MS,
       max: e.RATE_LIMIT_MAX,
       authMax: e.AUTH_RATE_LIMIT_MAX,

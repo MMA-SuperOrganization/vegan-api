@@ -7,6 +7,15 @@ import { startServer } from "../../src/server.js";
 
 const pass = (_req, _res, next) => next();
 describe("Foundation security and lifecycle", () => {
+  it("allows repeated requests when backend rate limiting is disabled", async () => {
+    const { app } = buildTestApp({
+      overrides: {
+        apiRateLimiter: createRateLimiter({ enabled: false, windowMs: 60000, limit: 1 }),
+      },
+    });
+    expect((await request(app).get("/api/v1/health")).status).toBe(200);
+    expect((await request(app).get("/api/v1/health")).status).toBe(200);
+  });
   it("global rate limiter enforces limits with standard envelope", async () => {
     const { app } = buildTestApp({
       overrides: { apiRateLimiter: createRateLimiter({ windowMs: 60000, limit: 1 }) },

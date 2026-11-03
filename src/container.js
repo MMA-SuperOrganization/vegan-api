@@ -167,16 +167,28 @@ export const createContainer = ({ env, logger, overrides = {} }) => {
     },
     auth: createAuthGuards({ authProvider, usersService: services.users }),
     apiRateLimiter: dependency(overrides, "apiRateLimiter", () =>
-      createRateLimiter({ windowMs: limits.windowMs, limit: limits.max }),
+      createRateLimiter({ enabled: limits.enabled, windowMs: limits.windowMs, limit: limits.max }),
     ),
     authRateLimiter: dependency(overrides, "authRateLimiter", () =>
-      createRateLimiter({ windowMs: limits.windowMs, limit: limits.authMax }),
+      createRateLimiter({
+        enabled: limits.enabled,
+        windowMs: limits.windowMs,
+        limit: limits.authMax,
+      }),
     ),
     uploadRateLimiter: dependency(overrides, "uploadRateLimiter", () =>
-      createRateLimiter({ windowMs: limits.windowMs, limit: limits.uploadMax }),
+      createRateLimiter({
+        enabled: limits.enabled,
+        windowMs: limits.windowMs,
+        limit: limits.uploadMax,
+      }),
     ),
     aiRateLimiter: dependency(overrides, "aiRateLimiter", () =>
-      createRateLimiter({ windowMs: limits.windowMs, limit: limits.aiMax }),
+      createRateLimiter({
+        enabled: limits.enabled,
+        windowMs: limits.windowMs,
+        limit: limits.aiMax,
+      }),
     ),
   };
 };

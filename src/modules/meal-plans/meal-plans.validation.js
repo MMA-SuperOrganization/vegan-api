@@ -18,6 +18,7 @@ export const mealInput = z
     recipeId: id,
     servings: mealServings.default(1),
     note: text(1000, 0).optional(),
+    acknowledgeAllergens: z.boolean().optional(),
   })
   .strict();
 export const mealPlanInput = z

@@ -15,6 +15,7 @@ import {
   requireAdmin,
   syncMedia,
   userState,
+  isPublic,
 } from "../../common/content-service.js";
 export const createPostsService = (deps) => {
   const repo = deps.repositories.posts;
@@ -32,7 +33,14 @@ export const createPostsService = (deps) => {
             {
               page: 1,
               limit: recipeIds.length,
-              projection: { title: 1, slug: 1, coverImageUrl: 1 },
+              projection: {
+                title: 1,
+                slug: 1,
+                coverImageUrl: 1,
+                status: 1,
+                visibility: 1,
+                deletedAt: 1,
+              },
             },
           )
         : { data: [] },
@@ -42,13 +50,21 @@ export const createPostsService = (deps) => {
             {
               page: 1,
               limit: foodItemIds.length,
-              projection: { name: 1, slug: 1, imageUrl: 1 },
+              projection: { name: 1, slug: 1, imageUrl: 1, status: 1 },
             },
           )
         : { data: [] },
     ]);
-    const recipesById = new Map(recipes.data.map((recipe) => [objectId(recipe), recipe]));
-    const foodItemsById = new Map(foodItems.data.map((foodItem) => [objectId(foodItem), foodItem]));
+    const recipesById = new Map(
+      recipes.data
+        .filter(isPublic)
+        .map((recipe) => [objectId(recipe), recipe]),
+    );
+    const foodItemsById = new Map(
+      foodItems.data
+        .filter((foodItem) => foodItem.status === "active")
+        .map((foodItem) => [objectId(foodItem), foodItem]),
+    );
     return posts.map((post) => ({
       ...post,
       relatedRecipe: post.recipeId ? (recipesById.get(objectId(post.recipeId)) ?? null) : null,
@@ -85,7 +101,12 @@ export const createPostsService = (deps) => {
     data: await enrichViewerReactions(await enrichFoodRelationships(page.data), actor),
   });
   const assertRecipeExists = async (recipeId, session) => {
-    if (recipeId) requireFound(await deps.repositories.recipes.findById(recipeId, { session }));
+    if (!recipeId) return;
+    const recipe = requireFound(
+      await deps.repositories.recipes.findById(recipeId, { session }),
+      "Recipe not found",
+    );
+    if (!isPublic(recipe)) throw AppError.notFound("Recipe not found");
   };
   const assertFoodItemsExist = async (foodItemIds = [], session) => {
     for (const foodItemId of foodItemIds) {
@@ -100,10 +121,21 @@ export const createPostsService = (deps) => {
     if (!post.recipeId && !post.foodItemIds?.length)
       throw AppError.badRequest("A post must link at least one ingredient or one recipe");
   };
+  const assertCategoriesExist = async (categoryIds = [], session) => {
+    for (const categoryId of categoryIds) {
+      const category = requireFound(
+        await deps.repositories.categories.findById(categoryId, { session }),
+        "Post category not found",
+      );
+      if (category.status !== "active" || category.type !== "post")
+        throw AppError.notFound("Post category not found");
+    }
+  };
   const assertReferences = async (post, session) => {
     assertFoodRelationship(post);
     await assertRecipeExists(post.recipeId, session);
     await assertFoodItemsExist(post.foodItemIds, session);
+    await assertCategoriesExist(post.categoryIds, session);
   };
   const validatePublication = async (post, actor, session) => {
     if (!post.title?.trim() || !post.content?.trim())

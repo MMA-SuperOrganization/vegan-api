@@ -58,8 +58,18 @@ describe("open catalog ingestion", () => {
     expect(transformForkRecipe(base)).toMatchObject({
       title: "Tofu Bowl",
       category: "Dinner",
+      prepMinutes: 10,
+      cookMinutes: 10,
+      totalMinutes: 20,
       sourceAttribution: { license: "CC-BY-SA-4.0" },
     });
+    expect(
+      transformForkRecipe({
+        ...base,
+        activeTime: "45 minutes",
+        totalTime: "2 hours",
+      }),
+    ).toMatchObject({ prepMinutes: 45, cookMinutes: 75, totalMinutes: 120 });
     expect(
       transformForkRecipe({
         ...base,

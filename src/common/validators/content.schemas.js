@@ -34,6 +34,7 @@ export const contentQuery = pagination
     q: text(100).optional(),
     category: id.optional(),
     categoryId: id.optional(),
+    categoryIds: queryArray(id).optional(),
     tags: queryArray(text(60), 30).optional(),
     difficulty: z.enum(RECIPE_DIFFICULTIES.values()).optional(),
     sort: z

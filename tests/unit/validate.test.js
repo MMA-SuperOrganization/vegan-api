@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { AppError } from "../../src/common/errors/app-error.js";
 import { validate } from "../../src/common/middlewares/validate.js";
-import { updateMeBodySchema } from "../../src/modules/users/users.validation.js";
+import { profileSchema, updateMeBodySchema } from "../../src/modules/users/users.validation.js";
 
 const run = (middleware, req) => {
   const next = vi.fn();
@@ -87,5 +87,27 @@ describe("updateMeBodySchema", () => {
     expect(updateMeBodySchema.parse({ avatarMediaId: "200000000000000000000001" })).toEqual({
       avatarMediaId: "200000000000000000000001",
     });
+  });
+});
+
+describe("profileSchema", () => {
+  it("ignores blank optional profile fields", () => {
+    expect(
+      profileSchema.parse({
+        username: "  ",
+        bio: "",
+        city: " ",
+        country: "",
+        dateOfBirth: "",
+        locale: "",
+        timezone: "",
+      }),
+    ).toEqual({});
+  });
+
+  it("still rejects malformed non-empty optional fields", () => {
+    expect(profileSchema.safeParse({ username: "bad name" }).success).toBe(false);
+    expect(profileSchema.safeParse({ dateOfBirth: "not-a-date" }).success).toBe(false);
+    expect(profileSchema.safeParse({ timezone: "not/a-zone" }).success).toBe(false);
   });
 });

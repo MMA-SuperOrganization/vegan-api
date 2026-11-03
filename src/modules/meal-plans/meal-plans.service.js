@@ -41,6 +41,28 @@ export function createMealPlansService({
       session: options.session,
     });
     if (!recipe) throw AppError.notFound("Recipe not found");
+    if (!input.acknowledgeAllergens && recipe.allergenIds?.length) {
+      if (!services.users?.getProfile || !services.users?.getNutrition)
+        throw AppError.serviceUnavailable("User nutrition profile is unavailable");
+      const [profile, nutrition] = options.session
+        ? [
+            await services.users.getProfile(userId, options),
+            await services.users.getNutrition(userId, options),
+          ]
+        : await Promise.all([
+            services.users.getProfile(userId, options),
+            services.users.getNutrition(userId, options),
+          ]);
+      const savedAllergens = new Set(
+        [...(profile?.allergenIds ?? []), ...(nutrition?.allergenIds ?? [])].map(String),
+      );
+      if (recipe.allergenIds.some((allergenId) => savedAllergens.has(String(allergenId))))
+        throw AppError.conflict(
+          "Recipe contains an allergen saved in the user's nutrition profile",
+          [],
+          "ALLERGEN_ACKNOWLEDGEMENT_REQUIRED",
+        );
+    }
     if (!recipe.nutritionPerServing || !Number.isFinite(recipe.servings) || recipe.servings <= 0)
       throw AppError.badRequest("Recipe has no usable nutrition snapshot");
     return {
@@ -371,7 +393,9 @@ export function createMealPlansService({
               const replacement = await snapshotMeal(userId, { ...meal, ...body }, { session });
               meal.recipeSnapshot = replacement.recipeSnapshot;
             }
-            Object.assign(meal, body);
+            const mealChanges = { ...body };
+            delete mealChanges.acknowledgeAllergens;
+            Object.assign(meal, mealChanges);
             // Always reconcile the linked diary entry when completion is explicitly sent.
             // This repairs legacy plans whose completed flag was saved before diary sync existed.
             if (typeof body.completed === "boolean") {

@@ -77,7 +77,16 @@ const compactText = (value) =>
   String(value ?? "")
     .replace(/\s+/g, " ")
     .trim();
-const parseMinutes = (value) => number(String(value ?? "").match(/\d+(?:\.\d+)?/)?.[0]);
+const parseMinutes = (value) => {
+  const text = String(value ?? "")
+    .trim()
+    .toLowerCase();
+  if (!text) return 0;
+  const hours = Number(text.match(/(\d+(?:\.\d+)?)\s*(?:h|hr|hrs|hour|hours)\b/)?.[1] ?? 0);
+  const minutes = Number(text.match(/(\d+(?:\.\d+)?)\s*(?:m|min|mins|minute|minutes)\b/)?.[1] ?? 0);
+  if (hours || minutes) return Math.round(hours * 60 + minutes);
+  return number(text.match(/\d+(?:\.\d+)?/)?.[0]);
+};
 
 export function transformUsdaFoundation(payload, importedAt = new Date().toISOString()) {
   return (payload.FoundationFoods ?? payload.SRLegacyFoods ?? [])
@@ -179,6 +188,7 @@ export function transformForkRecipe(recipe, importedAt = new Date().toISOString(
       number(recipe.difficulty) >= 4 ? "hard" : number(recipe.difficulty) >= 2 ? "medium" : "easy",
     prepMinutes: parseMinutes(recipe.activeTime),
     totalMinutes: parseMinutes(recipe.totalTime),
+    cookMinutes: Math.max(0, parseMinutes(recipe.totalTime) - parseMinutes(recipe.activeTime)),
     servings: 4,
     ingredients,
     steps: recipe.processNodes.map((step, index) => ({

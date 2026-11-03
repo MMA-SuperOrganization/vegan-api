@@ -23,6 +23,7 @@ const otherId = newId();
 const foodId = newId();
 const categoryId = newId();
 const recipeId = newId();
+const allergenId = newId();
 const actor = { userId };
 const clock = () => new Date("2026-10-03T12:00:00Z");
 const food = {
@@ -61,6 +62,10 @@ function setup(seed = {}) {
         data: [recipe],
         meta: { page: 1, limit: 20, total: 1, totalPages: 1 },
       })),
+    },
+    users: {
+      getProfile: vi.fn(async () => ({ allergenIds: [] })),
+      getNutrition: vi.fn(async () => ({ allergenIds: [] })),
     },
   };
   const deps = {
@@ -289,6 +294,41 @@ describe("pantry owner aggregate and concurrency", () => {
 });
 
 describe("meal plans and grocery child isolation", () => {
+  it("requires explicit acknowledgement before adding a recipe with a saved allergen", async () => {
+    const { modules, services } = setup();
+    services.users.getNutrition.mockResolvedValue({ allergenIds: [allergenId] });
+    services.recipes.getById.mockResolvedValue({
+      ...recipe,
+      allergenIds: [allergenId],
+    });
+    const plan = await modules.mealPlans.operations.createMealPlan({
+      actor,
+      body: { title: "Allergen-aware week", weekStartDate: "2026-10-05", days: [] },
+    });
+    const input = {
+      date: "2026-10-05",
+      type: "dinner",
+      recipeId,
+      servings: 1,
+    };
+
+    await expect(
+      modules.mealPlans.operations.addMealToPlan({
+        actor,
+        params: { id: plan._id },
+        body: input,
+      }),
+    ).rejects.toMatchObject({ code: "ALLERGEN_ACKNOWLEDGEMENT_REQUIRED" });
+
+    const updated = await modules.mealPlans.operations.addMealToPlan({
+      actor,
+      params: { id: plan._id },
+      body: { ...input, acknowledgeAllergens: true },
+    });
+    expect(updated.days[0].meals).toHaveLength(1);
+    expect(updated.days[0].meals[0]).not.toHaveProperty("acknowledgeAllergens");
+  });
+
   it("snapshot nutrition, child completion and delete preserve aggregate", async () => {
     const { modules, repositories } = setup();
     const ops = modules.mealPlans.operations;
@@ -314,6 +354,9 @@ describe("meal plans and grocery child isolation", () => {
       nameSnapshot: "Tofu plate",
       nutritionSnapshot: expect.objectContaining({ caloriesKcal: 250, proteinG: 25 }),
     });
+    expect(new Date(repositories.diaryEntries.records[0].consumedAt).toISOString()).toBe(
+      clock().toISOString(),
+    );
     expect(repositories.pantries.records).toHaveLength(0);
     const removed = await ops.deleteMealFromPlan({ actor, params: { id: plan._id, mealId } });
     expect(removed._id).toBe(plan._id);
