@@ -59,6 +59,11 @@ const ALLERGEN_CAUTION = Object.freeze({
     "Catalog items matching saved allergens were excluded, but ingredient and cross-contact data may be incomplete. Verify product labels and preparation conditions before eating.",
 });
 const NUTRITION_QUALITY_ORDER = Object.freeze(["verified", "estimated", "unavailable"]);
+const normalizeConversationTitle = (value) =>
+  String(value ?? "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 80);
 const NUTRITION_QUALITY_PRIORITY = Object.freeze(
   Object.fromEntries(NUTRITION_QUALITY_ORDER.map((quality, index) => [quality, index])),
 );
@@ -701,6 +706,7 @@ export function createAiService({
         { userId, conversationId: params.id, status: "completed" },
         { page: 1, limit: 12, sort: { createdAt: -1, _id: -1 } },
       );
+      const isFirstTurn = history.data.length === 0;
       let output;
       let safetyNotices = [];
       if (
@@ -739,6 +745,14 @@ export function createAiService({
               content: JSON.stringify({
                 userContext: await context(userId),
                 catalog,
+                ...(isFirstTurn
+                  ? {
+                      responseRequirements: {
+                        conversationTitle:
+                          "Summarize the user's first question and your answer as a natural 3-8 word chat title in the user's language. Do not use quotes or ending punctuation.",
+                      },
+                    }
+                  : {}),
               }),
             },
             { role: "user", content },
@@ -780,9 +794,17 @@ export function createAiService({
         safetyNotices,
         status: output.model === "safety-policy" ? "blocked" : "completed",
       });
+      const generatedTitle = isFirstTurn
+        ? normalizeConversationTitle(output.data.conversationTitle)
+        : "";
       await repos.aiConversations.updateOne(
         { _id: params.id, userId },
-        { $set: { lastMessageAt: now() } },
+        {
+          $set: {
+            lastMessageAt: now(),
+            ...(generatedTitle ? { title: generatedTitle } : {}),
+          },
+        },
       );
       return { ...message, runId: output.runId, disclaimer: AI_DISCLAIMER, safetyNotices };
     },
