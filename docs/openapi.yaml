@@ -54673,14 +54673,13 @@ paths:
         - name: type
           in: query
           required: false
-          description: 'Loại resource/hành động theo enum của endpoint, không dùng chung enum giữa mọi API. Mặc định: "all". Giá trị cho phép: all, recipe, post, video.'
+          description: 'Loại resource/hành động theo enum của endpoint, không dùng chung enum giữa mọi API. Mặc định: "all". Giá trị cho phép: all, recipe, video.'
           schema:
             default: all
             type: string
             enum:
               - all
               - recipe
-              - post
               - video
           example: all
         - name: q
@@ -62356,6 +62355,12 @@ components:
                 - "null"
               maxLength: 10000
               description: Nội dung mô tả chi tiết.
+            coverImageUrl:
+              type:
+                - string
+                - "null"
+              maxLength: 2048
+              description: Trường cover Image Url trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
             coverMediaId:
               type:
                 - string
@@ -62752,6 +62757,12 @@ components:
                 - "null"
               maxLength: 10000
               description: Nội dung mô tả chi tiết.
+            coverImageUrl:
+              type:
+                - string
+                - "null"
+              maxLength: 2048
+              description: Trường cover Image Url trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
             coverMediaId:
               type:
                 - string
@@ -63183,6 +63194,12 @@ components:
                 - "null"
               maxLength: 10000
               description: Nội dung mô tả chi tiết.
+            coverImageUrl:
+              type:
+                - string
+                - "null"
+              maxLength: 2048
+              description: Trường cover Image Url trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
             coverMediaId:
               type:
                 - string
@@ -79553,9 +79570,8 @@ components:
           enum:
             - all
             - recipe
-            - post
             - video
-          description: 'Loại resource/hành động theo enum của endpoint, không dùng chung enum giữa mọi API. Mặc định: "all". Giá trị cho phép: all, recipe, post, video.'
+          description: 'Loại resource/hành động theo enum của endpoint, không dùng chung enum giữa mọi API. Mặc định: "all". Giá trị cho phép: all, recipe, video.'
         q:
           type: string
           minLength: 1
@@ -79605,6 +79621,12 @@ components:
                       - "null"
                     maxLength: 10000
                     description: Nội dung mô tả chi tiết.
+                  coverImageUrl:
+                    type:
+                      - string
+                      - "null"
+                    maxLength: 2048
+                    description: Trường cover Image Url trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
                   coverMediaId:
                     type:
                       - string

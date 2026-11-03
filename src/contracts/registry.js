@@ -271,6 +271,7 @@ export function createContractRegistry(container = createContractContainer()) {
     "title",
     "description",
     "excerpt",
+    "coverImageUrl",
     "coverMediaId",
     "thumbnailMediaId",
     "categoryIds",

@@ -1,5 +1,6 @@
 import { dietFilter, fitsDiet } from "../../common/utils/diet.js";
 import { contentCardProjection } from "../../common/utils/content-card.js";
+import { presentContentMedia } from "../../common/utils/media-presentation.js";
 import { z } from "zod";
 import {
   user,
@@ -123,7 +124,7 @@ export const createRecommendationsService = (deps) => {
         for (const food of foods.data) ingredientAllergies.add(stringId(food));
       }
     }
-    return data
+    const ranked = data
       .filter(
         (item) =>
           isPublic(item) &&
@@ -189,6 +190,12 @@ export const createRecommendationsService = (deps) => {
           },
         };
       });
+    return Promise.all(
+      ranked.map(async (item) => ({
+        ...item,
+        ...(await presentContentMedia(deps, item, { type })),
+      })),
+    );
   };
   const recommend = async (actor, query, types) => {
     const ctx = await context(actor);

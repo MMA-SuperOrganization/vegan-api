@@ -20,6 +20,7 @@ import {
 import { fuzzyMongoRegex } from "../../common/utils/fuzzy-search.js";
 import { SEARCH_SCOPE_TYPES } from "../../common/constants/enums/ai.enums.js";
 import { RECIPE_DIFFICULTIES, CONTENT_SORTS } from "../../common/constants/enums/content.enums.js";
+import { presentContentMedia } from "../../common/utils/media-presentation.js";
 
 const types = SEARCH_SCOPE_TYPES.values();
 const boundedList = (schema) =>
@@ -131,7 +132,14 @@ export const createSearchService = (deps, history) => {
       })),
       { page, limit, sort: sorting(query.sort) },
     );
-    return { ...result, data: result.data.map((item) => summary(item, item.type)) };
+    return {
+      ...result,
+      data: await Promise.all(
+        result.data.map(async (item) =>
+          summary(await presentContentMedia(deps, item, { type: item.type }), item.type),
+        ),
+      ),
+    };
   };
   return {
     async searchContent({ actor, query = {} }) {

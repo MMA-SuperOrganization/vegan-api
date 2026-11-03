@@ -4,6 +4,7 @@ import { AppError } from "../../common/errors/app-error.js";
 import { requireFound, publicFilter, slug, objectIdString } from "../../common/domain.js";
 import { calculateRecipeNutrition } from "../../common/utils/nutrition.js";
 import { quantityToGrams } from "../../common/utils/units.js";
+import { presentContentMedia } from "../../common/utils/media-presentation.js";
 import {
   requireActor,
   transaction,
@@ -21,6 +22,12 @@ import {
 
 export const createRecipesService = (deps) => {
   const repo = deps.repositories.recipes;
+  const presentRecipe = (recipe, actor) =>
+    presentContentMedia(deps, safeContent(recipe, { actor }), { actor, type: "recipe" });
+  const presentPage = async (page, actor) => ({
+    ...page,
+    data: await Promise.all(page.data.map((recipe) => presentRecipe(recipe, actor))),
+  });
   const resolveIngredients = async (ingredients, session) => {
     const foodService = deps.services?.foodItems;
     const resolved = [];
@@ -96,7 +103,9 @@ export const createRecipesService = (deps) => {
     if (query.excludeAllergenIds?.length) filter.allergenIds = { $nin: query.excludeAllergenIds };
     const diet = dietFilter(query.dietType);
     if (Object.keys(diet).length) filter.$and = [...(filter.$and ?? []), diet];
-    return repo.findMany(publicFilter(filter), { ...listOptions(query), ...options });
+    return presentPage(
+      await repo.findMany(publicFilter(filter), { ...listOptions(query), ...options }),
+    );
   };
   const listMine = (userId, query = {}) =>
     repo.findMany(
@@ -119,17 +128,17 @@ export const createRecipesService = (deps) => {
     getMyRecipes: async ({ actor, query = {} }) => {
       requireActor(actor);
       const result = await listMine(actor.userId, query);
-      return { ...result, data: result.data.map((item) => safeContent(item, { actor })) };
+      return presentPage(result, actor);
     },
     getRecipe: async ({ actor, params }) => {
       const recipe = await getReadable(repo, params.idOrSlug, { actor, slug: true });
       return {
-        ...safeContent(recipe, { actor }),
+        ...(await presentRecipe(recipe, actor)),
         ...(await userState(deps, "recipe", recipe._id, actor)),
       };
     },
-    createRecipe: async (context) =>
-      transaction(deps, async (session) => {
+    createRecipe: async (context) => {
+      const recipe = await transaction(deps, async (session) => {
         const { actor, body } = context;
         requireActor(actor);
         const ingredients = await resolveIngredients(body.ingredients ?? [], session);
@@ -154,10 +163,12 @@ export const createRecipesService = (deps) => {
         );
         await syncMedia(deps, "recipe", null, recipe, actor, session);
         await auditAdmin(deps, context, "recipe", null, recipe, "recipe.create", session);
-        return safeContent(recipe, { actor });
-      }),
-    updateRecipe: async (context) =>
-      transaction(deps, async (session) => {
+        return recipe;
+      });
+      return presentRecipe(recipe, context.actor);
+    },
+    updateRecipe: async (context) => {
+      const recipe = await transaction(deps, async (session) => {
         const { actor, params, body } = context;
         const before = requireFound(await repo.findById(params.id, { session }));
         assertEditable(before, actor);
@@ -182,16 +193,30 @@ export const createRecipesService = (deps) => {
         if (before.status === "published") await validatePublication(candidate, actor, session);
         const after = await casUpdate(repo, before, changes, { version, session });
         await auditAdmin(deps, context, "recipe", before, after, "recipe.update", session);
-        return safeContent(after, { actor });
-      }),
-    deleteRecipe: (context) =>
-      lifecycle(deps, repo, "recipe", context, "delete", validatePublication),
-    submitRecipe: (context) =>
-      lifecycle(deps, repo, "recipe", context, "submit", validatePublication),
-    publishRecipe: (context) =>
-      lifecycle(deps, repo, "recipe", context, "publish", validatePublication),
-    rejectRecipe: (context) =>
-      lifecycle(deps, repo, "recipe", context, "reject", validatePublication),
+        return after;
+      });
+      return presentRecipe(recipe, context.actor);
+    },
+    deleteRecipe: async (context) =>
+      presentRecipe(
+        await lifecycle(deps, repo, "recipe", context, "delete", validatePublication),
+        context.actor,
+      ),
+    submitRecipe: async (context) =>
+      presentRecipe(
+        await lifecycle(deps, repo, "recipe", context, "submit", validatePublication),
+        context.actor,
+      ),
+    publishRecipe: async (context) =>
+      presentRecipe(
+        await lifecycle(deps, repo, "recipe", context, "publish", validatePublication),
+        context.actor,
+      ),
+    rejectRecipe: async (context) =>
+      presentRecipe(
+        await lifecycle(deps, repo, "recipe", context, "reject", validatePublication),
+        context.actor,
+      ),
     getRecipeNutrition: async ({ params }) => {
       const recipe = await getById(params.id, { publicOnly: true });
       return {

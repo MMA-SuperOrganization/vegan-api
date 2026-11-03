@@ -823,8 +823,32 @@ describe("Complete content modules", () => {
       }),
     ).rejects.toMatchObject({ statusCode: 403 });
     const recipe = await h.call("recipes", "createRecipe", {
-      body: { title: "Private", coverMediaId: upload.assetId },
+      body: {
+        title: "Uploaded cover",
+        coverMediaId: upload.assetId,
+        ingredients: [{ foodItemId: linkedFoodId, quantity: 100, unit: "g" }],
+        steps: [{ order: 1, instruction: "Cook" }],
+      },
     });
+    expect(recipe.coverImageUrl).toContain("?signed");
+    expect((await h.call("recipes", "getMyRecipes")).data[0].coverImageUrl).toContain("?signed");
+    expect(
+      (
+        await h.call("recipes", "getRecipe", {
+          params: { idOrSlug: recipe._id },
+        })
+      ).coverImageUrl,
+    ).toContain("?signed");
+    const submitted = await h.call("recipes", "submitRecipe", {
+      params: { id: recipe._id },
+      body: { version: recipe.version },
+    });
+    await h.call("recipes", "publishRecipe", {
+      actor: admin,
+      params: { id: recipe._id },
+      body: { version: submitted.version },
+    });
+    expect((await h.call("recipes", "getRecipes")).data[0].coverImageUrl).toContain("?signed");
     await expect(
       h.call("media", "deleteMediaAsset", { params: { id: upload.assetId } }),
     ).rejects.toMatchObject({ code: "MEDIA_IN_USE" });
