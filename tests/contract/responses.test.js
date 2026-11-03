@@ -298,12 +298,17 @@ describe("Concrete response contracts against mounted HTTP results", () => {
         aiProvider: {
           enabled: true,
           provider: "fake",
-          async generate({ feature }) {
+          async generate({ feature, schema }) {
             return {
               model: "fake",
               data:
                 feature === "chat"
-                  ? { content: "Try tofu" }
+                  ? {
+                      content: "Try tofu",
+                      ...(schema?.shape?.conversationTitle
+                        ? { conversationTitle: "Quick tofu ideas" }
+                        : {}),
+                    }
                   : {
                       title: "Day",
                       days: [

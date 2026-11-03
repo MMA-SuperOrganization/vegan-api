@@ -418,6 +418,25 @@ describe("complete identity, nutrition, onboarding and master domain contracts",
     expect(repositories.userProfiles.rows).toHaveLength(0);
     expect(repositories.nutritionProfiles.rows).toHaveLength(0);
   });
+  it("replaces and clears the saved allergen selection", async () => {
+    const { call } = fixture();
+
+    const selected = await call("nutrition-profiles", "upsertMyNutritionProfile", {
+      body: { allergenIds: [ALLERGEN] },
+    });
+    expect(selected).toMatchObject({
+      allergenIds: [ALLERGEN],
+      allergenSelectionCompleted: true,
+    });
+
+    const cleared = await call("nutrition-profiles", "upsertMyNutritionProfile", {
+      body: { allergenIds: [] },
+    });
+    expect(cleared).toMatchObject({
+      allergenIds: [],
+      allergenSelectionCompleted: true,
+    });
+  });
   it("requires explicit allergen selection then completes onboarding idempotently", async () => {
     const { call } = fixture();
     await expect(call("onboarding", "completeOnboarding")).rejects.toMatchObject({

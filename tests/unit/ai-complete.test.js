@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { z } from "zod";
-import { chatRetrievalOutput, createAiModule } from "../../src/modules/ai/index.js";
+import { chatOutput, chatRetrievalOutput, createAiModule } from "../../src/modules/ai/index.js";
 import { createAiProvider, AI_SAFETY_PROMPT } from "../../src/providers/ai/ai.provider.js";
 import { linkAiCatalogReferences } from "../../src/modules/ai/ai.references.js";
 import { fakeRepository, fakeTransaction, objectId } from "./ai-reminders-fakes.js";
@@ -43,8 +43,11 @@ function fixture(overrides = {}) {
   const aiProvider = {
     enabled: true,
     provider: "fake",
-    generate: vi.fn(async ({ feature, mediaUrl }) => ({
-      data: outputs[feature],
+    generate: vi.fn(async ({ feature, mediaUrl, schema }) => ({
+      data:
+        feature === "chat" && schema?.shape?.conversationTitle
+          ? { ...outputs.chat, conversationTitle: "Quick vegan meal ideas" }
+          : outputs[feature],
       model: mediaUrl ? "fake-vision" : `fake-${feature}`,
       usage: { total_tokens: 10 },
     })),
@@ -292,12 +295,60 @@ describe("AI complete domain", () => {
     expect(prompt).not.toContain("SECRET_");
     expect(prompt).toContain("veganapp://recipe/ID");
     expect(prompt).toContain("Never display an ID as visible text");
+    expect(prompt).toContain("Summarize the user's first question and your answer");
+    expect(f.repos.aiConversations.records[0].title).toBe("Quick vegan meal ideas");
     await expect(
       f.operations.getAiMessages({ actor: { userId: other }, params: { id: c._id } }),
     ).rejects.toMatchObject({ statusCode: 404 });
     expect((await f.operations.getAiConversations({ actor: { userId: other } })).data).toHaveLength(
       0,
     );
+  });
+  it("generates a title only from the first question and answer", async () => {
+    const f = fixture();
+    const conversation = await f.operations.createAiConversation({
+      actor,
+      body: { title: "Temporary first question" },
+    });
+
+    await f.operations.sendAiMessage({
+      actor,
+      params: { id: conversation._id },
+      body: { content: "What is a quick high-protein vegan breakfast?" },
+    });
+    expect(f.repos.aiConversations.records[0].title).toBe("Quick vegan meal ideas");
+
+    f.outputs.chat = { content: "Try a different dinner." };
+    await f.operations.sendAiMessage({
+      actor,
+      params: { id: conversation._id },
+      body: { content: "What about dinner?" },
+    });
+
+    expect(f.repos.aiConversations.records[0].title).toBe("Quick vegan meal ideas");
+    expect(f.provider.generate.mock.calls[1][0].schema).toBe(chatOutput);
+  });
+  it("returns the first answer even when the provider omits the optional title", async () => {
+    const f = fixture();
+    f.provider.generate.mockImplementationOnce(async () => ({
+      data: { content: "Try oats with soy milk and fruit." },
+      model: "fake-chat",
+      usage: { total_tokens: 8 },
+    }));
+    const conversation = await f.operations.createAiConversation({
+      actor,
+      body: { title: "Quick breakfast question" },
+    });
+
+    const answer = await f.operations.sendAiMessage({
+      actor,
+      params: { id: conversation._id },
+      body: { content: "What is a quick vegan breakfast?" },
+    });
+
+    expect(answer.content).toContain("Try oats");
+    expect(f.repos.aiConversations.records[0].title).toBe("Quick breakfast question");
+    expect(f.repos.aiMessages.records).toHaveLength(2);
   });
   it("passes an owned ready image to chat through the vision model", async () => {
     const f = fixture();

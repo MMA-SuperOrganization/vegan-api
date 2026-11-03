@@ -66843,6 +66843,9 @@ components:
           minLength: 1
           maxLength: 8000
           description: Nội dung theo loại resource; xem schema nhánh tương ứng.
+        conversationTitle:
+          type: string
+          description: Trường conversation Title trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
       required:
         - content
       additionalProperties: false

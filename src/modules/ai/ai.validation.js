@@ -50,7 +50,12 @@ export const pantryOutput = z.strictObject({
     .max(50),
   notes: z.string().max(2000).optional(),
 });
-export const chatOutput = z.strictObject({ content: text(8000) });
+export const chatOutput = z.strictObject({
+  content: text(8000),
+  // Title generation must never make a valid chat answer fail. The service
+  // only consumes this optional value for the first successful turn.
+  conversationTitle: z.string().trim().optional(),
+});
 export const chatRetrievalOutput = z.strictObject({
   mode: z.enum(["direct", "catalog"]),
   searchText: z.string().trim().max(160).default(""),
