@@ -508,5 +508,9 @@ describe("Firebase messaging offline adapter", () => {
       await enabled.send({ tokens: ["a", "b"], title: "x", body: "y", data: { count: 2 } }),
     ).toMatchObject({ sent: 1, invalidTokens: ["b"] });
     expect(messaging.sendEachForMulticast.mock.calls[0][0].data.count).toBe("2");
+    expect(messaging.sendEachForMulticast.mock.calls[0][0].android).toEqual({
+      priority: "high",
+      notification: { channelId: "default", sound: "default" },
+    });
   });
 });

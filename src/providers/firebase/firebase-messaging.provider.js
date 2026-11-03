@@ -41,6 +41,13 @@ export function createFirebaseMessagingProvider({ env = {}, messaging, app, logg
             client.sendEachForMulticast({
               tokens: unique,
               notification: { title, body },
+              android: {
+                priority: "high",
+                notification: {
+                  channelId: "default",
+                  sound: "default",
+                },
+              },
               data: Object.fromEntries(
                 Object.entries(data).map(([key, value]) => [
                   key,
