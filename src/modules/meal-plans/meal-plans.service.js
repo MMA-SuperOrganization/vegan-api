@@ -83,9 +83,63 @@ export function createMealPlansService({
           ...(item.gramEquivalent ? { gramEquivalent: item.gramEquivalent } : {}),
           optional: Boolean(item.optional),
         })),
+        allergenIds: recipe.allergenIds ?? [],
         nutritionPerServing: normalizeNutrition(recipe.nutritionPerServing),
       },
     };
+  }
+  async function mealAllergenIds(userId, meal, options = {}) {
+    if (Array.isArray(meal.recipeSnapshot?.allergenIds))
+      return meal.recipeSnapshot.allergenIds.map(String);
+    if (!services.foodItems?.getById)
+      throw AppError.serviceUnavailable("Food item service is unavailable");
+    const found = new Set();
+    for (const ingredient of meal.recipeSnapshot?.ingredients ?? []) {
+      const food = await services.foodItems.getById(String(ingredient.foodItemId), {
+        actor: { userId },
+        session: options.session,
+        allowInactive: true,
+      });
+      for (const allergenId of food?.allergenIds ?? []) found.add(String(allergenId));
+    }
+    return [...found];
+  }
+  async function getAllergenConflictsForDate(userId, date, allergenIds, options = {}) {
+    if (!userId) throw AppError.unauthorized();
+    const requested = new Set((allergenIds ?? []).map(String));
+    if (!requested.size) return [];
+    const dayStart = new Date(`${date}T00:00:00Z`);
+    const plans = await repo.findMany(
+      {
+        userId,
+        status: { $in: ["active", "draft"] },
+        weekStartDate: {
+          $lte: dayStart,
+          $gt: new Date(dayStart.getTime() - 7 * 86400000),
+        },
+      },
+      { page: 1, limit: 20, sort: { updatedAt: -1, _id: -1 }, session: options.session },
+    );
+    const conflicts = [];
+    for (const plan of plans.data) {
+      const selectedDay = plan.days.find((candidate) => dateString(candidate.date) === date);
+      for (const meal of selectedDay?.meals ?? []) {
+        const matches = (await mealAllergenIds(userId, meal, options)).filter((allergenId) =>
+          requested.has(allergenId),
+        );
+        if (matches.length)
+          conflicts.push({
+            planId: String(plan._id),
+            planTitle: plan.title,
+            mealId: meal.mealId,
+            recipeId: String(meal.recipeId),
+            mealName: meal.recipeSnapshot.title,
+            mealType: meal.type,
+            allergenIds: matches,
+          });
+      }
+    }
+    return conflicts;
   }
   async function createForUser(userId, body, options = {}) {
     if (!userId) throw AppError.unauthorized();
@@ -503,6 +557,7 @@ export function createMealPlansService({
       generateGroceryList,
       generateGroceryListFromPlan: generateGroceryList,
       groceryIngredients,
+      getAllergenConflictsForDate,
     },
   };
 }

@@ -23,6 +23,10 @@ const recipeSnapshot = new mongoose.Schema(
     title: { type: String, required: true },
     servings: { type: Number, required: true, min: Number.EPSILON },
     ingredients: { type: [ingredient], default: [] },
+    allergenIds: {
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: "Allergens" }],
+      default: undefined,
+    },
     nutritionPerServing: { type: nutrition, required: true },
   },
   { _id: false },

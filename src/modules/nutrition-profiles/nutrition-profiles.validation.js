@@ -24,11 +24,14 @@ export const nutritionProfileSchema = z
     medicalNotes: text(2000, 0).nullable().optional(),
   })
   .strict();
+export const nutritionProfileUpdateSchema = nutritionProfileSchema.extend({
+  acknowledgeMealPlanAllergenConflicts: z.boolean().optional(),
+});
 export const createNutritionProfilesValidation = () => ({
   getMyNutritionProfile: {},
   upsertMyNutritionProfile: {
-    body: nutritionProfileSchema.refine(
-      (value) => Object.keys(value).length > 0,
+    body: nutritionProfileUpdateSchema.refine(
+      (value) => Object.keys(value).some((key) => key !== "acknowledgeMealPlanAllergenConflicts"),
       "At least one field is required",
     ),
   },

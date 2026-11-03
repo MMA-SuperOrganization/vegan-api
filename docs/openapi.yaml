@@ -59699,6 +59699,17 @@ components:
                             additionalProperties: false
                             description: Trường ingredients item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
                           description: Nguyên liệu công thức; mỗi mục tham chiếu thực phẩm chuẩn.
+                        allergenIds:
+                          type:
+                            - array
+                            - "null"
+                          items:
+                            type:
+                              - string
+                              - "null"
+                            pattern: ^[A-Fa-f0-9]{24}$
+                            description: Trường allergen Ids item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. ObjectId gồm 24 ký tự hexadecimal.
+                          description: Danh sách ID chất gây dị ứng trong master data.
                         nutritionPerServing:
                           type: object
                           properties:
@@ -68143,6 +68154,9 @@ components:
             - type: "null"
               description: Ghi chú riêng trong hồ sơ dinh dưỡng; không phải chẩn đoán tự động.
           description: Ghi chú riêng trong hồ sơ dinh dưỡng; không phải chẩn đoán tự động.
+        acknowledgeMealPlanAllergenConflicts:
+          type: boolean
+          description: Trường acknowledge Meal Plan Allergen Conflicts trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
       additionalProperties: false
       description: Dữ liệu Body của upsertMyNutritionProfile; required/default/enum/giới hạn theo validator thật, các quy tắc kiểm tra chéo xem description của operation.
     upsertMyNutritionProfileResponse:

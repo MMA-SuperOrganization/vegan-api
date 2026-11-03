@@ -1,6 +1,6 @@
 import { AppError } from "../../common/errors/app-error.js";
 import { id } from "../../common/validators/domain.schemas.js";
-import { nutritionProfileSchema } from "./nutrition-profiles.validation.js";
+import { nutritionProfileUpdateSchema } from "./nutrition-profiles.validation.js";
 
 const targets = [
   "dailyCalorieTarget",
@@ -13,6 +13,17 @@ const targets = [
 const rounded = (v) => Math.round(v * 10) / 10;
 const disclaimer =
   "Nutrition and BMI values are estimates for general information, not a diagnosis or medical advice.";
+const dateInTimezone = (value, timezone = "UTC") => {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  })
+    .formatToParts(value)
+    .reduce((result, part) => ({ ...result, [part.type]: part.value }), {});
+  return `${parts.year}-${parts.month}-${parts.day}`;
+};
 const safe = (value) => {
   if (!value) return null;
   const keys = [
@@ -135,15 +146,56 @@ export const createNutritionProfilesService = ({ deps, repository }) => {
   };
   const persist = async (userId, body, options = {}) => {
     userId = id.parse(String(userId));
-    const data = nutritionProfileSchema.parse(body);
+    const parsed = nutritionProfileUpdateSchema.parse(body);
+    const { acknowledgeMealPlanAllergenConflicts = false, ...data } = parsed;
     await userService().getById(userId, options);
+    let allergens = [];
     if (data.allergenIds?.length) {
       if (!deps.services?.allergens?.getMany)
         throw AppError.serviceUnavailable("Allergen service unavailable");
-      await deps.services.allergens.getMany(data.allergenIds, options);
+      allergens = await deps.services.allergens.getMany(data.allergenIds, options);
     }
+    let checkedAllergenSignature = null;
     for (let attempt = 0; attempt < 5; attempt += 1) {
       const current = await repository.findOne({ userId }, options);
+      const currentAllergens = new Set((current?.allergenIds ?? []).map(String));
+      const addedAllergenIds = (data.allergenIds ?? []).filter(
+        (allergenId) => !currentAllergens.has(String(allergenId)),
+      );
+      const signature = addedAllergenIds.map(String).sort().join(",");
+      if (
+        signature &&
+        !acknowledgeMealPlanAllergenConflicts &&
+        signature !== checkedAllergenSignature
+      ) {
+        if (!deps.services?.mealPlans?.getAllergenConflictsForDate)
+          throw AppError.serviceUnavailable("Meal plan service unavailable");
+        const profile = await userService().getProfile(userId, options);
+        const date = dateInTimezone(now(), profile?.timezone ?? "UTC");
+        const conflicts = await deps.services.mealPlans.getAllergenConflictsForDate(
+          userId,
+          date,
+          addedAllergenIds,
+          options,
+        );
+        if (conflicts.length) {
+          const allergenNames = new Map(
+            allergens.map((allergen) => [String(allergen._id), allergen.name]),
+          );
+          throw AppError.conflict(
+            "Today's meal plan contains one or more newly selected allergens",
+            conflicts.map((conflict) => ({
+              ...conflict,
+              allergens: conflict.allergenIds.map((allergenId) => ({
+                id: allergenId,
+                name: allergenNames.get(String(allergenId)) ?? "Unknown allergen",
+              })),
+            })),
+            "MEAL_PLAN_ALLERGEN_ACKNOWLEDGEMENT_REQUIRED",
+          );
+        }
+        checkedAllergenSignature = signature;
+      }
       const manual = [
         ...new Set([
           ...(current?.manualTargetFields ?? []),

@@ -347,6 +347,18 @@ describe("meal plans and grocery child isolation", () => {
     });
     expect(updated.days[0].meals).toHaveLength(1);
     expect(updated.days[0].meals[0]).not.toHaveProperty("acknowledgeAllergens");
+    expect(updated.days[0].meals[0].recipeSnapshot.allergenIds).toEqual([allergenId]);
+    await expect(
+      modules.mealPlans.services.mealPlans.getAllergenConflictsForDate(userId, "2026-10-05", [
+        allergenId,
+      ]),
+    ).resolves.toEqual([
+      expect.objectContaining({
+        mealId: updated.days[0].meals[0].mealId,
+        mealName: recipe.title,
+        allergenIds: [allergenId],
+      }),
+    ]);
   });
 
   it("snapshot nutrition, child completion and delete preserve aggregate", async () => {

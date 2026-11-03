@@ -208,6 +208,9 @@ const fixture = ({ transaction } = {}) => {
       return [key, module];
     }),
   );
+  deps.services.mealPlans = {
+    getAllergenConflictsForDate: vi.fn(async () => []),
+  };
   const call = async (module, operation, input = {}) => {
     const schema = modules[module].validation[operation];
     const context = {

@@ -50,8 +50,8 @@ const fixture = ({ existingNutrition = false, transaction = true } = {}) => {
       { _id: TWO, status: "active" },
     ],
     allergens: [
-      { _id: ONE, status: "active" },
-      { _id: TWO, status: "active" },
+      { _id: ONE, name: "Soy", status: "active" },
+      { _id: TWO, name: "Wheat", status: "active" },
     ],
     foodItems: [
       { _id: ONE, status: "active" },
@@ -76,6 +76,9 @@ const fixture = ({ existingNutrition = false, transaction = true } = {}) => {
     Object.assign(deps.services, module.services);
     return module;
   });
+  deps.services.mealPlans = {
+    getAllergenConflictsForDate: vi.fn(async () => []),
+  };
   return { deps, repositories, users: modules[0], nutrition: modules[1] };
 };
 const gateTwoReads = (repository, relevant) => {
@@ -217,5 +220,44 @@ describe("identity transaction and concurrency regressions", () => {
     });
     expect(result.dailyCalorieTarget).toBe(2050);
     expect((await repositories.nutritionProfiles.findOne({ userId: USER })).version).toBe(1);
+  });
+  it("requires confirmation when a newly selected allergen occurs in today's meal plan", async () => {
+    const { deps, repositories, nutrition } = fixture({ existingNutrition: true });
+    deps.services.mealPlans.getAllergenConflictsForDate.mockResolvedValue([
+      {
+        mealId: "meal-1",
+        recipeId: TWO,
+        mealName: "Tempeh bowl",
+        mealType: "dinner",
+        allergenIds: [ONE],
+      },
+    ]);
+
+    await expect(
+      nutrition.operations.upsertMyNutritionProfile({ actor, body: { allergenIds: [ONE] } }),
+    ).rejects.toMatchObject({
+      code: "MEAL_PLAN_ALLERGEN_ACKNOWLEDGEMENT_REQUIRED",
+      details: [
+        expect.objectContaining({
+          mealName: "Tempeh bowl",
+          allergens: [{ id: ONE, name: "Soy" }],
+        }),
+      ],
+    });
+    expect((await repositories.nutritionProfiles.findOne({ userId: USER })).allergenIds).toBe(
+      undefined,
+    );
+    expect(deps.services.mealPlans.getAllergenConflictsForDate).toHaveBeenCalledWith(
+      USER,
+      "2026-10-03",
+      [ONE],
+      {},
+    );
+
+    const saved = await nutrition.operations.upsertMyNutritionProfile({
+      actor,
+      body: { allergenIds: [ONE], acknowledgeMealPlanAllergenConflicts: true },
+    });
+    expect(saved.allergenIds).toEqual([ONE]);
   });
 });
