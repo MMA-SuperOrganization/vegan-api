@@ -31,6 +31,14 @@ export const NOTIFICATION_STATUSES = createEnum({
   READ: "read",
 });
 
+export const NOTIFICATION_TYPES = createEnum({
+  RECIPE_APPROVED: "recipe.approved",
+  RECIPE_REJECTED: "recipe.rejected",
+  COMMENT_CREATED: "social.comment",
+  COMMENT_REPLIED: "social.reply",
+  REACTION_CREATED: "social.reaction",
+});
+
 export const DISPATCH_STATUSES = createEnum({
   PENDING: "pending",
   SENT: "sent",

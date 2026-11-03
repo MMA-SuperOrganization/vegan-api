@@ -1,5 +1,6 @@
 import { AppError } from "../../common/errors/app-error.js";
 import { assertOwner, requireFound, objectIdString } from "../../common/domain.js";
+import { NOTIFICATION_TYPES } from "../../common/constants/enums/notification.enums.js";
 import {
   requireActor,
   transaction,
@@ -41,16 +42,17 @@ export const createCommentsService = (deps) => {
         },
       );
     },
-    createComment: (context) =>
-      transaction(deps, async (session) => {
+    createComment: async (context) => {
+      const result = await transaction(deps, async (session) => {
         const { actor, body } = context;
         requireActor(actor);
-        await deps.services.content.getTarget(body.targetType, body.targetId, {
+        const target = await deps.services.content.getTarget(body.targetType, body.targetId, {
           publicOnly: true,
           session,
         });
+        let parent = null;
         if (body.parentCommentId) {
-          const parent = requireFound(await repo.findById(body.parentCommentId, { session }));
+          parent = requireFound(await repo.findById(body.parentCommentId, { session }));
           if (
             parent.status !== "visible" ||
             parent.deletedAt ||
@@ -82,8 +84,42 @@ export const createCommentsService = (deps) => {
           { session },
         );
         await auditAdmin(deps, context, "comment", null, comment, "comment.create", session);
-        return comment;
-      }),
+        return {
+          comment,
+          parentAuthorId: parent?.authorId,
+          targetAuthorId: target.authorId,
+          targetTitle: target.title,
+        };
+      });
+      const baseNotification = {
+        actorId: context.actor.userId,
+        targetType: context.body.targetType,
+        targetId: context.body.targetId,
+        targetTitle: result.targetTitle,
+      };
+      if (result.parentAuthorId) {
+        await deps.services.notifications?.deliverActivity?.({
+          ...baseNotification,
+          recipientId: result.parentAuthorId,
+          type: NOTIFICATION_TYPES.COMMENT_REPLIED,
+          deliveryKey: `comment:${result.comment._id}:reply`,
+        });
+        if (String(result.targetAuthorId) !== String(result.parentAuthorId))
+          await deps.services.notifications?.deliverActivity?.({
+            ...baseNotification,
+            recipientId: result.targetAuthorId,
+            type: NOTIFICATION_TYPES.COMMENT_CREATED,
+            deliveryKey: `comment:${result.comment._id}:target`,
+          });
+      } else
+        await deps.services.notifications?.deliverActivity?.({
+          ...baseNotification,
+          recipientId: result.targetAuthorId,
+          type: NOTIFICATION_TYPES.COMMENT_CREATED,
+          deliveryKey: `comment:${result.comment._id}:created`,
+        });
+      return result.comment;
+    },
     updateComment: (context) =>
       transaction(deps, async (session) => {
         const { actor, params, body } = context;
