@@ -178,6 +178,37 @@ export function createPantriesService({
       })
       .sort((a, b) => b.matchRatio - a.matchRatio || b.sufficientCount - a.sufficientCount);
   }
+  async function consumeIngredients(userId, ingredients, options = {}) {
+    return mutate(
+      userId,
+      (pantry) => {
+        const items = [...(pantry.items ?? [])].sort((left, right) => {
+          if (!left.expiresAt) return 1;
+          if (!right.expiresAt) return -1;
+          return new Date(left.expiresAt) - new Date(right.expiresAt);
+        });
+        for (const ingredient of ingredients.filter((item) => !item.optional)) {
+          let remaining = ingredient.quantity;
+          for (const item of items) {
+            if (String(item.foodItemId) !== String(ingredient.foodItemId)) continue;
+            const available = convertQuantity(item.quantity, item.unit, ingredient.unit);
+            if (available == null || remaining <= 0) continue;
+            const used = Math.min(available, remaining);
+            const usedInStockUnit = convertQuantity(used, ingredient.unit, item.unit);
+            if (usedInStockUnit == null) continue;
+            item.quantity = Math.max(0, item.quantity - usedInStockUnit);
+            item.updatedAt = now();
+            remaining -= used;
+          }
+        }
+        return {
+          items: items.filter((item) => item.quantity > 0),
+          bulkRequests: pantry.bulkRequests,
+        };
+      },
+      options,
+    );
+  }
   const operations = {
     getPantry: async ({ actor }) => getForUser(ownerId(actor)),
     addPantryItem: async ({ actor, body }) => addItems(ownerId(actor), [body]),
@@ -282,6 +313,8 @@ export function createPantriesService({
       getForUser: async (userId, options) => safePantry(await getForUser(userId, options)),
       addItems: async (userId, items, options) =>
         safePantry(await addItems(userId, items, options)),
+      consumeIngredients: async (userId, ingredients, options) =>
+        safePantry(await consumeIngredients(userId, ingredients, options)),
       match,
     },
   };

@@ -80,6 +80,9 @@ export const createFirebaseAuthProvider = ({ firebaseAuth, checkRevoked = true }
           typeof decoded.picture === "string" && decoded.picture.startsWith("https://")
             ? decoded.picture
             : null,
+        ...(decoded.firebase?.sign_in_provider
+          ? { signInProvider: decoded.firebase.sign_in_provider }
+          : {}),
         authTime: decoded.auth_time ? new Date(decoded.auth_time * 1000) : null,
       };
     } catch (error) {

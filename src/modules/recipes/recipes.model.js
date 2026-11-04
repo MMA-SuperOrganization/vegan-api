@@ -51,6 +51,23 @@ const step = new mongoose.Schema(
   },
   { _id: false },
 );
+const recipeVariant = new mongoose.Schema(
+  {
+    variantId: { type: String, required: true },
+    name: { ...shortText(120), required: true },
+    region: shortText(120),
+    countryCode: { type: String, trim: true, uppercase: true, minlength: 2, maxlength: 2 },
+    servings: { type: Number, min: 1, max: 1000, required: true },
+    ingredients: { type: [ingredient], default: [] },
+    nutritionPerServing: {
+      type: new mongoose.Schema(nutritionFields, { _id: false }),
+      default: () => ({}),
+    },
+    allergenIds: [ref("Allergens")],
+    isDefault: { type: Boolean, default: false },
+  },
+  { _id: false },
+);
 export const RecipesModel = registerModel(
   "Recipes",
   {
@@ -75,12 +92,18 @@ export const RecipesModel = registerModel(
       default: RECIPE_DIFFICULTIES.EASY,
     },
     ingredients: [ingredient],
+    variants: { type: [recipeVariant], default: [] },
     steps: [step],
     nutritionPerServing: {
       type: new mongoose.Schema(nutritionFields, { _id: false }),
       default: () => ({}),
     },
     nutritionDataQuality: nutritionDataQualityField,
+    nutritionCalculation: {
+      method: { type: String, enum: ["declared", "atwater_general"], default: "declared" },
+      declaredCaloriesKcal: { type: Number, min: 0, default: null },
+      atwaterCaloriesKcal: { type: Number, min: 0, default: 0 },
+    },
     sourceAttribution: { type: catalogSourceSchema },
     allergenIds: [ref("Allergens")],
     isVegan: Boolean,

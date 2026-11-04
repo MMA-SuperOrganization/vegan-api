@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { AppError } from "../../common/errors/app-error.js";
 import { NOTIFICATION_TYPES } from "../../common/constants/enums/notification.enums.js";
 import { requireFound, publicFilter, slug, objectIdString } from "../../common/domain.js";
-import { calculateRecipeNutrition } from "../../common/utils/nutrition.js";
+import { calculateRecipeNutrition, normalizeCalories } from "../../common/utils/nutrition.js";
 import { quantityToGrams } from "../../common/utils/units.js";
 import { presentContentMedia } from "../../common/utils/media-presentation.js";
 import {
@@ -74,8 +74,10 @@ export const createRecipesService = (deps) => {
     } catch {
       throw AppError.badRequest("Unable to calculate nutrition from these ingredients");
     }
+    const normalizedCalories = normalizeCalories(nutritionPerServing);
     return {
-      nutritionPerServing,
+      nutritionPerServing: normalizedCalories.nutrition,
+      nutritionCalculation: normalizedCalories.calculation,
       allergenIds: [...new Set(ingredients.flatMap((ingredient) => ingredient.allergenIds ?? []))],
       isVegan: ingredients.length > 0 && ingredients.every((i) => i.isVegan),
       isVegetarian: ingredients.length > 0 && ingredients.every((i) => i.isVegetarian),
@@ -90,6 +92,23 @@ export const createRecipesService = (deps) => {
         ]),
       ),
     };
+  };
+  const resolveVariants = async (variants = [], defaultServings, session) => {
+    const resolved = [];
+    for (const input of variants) {
+      const ingredients = await resolveIngredients(input.ingredients, session);
+      const servings = input.servings ?? defaultServings;
+      const variantSnapshots = snapshots(ingredients, servings);
+      resolved.push({
+        ...input,
+        variantId: input.variantId ?? randomUUID(),
+        servings,
+        ingredients,
+        nutritionPerServing: variantSnapshots.nutritionPerServing,
+        allergenIds: variantSnapshots.allergenIds,
+      });
+    }
+    return resolved;
   };
   const validatePublication = async (recipe, actor, session) => {
     if (!recipe.title || !recipe.ingredients?.length || !recipe.steps?.length)
@@ -143,10 +162,12 @@ export const createRecipesService = (deps) => {
         const { actor, body } = context;
         requireActor(actor);
         const ingredients = await resolveIngredients(body.ingredients ?? [], session);
+        const variants = await resolveVariants(body.variants ?? [], body.servings ?? 1, session);
         const recipe = await repo.create(
           {
             ...body,
             ingredients,
+            variants,
             ...snapshots(ingredients, body.servings ?? 1),
             slug: `${slug(body.title)}-${randomUUID().slice(0, 8)}`,
             authorId: actor.userId,
@@ -177,6 +198,12 @@ export const createRecipesService = (deps) => {
         const ingredients = changes.ingredients
           ? await resolveIngredients(changes.ingredients, session)
           : before.ingredients;
+        if (changes.variants)
+          changes.variants = await resolveVariants(
+            changes.variants,
+            changes.servings ?? before.servings,
+            session,
+          );
         if (changes.ingredients || changes.servings != null)
           Object.assign(changes, snapshots(ingredients, changes.servings ?? before.servings), {
             ingredients,
@@ -241,6 +268,7 @@ export const createRecipesService = (deps) => {
         recipeId: recipe._id,
         servings: recipe.servings,
         nutritionPerServing: recipe.nutritionPerServing,
+        nutritionCalculation: recipe.nutritionCalculation,
         allergenIds: recipe.allergenIds,
       };
     },

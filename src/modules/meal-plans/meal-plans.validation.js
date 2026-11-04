@@ -19,6 +19,7 @@ export const mealInput = z
     servings: mealServings.default(1),
     note: text(1000, 0).optional(),
     acknowledgeAllergens: z.boolean().optional(),
+    consumePantry: z.boolean().optional(),
   })
   .strict();
 export const mealPlanInput = z
@@ -86,6 +87,7 @@ export const createMealPlansValidation = () => ({
       .extend({
         weekStartDate: dateOnly.optional(),
         status: z.enum(MEAL_PLAN_STATUSES.values()).optional(),
+        isTemplate: z.coerce.boolean().optional(),
       })
       .strict(),
   },
@@ -115,7 +117,17 @@ export const createMealPlansValidation = () => ({
   activateMealPlan: { params, body: emptyBody },
   cloneMealPlan: {
     params,
-    body: z.object({ weekStartDate: dateOnly, title: text(200).optional() }).strict(),
+    body: z
+      .object({
+        weekStartDate: dateOnly.optional(),
+        title: text(200).optional(),
+        action: z.enum(["clone", "save_template", "apply_template"]).default("clone"),
+      })
+      .strict()
+      .refine((body) => body.action === "save_template" || body.weekStartDate, {
+        message: "A target week is required",
+        path: ["weekStartDate"],
+      }),
   },
   generateGroceryListFromPlan: {
     params,

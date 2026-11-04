@@ -42,6 +42,17 @@ export const stepInput = z
     timerSeconds: z.number().int().min(0).max(86400).optional(),
   })
   .strict();
+export const recipeVariantInput = z
+  .object({
+    variantId: z.uuid().optional(),
+    name: text(120),
+    region: text(120, 0).optional(),
+    countryCode: z.string().trim().length(2).toUpperCase().optional(),
+    servings: z.number().int().min(1).max(1000).optional(),
+    ingredients: z.array(ingredientInput).min(1).max(200),
+    isDefault: z.boolean().optional(),
+  })
+  .strict();
 export const recipeInput = z
   .object({
     title: text(200),
@@ -58,6 +69,14 @@ export const recipeInput = z
     cookMinutes: z.number().int().min(0).max(10080).optional(),
     difficulty: z.enum(RECIPE_DIFFICULTIES.values()).optional(),
     ingredients: z.array(ingredientInput).max(200).optional(),
+    variants: z
+      .array(recipeVariantInput)
+      .max(30)
+      .refine(
+        (variants) => variants.filter((variant) => variant.isDefault).length <= 1,
+        "Only one recipe variant can be the default",
+      )
+      .optional(),
     steps: z
       .array(stepInput)
       .max(200)

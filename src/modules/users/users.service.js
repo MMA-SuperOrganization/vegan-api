@@ -142,6 +142,7 @@ export const createUsersService = ({ deps, users, profiles, guards }) => {
   const syncAccount = async (identity) => {
     const firebaseUid = text(128).parse(identity?.firebaseUid ?? identity?.uid);
     let user = await users.findOne({ firebaseUid });
+    const isNewAccount = !user;
     if (user) active(user);
     const set = { lastLoginAt: now() };
     if (identity.email != null)
@@ -177,7 +178,13 @@ export const createUsersService = ({ deps, users, profiles, guards }) => {
         { new: true },
       );
     }
-    return presentAccount(active(found(user)));
+    const presented = await presentAccount(active(found(user)));
+    return {
+      ...presented,
+      isNewAccount,
+      passwordSetupRequired:
+        isNewAccount && identity.signInProvider === "google.com" && Boolean(presented.email),
+    };
   };
   const resolveIdentity = async (identity) => {
     const firebaseUid = text(128).parse(

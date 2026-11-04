@@ -62,6 +62,8 @@ const schema = new mongoose.Schema(
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "Users", required: true, index: true },
     weekStartDate: { type: Date, required: true },
     title: { type: String, trim: true, required: true, maxlength: 200 },
+    isTemplate: { type: Boolean, default: false, index: true },
+    templateSourceId: { type: mongoose.Schema.Types.ObjectId, ref: "MealPlans", default: null },
     status: {
       type: String,
       enum: MEAL_PLAN_STATUSES.values(),
@@ -75,7 +77,7 @@ const schema = new mongoose.Schema(
 );
 // Active-plan uniqueness is serialized through a stable slot, not a partial index key
 // that would need to be removed/reused by different documents within one transaction.
-schema.index({ userId: 1, status: 1, weekStartDate: -1 });
+schema.index({ userId: 1, isTemplate: 1, status: 1, weekStartDate: -1 });
 export const MealPlansModel = mongoose.models.MealPlans ?? mongoose.model("MealPlans", schema);
 
 const slotSchema = new mongoose.Schema(

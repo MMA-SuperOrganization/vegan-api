@@ -259,6 +259,23 @@ describe("pantry owner aggregate and concurrency", () => {
     );
     expect((await service.getForUser(userId)).items).toHaveLength(3);
   });
+  it("automatically consumes earliest pantry stock using compatible units", async () => {
+    const { modules } = setup();
+    const service = modules.pantries.services.pantries;
+    await service.addItems(userId, [
+      {
+        foodItemId: foodId,
+        quantity: 1,
+        unit: "kg",
+        expiresAt: "2026-10-05T00:00:00.000Z",
+      },
+    ]);
+    const pantry = await service.consumeIngredients(userId, [
+      { foodItemId: foodId, quantity: 250, unit: "g" },
+    ]);
+    expect(pantry.items).toHaveLength(1);
+    expect(pantry.items[0]).toMatchObject({ quantity: 0.75, unit: "kg" });
+  });
   it("child delete preserves parent and other user cannot mutate item", async () => {
     const { modules, repositories } = setup();
     const ops = modules.pantries.operations;
@@ -314,6 +331,30 @@ describe("pantry owner aggregate and concurrency", () => {
 });
 
 describe("meal plans and grocery child isolation", () => {
+  it("saves a reusable template and applies it to multiple weeks", async () => {
+    const { modules } = setup();
+    const operations = modules.mealPlans.operations;
+    const plan = await operations.createMealPlan({ actor, body: planBody });
+    const template = await operations.cloneMealPlan({
+      actor,
+      params: { id: plan._id },
+      body: { action: "save_template", title: "Weekly rotation" },
+    });
+    expect(template).toMatchObject({ isTemplate: true, title: "Weekly rotation" });
+    for (const weekStartDate of ["2026-10-12", "2026-10-19"]) {
+      const applied = await operations.cloneMealPlan({
+        actor,
+        params: { id: template._id },
+        body: { action: "apply_template", weekStartDate },
+      });
+      expect(applied).toMatchObject({
+        isTemplate: false,
+        weekStartDate: new Date(`${weekStartDate}T00:00:00.000Z`),
+      });
+      expect(applied.days[0].meals[0].completed).toBe(false);
+    }
+  });
+
   it("requires explicit acknowledgement before adding a recipe with a saved allergen", async () => {
     const { modules, services } = setup();
     services.users.getNutrition.mockResolvedValue({ allergenIds: [allergenId] });
@@ -396,6 +437,21 @@ describe("meal plans and grocery child isolation", () => {
     expect(removed.nutritionSummary.caloriesKcal).toBe(0);
     expect(repositories.diaryEntries.records).toHaveLength(0);
     expect(repositories.mealPlans.calls.some((call) => call.method === "deleteOne")).toBe(false);
+  });
+  it("deducts recipe ingredients only when meal completion explicitly requests it", async () => {
+    const { modules } = setup();
+    await modules.pantries.services.pantries.addItems(userId, [
+      { foodItemId: foodId, quantity: 1, unit: "kg" },
+    ]);
+    const plan = await modules.mealPlans.operations.createMealPlan({ actor, body: planBody });
+    const mealId = plan.days[0].meals[0].mealId;
+    await modules.mealPlans.operations.updateMealInPlan({
+      actor,
+      params: { id: plan._id, mealId },
+      body: { completed: true, consumePantry: true },
+    });
+    const pantry = await modules.pantries.services.pantries.getForUser(userId);
+    expect(pantry.items[0]).toMatchObject({ quantity: 0.5, unit: "kg" });
   });
   it("logs meal completion once and unlinks the plan when its diary entry is deleted", async () => {
     const { modules, repositories } = setup();

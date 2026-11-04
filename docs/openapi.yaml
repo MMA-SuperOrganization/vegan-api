@@ -14586,6 +14586,10 @@ paths:
                       recipeId: 507f1f77bcf86cd799439011
                       servings: 1
                       nutritionPerServing: {}
+                      nutritionCalculation:
+                        method: Ví dụ
+                        declaredCaloriesKcal: null
+                        atwaterCaloriesKcal: 1
                       allergenIds:
                         - 507f1f77bcf86cd799439011
                     meta:
@@ -19136,6 +19140,13 @@ paths:
               - completed
               - archived
           example: draft
+        - name: isTemplate
+          in: query
+          required: false
+          description: Trường is Template trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+          schema:
+            type: boolean
+          example: false
       responses:
         "200":
           description: Success
@@ -58469,6 +58480,299 @@ components:
             additionalProperties: false
             description: Trường ingredients item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
           description: Nguyên liệu công thức; mỗi mục tham chiếu thực phẩm chuẩn.
+        variants:
+          type:
+            - array
+            - "null"
+          items:
+            type: object
+            required:
+              - variantId
+              - name
+              - servings
+            properties:
+              variantId:
+                type: string
+                description: ID tham chiếu variantId; xem resource tương ứng và kiểm tra quyền ở service.
+              name:
+                type: string
+                maxLength: 120
+                description: Tên hiển thị.
+              region:
+                type:
+                  - string
+                  - "null"
+                maxLength: 120
+                description: Trường region trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+              countryCode:
+                type:
+                  - string
+                  - "null"
+                maxLength: 2
+                description: Trường country Code trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+              servings:
+                type: number
+                minimum: 1
+                maximum: 1000
+                description: Số khẩu phần công thức được sử dụng.
+              ingredients:
+                type:
+                  - array
+                  - "null"
+                items:
+                  type: object
+                  required:
+                    - foodItemId
+                    - quantity
+                    - unit
+                    - gramEquivalent
+                  properties:
+                    foodItemId:
+                      type: string
+                      pattern: ^[A-Fa-f0-9]{24}$
+                      description: ID thực phẩm chuẩn; phải tồn tại và hợp lệ theo kiểm tra service. ObjectId gồm 24 ký tự hexadecimal.
+                    foodNameSnapshot:
+                      type:
+                        - string
+                        - "null"
+                      maxLength: 200
+                      description: Tên thực phẩm được chụp tại thời điểm ghi nhận.
+                    nutritionPer100g:
+                      type:
+                        - object
+                        - "null"
+                      properties:
+                        caloriesKcal:
+                          type:
+                            - number
+                            - "null"
+                          minimum: 0
+                          description: "caloriesKcal: giá trị tính bằng kcal."
+                        proteinG:
+                          type:
+                            - number
+                            - "null"
+                          minimum: 0
+                          description: "proteinG: giá trị tính bằng gram."
+                        carbsG:
+                          type:
+                            - number
+                            - "null"
+                          minimum: 0
+                          description: "carbsG: giá trị tính bằng gram."
+                        fatG:
+                          type:
+                            - number
+                            - "null"
+                          minimum: 0
+                          description: "fatG: giá trị tính bằng gram."
+                        fiberG:
+                          type:
+                            - number
+                            - "null"
+                          minimum: 0
+                          description: "fiberG: giá trị tính bằng gram."
+                        sugarG:
+                          type:
+                            - number
+                            - "null"
+                          minimum: 0
+                          description: "sugarG: giá trị tính bằng gram."
+                        sodiumMg:
+                          type:
+                            - number
+                            - "null"
+                          minimum: 0
+                          description: "sodiumMg: giá trị tính bằng mg."
+                        calciumMg:
+                          type:
+                            - number
+                            - "null"
+                          minimum: 0
+                          description: "calciumMg: giá trị tính bằng mg."
+                        ironMg:
+                          type:
+                            - number
+                            - "null"
+                          minimum: 0
+                          description: "ironMg: giá trị tính bằng mg."
+                        vitaminB12Mcg:
+                          type:
+                            - number
+                            - "null"
+                          minimum: 0
+                          description: "vitaminB12Mcg: giá trị tính bằng microgram."
+                        vitaminDMcg:
+                          type:
+                            - number
+                            - "null"
+                          minimum: 0
+                          description: "vitaminDMcg: giá trị tính bằng microgram."
+                      additionalProperties: false
+                      description: Dinh dưỡng tính trên 100 gram thực phẩm.
+                    allergenIds:
+                      type:
+                        - array
+                        - "null"
+                      items:
+                        type:
+                          - string
+                          - "null"
+                        pattern: ^[A-Fa-f0-9]{24}$
+                        description: Trường allergen Ids item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. ObjectId gồm 24 ký tự hexadecimal.
+                      description: Danh sách ID chất gây dị ứng trong master data.
+                    isVegan:
+                      type:
+                        - boolean
+                        - "null"
+                      description: Có phù hợp vegan không; vegan không được chứa trứng/sữa.
+                    isVegetarian:
+                      type:
+                        - boolean
+                        - "null"
+                      description: Có phù hợp vegetarian không; phải true khi isVegan=true.
+                    containsEggs:
+                      type:
+                        - boolean
+                        - "null"
+                      description: Có chứa trứng; dữ liệu chưa biết có thể null trong response theo schema.
+                    containsDairy:
+                      type:
+                        - boolean
+                        - "null"
+                      description: Có chứa sữa; dữ liệu chưa biết có thể null trong response theo schema.
+                    quantity:
+                      type: number
+                      minimum: 0
+                      description: Số lượng dương, được diễn giải cùng unit.
+                    unit:
+                      type: string
+                      enum:
+                        - g
+                        - kg
+                        - ml
+                        - l
+                        - piece
+                        - tbsp
+                        - tsp
+                        - cup
+                        - serving
+                      description: "Đơn vị quantity theo enum; không tự coi mọi đơn vị là gram. Giá trị cho phép: g, kg, ml, l, piece, tbsp, tsp, cup, serving."
+                    gramEquivalent:
+                      type: number
+                      minimum: 0
+                      description: Khối lượng gram tương ứng để quy đổi dinh dưỡng.
+                    note:
+                      type:
+                        - string
+                        - "null"
+                      maxLength: 500
+                      description: Ghi chú tùy chọn.
+                    optional:
+                      type:
+                        - boolean
+                        - "null"
+                      description: Nguyên liệu có thể bỏ qua trong công thức theo khai báo.
+                    order:
+                      type:
+                        - number
+                        - "null"
+                      description: Thứ tự bước/nguyên liệu theo schema.
+                  additionalProperties: false
+                  description: Trường ingredients item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+                description: Nguyên liệu công thức; mỗi mục tham chiếu thực phẩm chuẩn.
+              nutritionPerServing:
+                type:
+                  - object
+                  - "null"
+                properties:
+                  caloriesKcal:
+                    type:
+                      - number
+                      - "null"
+                    minimum: 0
+                    description: "caloriesKcal: giá trị tính bằng kcal."
+                  proteinG:
+                    type:
+                      - number
+                      - "null"
+                    minimum: 0
+                    description: "proteinG: giá trị tính bằng gram."
+                  carbsG:
+                    type:
+                      - number
+                      - "null"
+                    minimum: 0
+                    description: "carbsG: giá trị tính bằng gram."
+                  fatG:
+                    type:
+                      - number
+                      - "null"
+                    minimum: 0
+                    description: "fatG: giá trị tính bằng gram."
+                  fiberG:
+                    type:
+                      - number
+                      - "null"
+                    minimum: 0
+                    description: "fiberG: giá trị tính bằng gram."
+                  sugarG:
+                    type:
+                      - number
+                      - "null"
+                    minimum: 0
+                    description: "sugarG: giá trị tính bằng gram."
+                  sodiumMg:
+                    type:
+                      - number
+                      - "null"
+                    minimum: 0
+                    description: "sodiumMg: giá trị tính bằng mg."
+                  calciumMg:
+                    type:
+                      - number
+                      - "null"
+                    minimum: 0
+                    description: "calciumMg: giá trị tính bằng mg."
+                  ironMg:
+                    type:
+                      - number
+                      - "null"
+                    minimum: 0
+                    description: "ironMg: giá trị tính bằng mg."
+                  vitaminB12Mcg:
+                    type:
+                      - number
+                      - "null"
+                    minimum: 0
+                    description: "vitaminB12Mcg: giá trị tính bằng microgram."
+                  vitaminDMcg:
+                    type:
+                      - number
+                      - "null"
+                    minimum: 0
+                    description: "vitaminDMcg: giá trị tính bằng microgram."
+                additionalProperties: false
+                description: Dinh dưỡng của một khẩu phần công thức.
+              allergenIds:
+                type:
+                  - array
+                  - "null"
+                items:
+                  type:
+                    - string
+                    - "null"
+                  pattern: ^[A-Fa-f0-9]{24}$
+                  description: Trường allergen Ids item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. ObjectId gồm 24 ký tự hexadecimal.
+                description: Danh sách ID chất gây dị ứng trong master data.
+              isDefault:
+                type:
+                  - boolean
+                  - "null"
+                description: Trường is Default trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            additionalProperties: false
+            description: Trường variants item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+          description: Trường variants trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
         steps:
           type:
             - array
@@ -58585,6 +58889,31 @@ components:
             - unavailable
             - null
           description: "Trường nutrition Data Quality trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. Giá trị cho phép: verified, estimated, unavailable, ."
+        nutritionCalculation:
+          type:
+            - object
+            - "null"
+          properties:
+            method:
+              type:
+                - string
+                - "null"
+              enum:
+                - declared
+                - atwater_general
+                - null
+              description: "HTTP method của hành động/resource được mô tả. Giá trị cho phép: declared, atwater_general, ."
+            declaredCaloriesKcal:
+              type:
+                - number
+                - "null"
+              description: "declaredCaloriesKcal: giá trị tính bằng kcal."
+            atwaterCaloriesKcal:
+              type:
+                - number
+                - "null"
+              description: "atwaterCaloriesKcal: giá trị tính bằng kcal."
+          description: Trường nutrition Calculation trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
         sourceAttribution:
           type:
             - object
@@ -59582,6 +59911,17 @@ components:
           type: string
           maxLength: 200
           description: Tiêu đề hiển thị.
+        isTemplate:
+          type:
+            - boolean
+            - "null"
+          description: Trường is Template trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+        templateSourceId:
+          type:
+            - string
+            - "null"
+          pattern: ^[A-Fa-f0-9]{24}$
+          description: ID tham chiếu templateSourceId; xem resource tương ứng và kiểm tra quyền ở service. ObjectId gồm 24 ký tự hexadecimal.
         status:
           type:
             - string
@@ -64178,6 +64518,299 @@ components:
             additionalProperties: false
             description: Trường ingredients item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
           description: Nguyên liệu công thức; mỗi mục tham chiếu thực phẩm chuẩn.
+        variants:
+          type:
+            - array
+            - "null"
+          items:
+            type: object
+            required:
+              - variantId
+              - name
+              - servings
+            properties:
+              variantId:
+                type: string
+                description: ID tham chiếu variantId; xem resource tương ứng và kiểm tra quyền ở service.
+              name:
+                type: string
+                maxLength: 120
+                description: Tên hiển thị.
+              region:
+                type:
+                  - string
+                  - "null"
+                maxLength: 120
+                description: Trường region trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+              countryCode:
+                type:
+                  - string
+                  - "null"
+                maxLength: 2
+                description: Trường country Code trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+              servings:
+                type: number
+                minimum: 1
+                maximum: 1000
+                description: Số khẩu phần công thức được sử dụng.
+              ingredients:
+                type:
+                  - array
+                  - "null"
+                items:
+                  type: object
+                  required:
+                    - foodItemId
+                    - quantity
+                    - unit
+                    - gramEquivalent
+                  properties:
+                    foodItemId:
+                      type: string
+                      pattern: ^[A-Fa-f0-9]{24}$
+                      description: ID thực phẩm chuẩn; phải tồn tại và hợp lệ theo kiểm tra service. ObjectId gồm 24 ký tự hexadecimal.
+                    foodNameSnapshot:
+                      type:
+                        - string
+                        - "null"
+                      maxLength: 200
+                      description: Tên thực phẩm được chụp tại thời điểm ghi nhận.
+                    nutritionPer100g:
+                      type:
+                        - object
+                        - "null"
+                      properties:
+                        caloriesKcal:
+                          type:
+                            - number
+                            - "null"
+                          minimum: 0
+                          description: "caloriesKcal: giá trị tính bằng kcal."
+                        proteinG:
+                          type:
+                            - number
+                            - "null"
+                          minimum: 0
+                          description: "proteinG: giá trị tính bằng gram."
+                        carbsG:
+                          type:
+                            - number
+                            - "null"
+                          minimum: 0
+                          description: "carbsG: giá trị tính bằng gram."
+                        fatG:
+                          type:
+                            - number
+                            - "null"
+                          minimum: 0
+                          description: "fatG: giá trị tính bằng gram."
+                        fiberG:
+                          type:
+                            - number
+                            - "null"
+                          minimum: 0
+                          description: "fiberG: giá trị tính bằng gram."
+                        sugarG:
+                          type:
+                            - number
+                            - "null"
+                          minimum: 0
+                          description: "sugarG: giá trị tính bằng gram."
+                        sodiumMg:
+                          type:
+                            - number
+                            - "null"
+                          minimum: 0
+                          description: "sodiumMg: giá trị tính bằng mg."
+                        calciumMg:
+                          type:
+                            - number
+                            - "null"
+                          minimum: 0
+                          description: "calciumMg: giá trị tính bằng mg."
+                        ironMg:
+                          type:
+                            - number
+                            - "null"
+                          minimum: 0
+                          description: "ironMg: giá trị tính bằng mg."
+                        vitaminB12Mcg:
+                          type:
+                            - number
+                            - "null"
+                          minimum: 0
+                          description: "vitaminB12Mcg: giá trị tính bằng microgram."
+                        vitaminDMcg:
+                          type:
+                            - number
+                            - "null"
+                          minimum: 0
+                          description: "vitaminDMcg: giá trị tính bằng microgram."
+                      additionalProperties: false
+                      description: Dinh dưỡng tính trên 100 gram thực phẩm.
+                    allergenIds:
+                      type:
+                        - array
+                        - "null"
+                      items:
+                        type:
+                          - string
+                          - "null"
+                        pattern: ^[A-Fa-f0-9]{24}$
+                        description: Trường allergen Ids item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. ObjectId gồm 24 ký tự hexadecimal.
+                      description: Danh sách ID chất gây dị ứng trong master data.
+                    isVegan:
+                      type:
+                        - boolean
+                        - "null"
+                      description: Có phù hợp vegan không; vegan không được chứa trứng/sữa.
+                    isVegetarian:
+                      type:
+                        - boolean
+                        - "null"
+                      description: Có phù hợp vegetarian không; phải true khi isVegan=true.
+                    containsEggs:
+                      type:
+                        - boolean
+                        - "null"
+                      description: Có chứa trứng; dữ liệu chưa biết có thể null trong response theo schema.
+                    containsDairy:
+                      type:
+                        - boolean
+                        - "null"
+                      description: Có chứa sữa; dữ liệu chưa biết có thể null trong response theo schema.
+                    quantity:
+                      type: number
+                      minimum: 0
+                      description: Số lượng dương, được diễn giải cùng unit.
+                    unit:
+                      type: string
+                      enum:
+                        - g
+                        - kg
+                        - ml
+                        - l
+                        - piece
+                        - tbsp
+                        - tsp
+                        - cup
+                        - serving
+                      description: "Đơn vị quantity theo enum; không tự coi mọi đơn vị là gram. Giá trị cho phép: g, kg, ml, l, piece, tbsp, tsp, cup, serving."
+                    gramEquivalent:
+                      type: number
+                      minimum: 0
+                      description: Khối lượng gram tương ứng để quy đổi dinh dưỡng.
+                    note:
+                      type:
+                        - string
+                        - "null"
+                      maxLength: 500
+                      description: Ghi chú tùy chọn.
+                    optional:
+                      type:
+                        - boolean
+                        - "null"
+                      description: Nguyên liệu có thể bỏ qua trong công thức theo khai báo.
+                    order:
+                      type:
+                        - number
+                        - "null"
+                      description: Thứ tự bước/nguyên liệu theo schema.
+                  additionalProperties: false
+                  description: Trường ingredients item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+                description: Nguyên liệu công thức; mỗi mục tham chiếu thực phẩm chuẩn.
+              nutritionPerServing:
+                type:
+                  - object
+                  - "null"
+                properties:
+                  caloriesKcal:
+                    type:
+                      - number
+                      - "null"
+                    minimum: 0
+                    description: "caloriesKcal: giá trị tính bằng kcal."
+                  proteinG:
+                    type:
+                      - number
+                      - "null"
+                    minimum: 0
+                    description: "proteinG: giá trị tính bằng gram."
+                  carbsG:
+                    type:
+                      - number
+                      - "null"
+                    minimum: 0
+                    description: "carbsG: giá trị tính bằng gram."
+                  fatG:
+                    type:
+                      - number
+                      - "null"
+                    minimum: 0
+                    description: "fatG: giá trị tính bằng gram."
+                  fiberG:
+                    type:
+                      - number
+                      - "null"
+                    minimum: 0
+                    description: "fiberG: giá trị tính bằng gram."
+                  sugarG:
+                    type:
+                      - number
+                      - "null"
+                    minimum: 0
+                    description: "sugarG: giá trị tính bằng gram."
+                  sodiumMg:
+                    type:
+                      - number
+                      - "null"
+                    minimum: 0
+                    description: "sodiumMg: giá trị tính bằng mg."
+                  calciumMg:
+                    type:
+                      - number
+                      - "null"
+                    minimum: 0
+                    description: "calciumMg: giá trị tính bằng mg."
+                  ironMg:
+                    type:
+                      - number
+                      - "null"
+                    minimum: 0
+                    description: "ironMg: giá trị tính bằng mg."
+                  vitaminB12Mcg:
+                    type:
+                      - number
+                      - "null"
+                    minimum: 0
+                    description: "vitaminB12Mcg: giá trị tính bằng microgram."
+                  vitaminDMcg:
+                    type:
+                      - number
+                      - "null"
+                    minimum: 0
+                    description: "vitaminDMcg: giá trị tính bằng microgram."
+                additionalProperties: false
+                description: Dinh dưỡng của một khẩu phần công thức.
+              allergenIds:
+                type:
+                  - array
+                  - "null"
+                items:
+                  type:
+                    - string
+                    - "null"
+                  pattern: ^[A-Fa-f0-9]{24}$
+                  description: Trường allergen Ids item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. ObjectId gồm 24 ký tự hexadecimal.
+                description: Danh sách ID chất gây dị ứng trong master data.
+              isDefault:
+                type:
+                  - boolean
+                  - "null"
+                description: Trường is Default trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            additionalProperties: false
+            description: Trường variants item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+          description: Trường variants trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
         steps:
           type:
             - array
@@ -64294,6 +64927,31 @@ components:
             - unavailable
             - null
           description: "Trường nutrition Data Quality trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. Giá trị cho phép: verified, estimated, unavailable, ."
+        nutritionCalculation:
+          type:
+            - object
+            - "null"
+          properties:
+            method:
+              type:
+                - string
+                - "null"
+              enum:
+                - declared
+                - atwater_general
+                - null
+              description: "HTTP method của hành động/resource được mô tả. Giá trị cho phép: declared, atwater_general, ."
+            declaredCaloriesKcal:
+              type:
+                - number
+                - "null"
+              description: "declaredCaloriesKcal: giá trị tính bằng kcal."
+            atwaterCaloriesKcal:
+              type:
+                - number
+                - "null"
+              description: "atwaterCaloriesKcal: giá trị tính bằng kcal."
+          description: Trường nutrition Calculation trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
         sourceAttribution:
           type:
             - object
@@ -64789,6 +65447,299 @@ components:
             additionalProperties: false
             description: Trường ingredients item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
           description: Nguyên liệu công thức; mỗi mục tham chiếu thực phẩm chuẩn.
+        variants:
+          type:
+            - array
+            - "null"
+          items:
+            type: object
+            required:
+              - variantId
+              - name
+              - servings
+            properties:
+              variantId:
+                type: string
+                description: ID tham chiếu variantId; xem resource tương ứng và kiểm tra quyền ở service.
+              name:
+                type: string
+                maxLength: 120
+                description: Tên hiển thị.
+              region:
+                type:
+                  - string
+                  - "null"
+                maxLength: 120
+                description: Trường region trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+              countryCode:
+                type:
+                  - string
+                  - "null"
+                maxLength: 2
+                description: Trường country Code trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+              servings:
+                type: number
+                minimum: 1
+                maximum: 1000
+                description: Số khẩu phần công thức được sử dụng.
+              ingredients:
+                type:
+                  - array
+                  - "null"
+                items:
+                  type: object
+                  required:
+                    - foodItemId
+                    - quantity
+                    - unit
+                    - gramEquivalent
+                  properties:
+                    foodItemId:
+                      type: string
+                      pattern: ^[A-Fa-f0-9]{24}$
+                      description: ID thực phẩm chuẩn; phải tồn tại và hợp lệ theo kiểm tra service. ObjectId gồm 24 ký tự hexadecimal.
+                    foodNameSnapshot:
+                      type:
+                        - string
+                        - "null"
+                      maxLength: 200
+                      description: Tên thực phẩm được chụp tại thời điểm ghi nhận.
+                    nutritionPer100g:
+                      type:
+                        - object
+                        - "null"
+                      properties:
+                        caloriesKcal:
+                          type:
+                            - number
+                            - "null"
+                          minimum: 0
+                          description: "caloriesKcal: giá trị tính bằng kcal."
+                        proteinG:
+                          type:
+                            - number
+                            - "null"
+                          minimum: 0
+                          description: "proteinG: giá trị tính bằng gram."
+                        carbsG:
+                          type:
+                            - number
+                            - "null"
+                          minimum: 0
+                          description: "carbsG: giá trị tính bằng gram."
+                        fatG:
+                          type:
+                            - number
+                            - "null"
+                          minimum: 0
+                          description: "fatG: giá trị tính bằng gram."
+                        fiberG:
+                          type:
+                            - number
+                            - "null"
+                          minimum: 0
+                          description: "fiberG: giá trị tính bằng gram."
+                        sugarG:
+                          type:
+                            - number
+                            - "null"
+                          minimum: 0
+                          description: "sugarG: giá trị tính bằng gram."
+                        sodiumMg:
+                          type:
+                            - number
+                            - "null"
+                          minimum: 0
+                          description: "sodiumMg: giá trị tính bằng mg."
+                        calciumMg:
+                          type:
+                            - number
+                            - "null"
+                          minimum: 0
+                          description: "calciumMg: giá trị tính bằng mg."
+                        ironMg:
+                          type:
+                            - number
+                            - "null"
+                          minimum: 0
+                          description: "ironMg: giá trị tính bằng mg."
+                        vitaminB12Mcg:
+                          type:
+                            - number
+                            - "null"
+                          minimum: 0
+                          description: "vitaminB12Mcg: giá trị tính bằng microgram."
+                        vitaminDMcg:
+                          type:
+                            - number
+                            - "null"
+                          minimum: 0
+                          description: "vitaminDMcg: giá trị tính bằng microgram."
+                      additionalProperties: false
+                      description: Dinh dưỡng tính trên 100 gram thực phẩm.
+                    allergenIds:
+                      type:
+                        - array
+                        - "null"
+                      items:
+                        type:
+                          - string
+                          - "null"
+                        pattern: ^[A-Fa-f0-9]{24}$
+                        description: Trường allergen Ids item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. ObjectId gồm 24 ký tự hexadecimal.
+                      description: Danh sách ID chất gây dị ứng trong master data.
+                    isVegan:
+                      type:
+                        - boolean
+                        - "null"
+                      description: Có phù hợp vegan không; vegan không được chứa trứng/sữa.
+                    isVegetarian:
+                      type:
+                        - boolean
+                        - "null"
+                      description: Có phù hợp vegetarian không; phải true khi isVegan=true.
+                    containsEggs:
+                      type:
+                        - boolean
+                        - "null"
+                      description: Có chứa trứng; dữ liệu chưa biết có thể null trong response theo schema.
+                    containsDairy:
+                      type:
+                        - boolean
+                        - "null"
+                      description: Có chứa sữa; dữ liệu chưa biết có thể null trong response theo schema.
+                    quantity:
+                      type: number
+                      minimum: 0
+                      description: Số lượng dương, được diễn giải cùng unit.
+                    unit:
+                      type: string
+                      enum:
+                        - g
+                        - kg
+                        - ml
+                        - l
+                        - piece
+                        - tbsp
+                        - tsp
+                        - cup
+                        - serving
+                      description: "Đơn vị quantity theo enum; không tự coi mọi đơn vị là gram. Giá trị cho phép: g, kg, ml, l, piece, tbsp, tsp, cup, serving."
+                    gramEquivalent:
+                      type: number
+                      minimum: 0
+                      description: Khối lượng gram tương ứng để quy đổi dinh dưỡng.
+                    note:
+                      type:
+                        - string
+                        - "null"
+                      maxLength: 500
+                      description: Ghi chú tùy chọn.
+                    optional:
+                      type:
+                        - boolean
+                        - "null"
+                      description: Nguyên liệu có thể bỏ qua trong công thức theo khai báo.
+                    order:
+                      type:
+                        - number
+                        - "null"
+                      description: Thứ tự bước/nguyên liệu theo schema.
+                  additionalProperties: false
+                  description: Trường ingredients item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+                description: Nguyên liệu công thức; mỗi mục tham chiếu thực phẩm chuẩn.
+              nutritionPerServing:
+                type:
+                  - object
+                  - "null"
+                properties:
+                  caloriesKcal:
+                    type:
+                      - number
+                      - "null"
+                    minimum: 0
+                    description: "caloriesKcal: giá trị tính bằng kcal."
+                  proteinG:
+                    type:
+                      - number
+                      - "null"
+                    minimum: 0
+                    description: "proteinG: giá trị tính bằng gram."
+                  carbsG:
+                    type:
+                      - number
+                      - "null"
+                    minimum: 0
+                    description: "carbsG: giá trị tính bằng gram."
+                  fatG:
+                    type:
+                      - number
+                      - "null"
+                    minimum: 0
+                    description: "fatG: giá trị tính bằng gram."
+                  fiberG:
+                    type:
+                      - number
+                      - "null"
+                    minimum: 0
+                    description: "fiberG: giá trị tính bằng gram."
+                  sugarG:
+                    type:
+                      - number
+                      - "null"
+                    minimum: 0
+                    description: "sugarG: giá trị tính bằng gram."
+                  sodiumMg:
+                    type:
+                      - number
+                      - "null"
+                    minimum: 0
+                    description: "sodiumMg: giá trị tính bằng mg."
+                  calciumMg:
+                    type:
+                      - number
+                      - "null"
+                    minimum: 0
+                    description: "calciumMg: giá trị tính bằng mg."
+                  ironMg:
+                    type:
+                      - number
+                      - "null"
+                    minimum: 0
+                    description: "ironMg: giá trị tính bằng mg."
+                  vitaminB12Mcg:
+                    type:
+                      - number
+                      - "null"
+                    minimum: 0
+                    description: "vitaminB12Mcg: giá trị tính bằng microgram."
+                  vitaminDMcg:
+                    type:
+                      - number
+                      - "null"
+                    minimum: 0
+                    description: "vitaminDMcg: giá trị tính bằng microgram."
+                additionalProperties: false
+                description: Dinh dưỡng của một khẩu phần công thức.
+              allergenIds:
+                type:
+                  - array
+                  - "null"
+                items:
+                  type:
+                    - string
+                    - "null"
+                  pattern: ^[A-Fa-f0-9]{24}$
+                  description: Trường allergen Ids item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. ObjectId gồm 24 ký tự hexadecimal.
+                description: Danh sách ID chất gây dị ứng trong master data.
+              isDefault:
+                type:
+                  - boolean
+                  - "null"
+                description: Trường is Default trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            additionalProperties: false
+            description: Trường variants item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+          description: Trường variants trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
         steps:
           type:
             - array
@@ -64905,6 +65856,31 @@ components:
             - unavailable
             - null
           description: "Trường nutrition Data Quality trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. Giá trị cho phép: verified, estimated, unavailable, ."
+        nutritionCalculation:
+          type:
+            - object
+            - "null"
+          properties:
+            method:
+              type:
+                - string
+                - "null"
+              enum:
+                - declared
+                - atwater_general
+                - null
+              description: "HTTP method của hành động/resource được mô tả. Giá trị cho phép: declared, atwater_general, ."
+            declaredCaloriesKcal:
+              type:
+                - number
+                - "null"
+              description: "declaredCaloriesKcal: giá trị tính bằng kcal."
+            atwaterCaloriesKcal:
+              type:
+                - number
+                - "null"
+              description: "atwaterCaloriesKcal: giá trị tính bằng kcal."
+          description: Trường nutrition Calculation trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
         sourceAttribution:
           type:
             - object
@@ -69781,6 +70757,100 @@ components:
             additionalProperties: false
             description: Trường ingredients item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
           description: Nguyên liệu công thức; mỗi mục tham chiếu thực phẩm chuẩn.
+        variants:
+          maxItems: 30
+          type: array
+          items:
+            type: object
+            properties:
+              variantId:
+                type: string
+                format: uuid
+                pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                description: ID tham chiếu variantId; xem resource tương ứng và kiểm tra quyền ở service.
+              name:
+                type: string
+                minLength: 1
+                maxLength: 120
+                description: Tên hiển thị.
+              region:
+                type: string
+                minLength: 0
+                maxLength: 120
+                description: Trường region trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+              countryCode:
+                type: string
+                minLength: 2
+                maxLength: 2
+                description: Trường country Code trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+              servings:
+                type: integer
+                minimum: 1
+                maximum: 1000
+                description: Số khẩu phần công thức được sử dụng.
+              ingredients:
+                minItems: 1
+                maxItems: 200
+                type: array
+                items:
+                  type: object
+                  properties:
+                    foodItemId:
+                      type: string
+                      pattern: ^[a-f\d]{24}$
+                      description: ID thực phẩm chuẩn; phải tồn tại và hợp lệ theo kiểm tra service. ObjectId gồm 24 ký tự hexadecimal.
+                    quantity:
+                      type: number
+                      exclusiveMinimum: 0
+                      maximum: 100000
+                      description: Số lượng dương, được diễn giải cùng unit.
+                    unit:
+                      type: string
+                      enum:
+                        - g
+                        - kg
+                        - ml
+                        - l
+                        - piece
+                        - tbsp
+                        - tsp
+                        - cup
+                        - serving
+                      description: "Đơn vị quantity theo enum; không tự coi mọi đơn vị là gram. Giá trị cho phép: g, kg, ml, l, piece, tbsp, tsp, cup, serving."
+                    gramEquivalent:
+                      type: number
+                      exclusiveMinimum: 0
+                      maximum: 1000000
+                      description: Khối lượng gram tương ứng để quy đổi dinh dưỡng.
+                    note:
+                      type: string
+                      minLength: 0
+                      maxLength: 500
+                      description: Ghi chú tùy chọn.
+                    optional:
+                      type: boolean
+                      description: Nguyên liệu có thể bỏ qua trong công thức theo khai báo.
+                    order:
+                      type: integer
+                      minimum: 1
+                      maximum: 200
+                      description: Thứ tự bước/nguyên liệu theo schema.
+                  required:
+                    - foodItemId
+                    - quantity
+                    - unit
+                  additionalProperties: false
+                  description: Trường ingredients item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+                description: Nguyên liệu công thức; mỗi mục tham chiếu thực phẩm chuẩn.
+              isDefault:
+                type: boolean
+                description: Trường is Default trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            required:
+              - name
+              - ingredients
+            additionalProperties: false
+            description: Trường variants item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+          description: Trường variants trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
         steps:
           maxItems: 200
           type: array
@@ -69997,6 +71067,100 @@ components:
             additionalProperties: false
             description: Trường ingredients item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
           description: Nguyên liệu công thức; mỗi mục tham chiếu thực phẩm chuẩn.
+        variants:
+          maxItems: 30
+          type: array
+          items:
+            type: object
+            properties:
+              variantId:
+                type: string
+                format: uuid
+                pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                description: ID tham chiếu variantId; xem resource tương ứng và kiểm tra quyền ở service.
+              name:
+                type: string
+                minLength: 1
+                maxLength: 120
+                description: Tên hiển thị.
+              region:
+                type: string
+                minLength: 0
+                maxLength: 120
+                description: Trường region trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+              countryCode:
+                type: string
+                minLength: 2
+                maxLength: 2
+                description: Trường country Code trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+              servings:
+                type: integer
+                minimum: 1
+                maximum: 1000
+                description: Số khẩu phần công thức được sử dụng.
+              ingredients:
+                minItems: 1
+                maxItems: 200
+                type: array
+                items:
+                  type: object
+                  properties:
+                    foodItemId:
+                      type: string
+                      pattern: ^[a-f\d]{24}$
+                      description: ID thực phẩm chuẩn; phải tồn tại và hợp lệ theo kiểm tra service. ObjectId gồm 24 ký tự hexadecimal.
+                    quantity:
+                      type: number
+                      exclusiveMinimum: 0
+                      maximum: 100000
+                      description: Số lượng dương, được diễn giải cùng unit.
+                    unit:
+                      type: string
+                      enum:
+                        - g
+                        - kg
+                        - ml
+                        - l
+                        - piece
+                        - tbsp
+                        - tsp
+                        - cup
+                        - serving
+                      description: "Đơn vị quantity theo enum; không tự coi mọi đơn vị là gram. Giá trị cho phép: g, kg, ml, l, piece, tbsp, tsp, cup, serving."
+                    gramEquivalent:
+                      type: number
+                      exclusiveMinimum: 0
+                      maximum: 1000000
+                      description: Khối lượng gram tương ứng để quy đổi dinh dưỡng.
+                    note:
+                      type: string
+                      minLength: 0
+                      maxLength: 500
+                      description: Ghi chú tùy chọn.
+                    optional:
+                      type: boolean
+                      description: Nguyên liệu có thể bỏ qua trong công thức theo khai báo.
+                    order:
+                      type: integer
+                      minimum: 1
+                      maximum: 200
+                      description: Thứ tự bước/nguyên liệu theo schema.
+                  required:
+                    - foodItemId
+                    - quantity
+                    - unit
+                  additionalProperties: false
+                  description: Trường ingredients item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+                description: Nguyên liệu công thức; mỗi mục tham chiếu thực phẩm chuẩn.
+              isDefault:
+                type: boolean
+                description: Trường is Default trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            required:
+              - name
+              - ingredients
+            additionalProperties: false
+            description: Trường variants item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+          description: Trường variants trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
         steps:
           maxItems: 200
           type: array
@@ -70323,6 +71487,28 @@ components:
                   description: "vitaminDMcg: giá trị tính bằng microgram."
               additionalProperties: false
               description: Dinh dưỡng của một khẩu phần công thức.
+            nutritionCalculation:
+              type: object
+              properties:
+                method:
+                  type: string
+                  description: Trường Json Value trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+                declaredCaloriesKcal:
+                  anyOf:
+                    - type: number
+                      description: Trường Json Value trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+                    - type: "null"
+                      description: "declaredCaloriesKcal: giá trị tính bằng kcal."
+                  description: "declaredCaloriesKcal: giá trị tính bằng kcal."
+                atwaterCaloriesKcal:
+                  type: number
+                  description: Trường Json Value trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+              required:
+                - method
+                - declaredCaloriesKcal
+                - atwaterCaloriesKcal
+              additionalProperties: false
+              description: Trường nutrition Calculation trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
             allergenIds:
               type: array
               items:
@@ -70334,6 +71520,7 @@ components:
             - recipeId
             - servings
             - nutritionPerServing
+            - nutritionCalculation
             - allergenIds
           additionalProperties: false
           description: Dữ liệu kết quả theo schema riêng của operation.
@@ -71650,6 +72837,9 @@ components:
             - completed
             - archived
           description: "Trạng thái resource; chỉ dùng các enum cho phép ở endpoint này. Giá trị cho phép: draft, active, completed, archived."
+        isTemplate:
+          type: boolean
+          description: Trường is Template trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
       additionalProperties: false
       description: Dữ liệu Query của getMealPlans; required/default/enum/giới hạn theo validator thật, các quy tắc kiểm tra chéo xem description của operation.
     getMealPlansResponse:
@@ -71792,6 +72982,9 @@ components:
                     acknowledgeAllergens:
                       type: boolean
                       description: Trường acknowledge Allergens trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+                    consumePantry:
+                      type: boolean
+                      description: Trường consume Pantry trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
                   required:
                     - type
                     - recipeId
@@ -71944,6 +73137,9 @@ components:
         acknowledgeAllergens:
           type: boolean
           description: Trường acknowledge Allergens trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+        consumePantry:
+          type: boolean
+          description: Trường consume Pantry trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
         date:
           type: string
           pattern: ^\d{4}-\d{2}-\d{2}$
@@ -72018,6 +73214,9 @@ components:
         acknowledgeAllergens:
           type: boolean
           description: Trường acknowledge Allergens trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+        consumePantry:
+          type: boolean
+          description: Trường consume Pantry trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
         completed:
           type: boolean
           description: Trạng thái hoàn tất bữa ăn/video theo endpoint.
@@ -72136,8 +73335,14 @@ components:
           minLength: 1
           maxLength: 200
           description: Tiêu đề hiển thị.
-      required:
-        - weekStartDate
+        action:
+          default: clone
+          type: string
+          enum:
+            - clone
+            - save_template
+            - apply_template
+          description: 'Mã hành động audit/kiểm duyệt. Mặc định: "clone". Giá trị cho phép: clone, save_template, apply_template.'
       additionalProperties: false
       description: Dữ liệu Body của cloneMealPlan; required/default/enum/giới hạn theo validator thật, các quy tắc kiểm tra chéo xem description của operation.
     cloneMealPlanResponse:

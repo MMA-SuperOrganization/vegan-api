@@ -571,6 +571,11 @@ export function createContractRegistry(container = createContractContainer()) {
       recipeId: id,
       servings: number,
       nutritionPerServing: nutrition,
+      nutritionCalculation: object({
+        method: string,
+        declaredCaloriesKcal: nullable(number),
+        atwaterCaloriesKcal: number,
+      }),
       allergenIds: array(id),
     }),
   );

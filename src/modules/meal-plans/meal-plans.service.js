@@ -386,6 +386,7 @@ export function createMealPlansService({
             ? { weekStartDate: new Date(`${query.weekStartDate}T00:00:00Z`) }
             : {}),
           ...(query.status ? { status: query.status } : {}),
+          isTemplate: query.isTemplate ?? false,
         },
         { page: query.page, limit: query.limit, sort: { weekStartDate: -1, _id: -1 } },
       ),
@@ -455,6 +456,7 @@ export function createMealPlansService({
             }
             const mealChanges = { ...body };
             delete mealChanges.acknowledgeAllergens;
+            delete mealChanges.consumePantry;
             Object.assign(meal, mealChanges);
             // Always reconcile the linked diary entry when completion is explicitly sent.
             // This repairs legacy plans whose completed flag was saved before diary sync existed.
@@ -478,6 +480,19 @@ export function createMealPlansService({
                   { session },
                 );
                 meal.diaryEntryId = diaryEntry._id;
+                if (body.consumePantry) {
+                  if (!services.pantries?.consumeIngredients)
+                    throw AppError.serviceUnavailable("Pantry service is unavailable");
+                  await services.pantries.consumeIngredients(
+                    userId,
+                    meal.recipeSnapshot.ingredients.map((ingredient) => ({
+                      ...ingredient,
+                      quantity:
+                        ingredient.quantity * (meal.servings / meal.recipeSnapshot.servings),
+                    })),
+                    { session },
+                  );
+                }
               } else {
                 await services.diary.removeMealPlanEntry(userId, plan._id, meal.mealId, {
                   session,
@@ -522,8 +537,31 @@ export function createMealPlansService({
     cloneMealPlan: async ({ actor, params, body }) => {
       const userId = owner(actor);
       const plan = await getOwned(userId, params.id);
+      if (body.action === "save_template") {
+        const days = copyDays(plan.days).map((day) => ({
+          ...day,
+          meals: day.meals.map(({ diaryEntryId: _diaryEntryId, ...meal }) => ({
+            ...meal,
+            mealId: randomUUID(),
+            completed: false,
+          })),
+        }));
+        return repo.create({
+          userId,
+          weekStartDate: plan.weekStartDate,
+          title: body.title ?? `${plan.title} template`,
+          days,
+          status: "draft",
+          isTemplate: true,
+          templateSourceId: plan._id,
+          nutritionSummary: nutritionSummary(days),
+          version: 0,
+        });
+      }
+      if (body.action === "apply_template" && !plan.isTemplate)
+        throw AppError.badRequest("Meal plan is not a template");
       const weekStartDate = new Date(`${body.weekStartDate}T00:00:00Z`);
-      if (dateString(plan.weekStartDate) === body.weekStartDate)
+      if (body.action !== "apply_template" && dateString(plan.weekStartDate) === body.weekStartDate)
         throw AppError.badRequest("Clone must target a different week");
       const shift = weekStartDate - new Date(plan.weekStartDate);
       const days = copyDays(plan.days).map((day) => ({
@@ -537,11 +575,15 @@ export function createMealPlansService({
       return repo.create({
         userId,
         weekStartDate,
-        title: body.title ?? plan.title,
+        title:
+          body.title ??
+          (body.action === "apply_template" ? plan.title.replace(/\s+template$/i, "") : plan.title),
         days,
         status: "draft",
         nutritionSummary: nutritionSummary(days),
         version: 0,
+        isTemplate: false,
+        templateSourceId: plan.isTemplate ? plan._id : (plan.templateSourceId ?? null),
       });
     },
     generateGroceryListFromPlan: async ({ actor, params, body }) =>
