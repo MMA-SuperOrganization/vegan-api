@@ -21,7 +21,6 @@ const canonical = (value) =>
             .map((key) => [key, canonical(value[key])]),
         )
       : value;
-
 export function createPantriesService({
   pantriesRepository: repo,
   services = {},
@@ -55,7 +54,7 @@ export function createPantriesService({
         bulkRequests: (pantry.bulkRequests ?? []).map((request) => ({ ...request })),
       });
       if (!change) return pantry;
-      if (change.items.length > 500) throw AppError.badRequest("Pantry is limited to 500 items");
+      if (change.items?.length > 500) throw AppError.badRequest("Pantry is limited to 500 items");
       const versionFilter = pantry.version === undefined ? { $exists: false } : pantry.version;
       const updated = await repo.updateOne(
         { _id: pantry._id, userId, version: versionFilter },
@@ -315,6 +314,10 @@ export function createPantriesService({
         safePantry(await addItems(userId, items, options)),
       consumeIngredients: async (userId, ingredients, options) =>
         safePantry(await consumeIngredients(userId, ingredients, options)),
+      shouldAutoConsume: async (userId, options) => {
+        const profile = await services.users?.getProfile?.(userId, options);
+        return profile?.kitchenAutomation?.autoDeductOnMealCompletion === true;
+      },
       match,
     },
   };

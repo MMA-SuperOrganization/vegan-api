@@ -99,7 +99,19 @@ export const createRecipesValidation = () => ({
     }),
   },
   getMyRecipes: { query: mineQuery },
-  getRecipe: { params: slugParams },
+  getRecipe: {
+    params: slugParams,
+    query: z
+      .object({
+        variantId: z.uuid().optional(),
+        includeSubstitutions: z
+          .enum(["true", "false"])
+          .transform((value) => value === "true")
+          .optional(),
+        excludeAllergenIds: excludedAllergens.optional(),
+      })
+      .strict(),
+  },
   createRecipe: { body: recipeInput },
   updateRecipe: { params: idParams, body: contentPatch(recipeInput) },
   deleteRecipe: { params: idParams },

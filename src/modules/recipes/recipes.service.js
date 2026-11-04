@@ -143,6 +143,83 @@ export const createRecipesService = (deps) => {
       },
     );
   const getById = (id, options = {}) => getReadable(repo, id, options);
+  const buildSubstitutions = async (recipe, actor, query = {}) => {
+    if (!actor?.userId || !query.includeSubstitutions) return undefined;
+    const variant = query.variantId
+      ? (recipe.variants ?? []).find((item) => item.variantId === query.variantId)
+      : null;
+    if (query.variantId && !variant) throw AppError.notFound("Recipe variant not found");
+    const [profile, nutritionProfile] = await Promise.all([
+      deps.services.users?.getProfile?.(actor.userId),
+      deps.services.users?.getNutrition?.(actor.userId),
+    ]);
+    const excludedAllergenIds = [
+      ...new Set(
+        [
+          ...(query.excludeAllergenIds ?? []),
+          ...(profile?.allergenIds ?? []),
+          ...(nutritionProfile?.allergenIds ?? []),
+        ].map(String),
+      ),
+    ];
+    if (!excludedAllergenIds.length) return [];
+    const excluded = new Set(excludedAllergenIds);
+    const ingredients = variant?.ingredients ?? recipe.ingredients ?? [];
+    const unsafe = ingredients.filter((ingredient) =>
+      (ingredient.allergenIds ?? []).some((allergenId) => excluded.has(String(allergenId))),
+    );
+    const suggestions = [];
+    for (const ingredient of unsafe) {
+      const source = await deps.services.foodItems?.getById?.(ingredient.foodItemId);
+      if (!source) continue;
+      const result = await deps.services.foodItems.search({
+        categoryId: source.categoryId,
+        excludeAllergenIds: excludedAllergenIds,
+        isVegan: true,
+        page: 1,
+        limit: 20,
+      });
+      const sourceCalories = Number(source.nutritionPer100g?.caloriesKcal ?? 0);
+      const alternatives = (result.data ?? result)
+        .filter((food) => String(food._id) !== String(source._id))
+        .map((food) => {
+          const alternativeCalories = Number(food.nutritionPer100g?.caloriesKcal ?? 0);
+          const quantityRatio = Math.min(
+            4,
+            Math.max(
+              0.25,
+              sourceCalories > 0 && alternativeCalories > 0
+                ? sourceCalories / alternativeCalories
+                : 1,
+            ),
+          );
+          return {
+            food,
+            quantityRatio: Number(quantityRatio.toFixed(2)),
+            recommendedQuantity: Number((ingredient.quantity * quantityRatio).toFixed(2)),
+            unit: ingredient.unit,
+            reason: "Same food category with saved allergens excluded",
+            guidance:
+              ingredient.unit === "g"
+                ? "Replace by the suggested weight, then adjust seasoning and texture while cooking."
+                : "Use the ratio as a starting point; confirm the gram equivalent for volume or piece units.",
+            nutritionDistance:
+              sourceCalories > 0
+                ? Math.abs(alternativeCalories - sourceCalories) / sourceCalories
+                : 1,
+          };
+        })
+        .sort(
+          (left, right) =>
+            left.nutritionDistance - right.nutritionDistance ||
+            left.food.name.localeCompare(right.food.name),
+        )
+        .slice(0, 5)
+        .map(({ nutritionDistance: _nutritionDistance, ...item }) => item);
+      suggestions.push({ ingredient, alternatives });
+    }
+    return suggestions;
+  };
   const operations = {
     getRecipes: async ({ query = {} }) => listPublic(query),
     getMyRecipes: async ({ actor, query = {} }) => {
@@ -150,11 +227,13 @@ export const createRecipesService = (deps) => {
       const result = await listMine(actor.userId, query);
       return presentPage(result, actor);
     },
-    getRecipe: async ({ actor, params }) => {
+    getRecipe: async ({ actor, params, query = {} }) => {
       const recipe = await getReadable(repo, params.idOrSlug, { actor, slug: true });
+      const substitutions = await buildSubstitutions(recipe, actor, query);
       return {
         ...(await presentRecipe(recipe, actor)),
         ...(await userState(deps, "recipe", recipe._id, actor)),
+        ...(substitutions === undefined ? {} : { substitutions }),
       };
     },
     createRecipe: async (context) => {

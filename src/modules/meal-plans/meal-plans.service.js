@@ -480,7 +480,10 @@ export function createMealPlansService({
                   { session },
                 );
                 meal.diaryEntryId = diaryEntry._id;
-                if (body.consumePantry) {
+                const consumePantry =
+                  body.consumePantry ??
+                  (await services.pantries?.shouldAutoConsume?.(userId, { session }));
+                if (consumePantry) {
                   if (!services.pantries?.consumeIngredients)
                     throw AppError.serviceUnavailable("Pantry service is unavailable");
                   await services.pantries.consumeIngredients(

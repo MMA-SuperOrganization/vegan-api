@@ -12746,6 +12746,8 @@ paths:
 
         Đọc bằng ObjectId hoặc slug. Guest chỉ đọc nội dung có quyền công khai; token có thể cho phép đọc nội dung riêng của owner và dữ liệu liên quan.
 
+        **Query:** xem danh sách tham số để biết bộ lọc, default và giới hạn. page bắt đầu từ 1 nếu endpoint phân trang; không gửi chuỗi 'undefined' hoặc 'null' thay cho tham số bị bỏ qua.
+
         **Response:** HTTP 200; envelope {success:true,data,meta}. data theo schema getRecipeResponse; meta.requestId khớp X-Request-Id. Danh sách có metadata phân trang khi schema khai báo.
 
         **Lỗi:** envelope {success:false,error:{code,message,details},meta:{requestId}}. 400 là dữ liệu/điều kiện nghiệp vụ không hợp lệ; 404 có thể che resource không được phép truy cập. Xem responses cho lỗi xác thực, xung đột, giới hạn và dependency. Các mã lỗi chung là khả năng của middleware, không bảo đảm mọi nhánh xuất hiện ở mọi request.
@@ -12768,6 +12770,39 @@ paths:
             maxLength: 240
             pattern: ^[a-zA-Z0-9_-]+$
           example: dau-hu-rau-cu
+        - name: variantId
+          in: query
+          required: false
+          description: ID tham chiếu variantId; xem resource tương ứng và kiểm tra quyền ở service.
+          schema:
+            type: string
+            format: uuid
+            pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+          example: 123e4567-e89b-42d3-a456-426614174000
+        - name: includeSubstitutions
+          in: query
+          required: false
+          description: "Trường include Substitutions trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. Giá trị cho phép: true, false."
+          schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          example: "true"
+        - name: excludeAllergenIds
+          in: query
+          required: false
+          description: Loại thực phẩm/nội dung có chất gây dị ứng được chỉ định; API cá nhân còn áp dụng dị ứng hồ sơ.
+          schema:
+            maxItems: 50
+            type: array
+            items:
+              type: string
+              pattern: ^[a-f\d]{24}$
+          style: form
+          explode: true
+          example:
+            - 507f1f77bcf86cd799439011
       responses:
         "200":
           description: Success
@@ -57201,6 +57236,37 @@ components:
             - string
             - "null"
           description: Tên múi giờ IANA hợp lệ, ví dụ Asia/Ho_Chi_Minh; không dùng GMT+7.
+        kitchenAutomation:
+          type:
+            - object
+            - "null"
+          properties:
+            autoDeductOnMealCompletion:
+              type:
+                - boolean
+                - "null"
+              description: Trường auto Deduct On Meal Completion trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            expiryTrackingEnabled:
+              type:
+                - boolean
+                - "null"
+              description: Trường expiry Tracking Enabled trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            expiryLeadDays:
+              type:
+                - number
+                - "null"
+              description: Trường expiry Lead Days trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            restockSuggestionsEnabled:
+              type:
+                - boolean
+                - "null"
+              description: Trường restock Suggestions Enabled trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            restockThresholdGrams:
+              type:
+                - number
+                - "null"
+              description: Trường restock Threshold Grams trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+          description: Trường kitchen Automation trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
         _id:
           type: string
           pattern: ^[A-Fa-f0-9]{24}$
@@ -62212,6 +62278,12 @@ components:
           type: string
           format: date-time
           description: Timestamp avatarExpiresAt, ISO 8601 khi schema khai báo date-time.
+        isNewAccount:
+          type: boolean
+          description: Trường Json Value trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+        passwordSetupRequired:
+          type: boolean
+          description: Trường Json Value trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
       additionalProperties: false
       description: Trường Account trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
     PublicUser:
@@ -66005,6 +66077,12 @@ components:
             - type: "null"
               description: Điểm số hoặc enum helpful/not_helpful theo schema endpoint.
           description: Điểm số hoặc enum helpful/not_helpful theo schema endpoint.
+        substitutions:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecipeSubstitution"
+            description: Trường substitutions item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+          description: Trường substitutions trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
       additionalProperties: false
       description: Trường Recipes Detail trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
     PostsContent:
@@ -66884,6 +66962,211 @@ components:
           description: Tiến độ xem riêng của người dùng theo schema.
       additionalProperties: false
       description: Trường Videos Detail trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+    RecipeSubstitutionOption:
+      type: object
+      properties:
+        food:
+          $ref: "#/components/schemas/PublicFoodItem"
+          description: Trường food trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+        quantityRatio:
+          type: number
+          description: Trường Json Value trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+        recommendedQuantity:
+          type: number
+          description: Trường Json Value trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+        unit:
+          type: string
+          description: Trường Json Value trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+        reason:
+          type: string
+          description: Trường Json Value trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+        guidance:
+          type: string
+          description: Trường Json Value trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+      required:
+        - food
+        - quantityRatio
+        - recommendedQuantity
+        - unit
+        - reason
+        - guidance
+      additionalProperties: false
+      description: Trường Recipe Substitution Option trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+    RecipeSubstitution:
+      type: object
+      properties:
+        ingredient:
+          type: object
+          required:
+            - foodItemId
+            - quantity
+            - unit
+            - gramEquivalent
+          properties:
+            foodItemId:
+              type: string
+              pattern: ^[A-Fa-f0-9]{24}$
+              description: ID thực phẩm chuẩn; phải tồn tại và hợp lệ theo kiểm tra service. ObjectId gồm 24 ký tự hexadecimal.
+            foodNameSnapshot:
+              type:
+                - string
+                - "null"
+              maxLength: 200
+              description: Tên thực phẩm được chụp tại thời điểm ghi nhận.
+            nutritionPer100g:
+              type:
+                - object
+                - "null"
+              properties:
+                caloriesKcal:
+                  type:
+                    - number
+                    - "null"
+                  minimum: 0
+                  description: "caloriesKcal: giá trị tính bằng kcal."
+                proteinG:
+                  type:
+                    - number
+                    - "null"
+                  minimum: 0
+                  description: "proteinG: giá trị tính bằng gram."
+                carbsG:
+                  type:
+                    - number
+                    - "null"
+                  minimum: 0
+                  description: "carbsG: giá trị tính bằng gram."
+                fatG:
+                  type:
+                    - number
+                    - "null"
+                  minimum: 0
+                  description: "fatG: giá trị tính bằng gram."
+                fiberG:
+                  type:
+                    - number
+                    - "null"
+                  minimum: 0
+                  description: "fiberG: giá trị tính bằng gram."
+                sugarG:
+                  type:
+                    - number
+                    - "null"
+                  minimum: 0
+                  description: "sugarG: giá trị tính bằng gram."
+                sodiumMg:
+                  type:
+                    - number
+                    - "null"
+                  minimum: 0
+                  description: "sodiumMg: giá trị tính bằng mg."
+                calciumMg:
+                  type:
+                    - number
+                    - "null"
+                  minimum: 0
+                  description: "calciumMg: giá trị tính bằng mg."
+                ironMg:
+                  type:
+                    - number
+                    - "null"
+                  minimum: 0
+                  description: "ironMg: giá trị tính bằng mg."
+                vitaminB12Mcg:
+                  type:
+                    - number
+                    - "null"
+                  minimum: 0
+                  description: "vitaminB12Mcg: giá trị tính bằng microgram."
+                vitaminDMcg:
+                  type:
+                    - number
+                    - "null"
+                  minimum: 0
+                  description: "vitaminDMcg: giá trị tính bằng microgram."
+              additionalProperties: false
+              description: Dinh dưỡng tính trên 100 gram thực phẩm.
+            allergenIds:
+              type:
+                - array
+                - "null"
+              items:
+                type:
+                  - string
+                  - "null"
+                pattern: ^[A-Fa-f0-9]{24}$
+                description: Trường allergen Ids item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. ObjectId gồm 24 ký tự hexadecimal.
+              description: Danh sách ID chất gây dị ứng trong master data.
+            isVegan:
+              type:
+                - boolean
+                - "null"
+              description: Có phù hợp vegan không; vegan không được chứa trứng/sữa.
+            isVegetarian:
+              type:
+                - boolean
+                - "null"
+              description: Có phù hợp vegetarian không; phải true khi isVegan=true.
+            containsEggs:
+              type:
+                - boolean
+                - "null"
+              description: Có chứa trứng; dữ liệu chưa biết có thể null trong response theo schema.
+            containsDairy:
+              type:
+                - boolean
+                - "null"
+              description: Có chứa sữa; dữ liệu chưa biết có thể null trong response theo schema.
+            quantity:
+              type: number
+              minimum: 0
+              description: Số lượng dương, được diễn giải cùng unit.
+            unit:
+              type: string
+              enum:
+                - g
+                - kg
+                - ml
+                - l
+                - piece
+                - tbsp
+                - tsp
+                - cup
+                - serving
+              description: "Đơn vị quantity theo enum; không tự coi mọi đơn vị là gram. Giá trị cho phép: g, kg, ml, l, piece, tbsp, tsp, cup, serving."
+            gramEquivalent:
+              type: number
+              minimum: 0
+              description: Khối lượng gram tương ứng để quy đổi dinh dưỡng.
+            note:
+              type:
+                - string
+                - "null"
+              maxLength: 500
+              description: Ghi chú tùy chọn.
+            optional:
+              type:
+                - boolean
+                - "null"
+              description: Nguyên liệu có thể bỏ qua trong công thức theo khai báo.
+            order:
+              type:
+                - number
+                - "null"
+              description: Thứ tự bước/nguyên liệu theo schema.
+          additionalProperties: false
+          description: Trường ingredients item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+        alternatives:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecipeSubstitutionOption"
+            description: Trường alternatives item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+          description: Trường alternatives trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+      required:
+        - ingredient
+        - alternatives
+      additionalProperties: false
+      description: Trường Recipe Substitution trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
     Pantry:
       type: object
       required:
@@ -69009,6 +69292,36 @@ components:
           type: string
           maxLength: 100
           description: Tên múi giờ IANA hợp lệ, ví dụ Asia/Ho_Chi_Minh; không dùng GMT+7.
+        kitchenAutomation:
+          type: object
+          properties:
+            autoDeductOnMealCompletion:
+              type: boolean
+              description: Trường auto Deduct On Meal Completion trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            expiryTrackingEnabled:
+              type: boolean
+              description: Trường expiry Tracking Enabled trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            expiryLeadDays:
+              type: integer
+              minimum: 0
+              maximum: 30
+              description: Trường expiry Lead Days trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            restockSuggestionsEnabled:
+              type: boolean
+              description: Trường restock Suggestions Enabled trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+            restockThresholdGrams:
+              type: number
+              minimum: 0
+              maximum: 100000
+              description: Trường restock Threshold Grams trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
+          required:
+            - autoDeductOnMealCompletion
+            - expiryTrackingEnabled
+            - expiryLeadDays
+            - restockSuggestionsEnabled
+            - restockThresholdGrams
+          additionalProperties: false
+          description: Trường kitchen Automation trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema.
       additionalProperties: false
       description: Dữ liệu Body của upsertMyProfile; required/default/enum/giới hạn theo validator thật, các quy tắc kiểm tra chéo xem description của operation.
     upsertMyProfileResponse:
@@ -70598,6 +70911,30 @@ components:
         - idOrSlug
       additionalProperties: false
       description: Dữ liệu Params của getRecipe; required/default/enum/giới hạn theo validator thật, các quy tắc kiểm tra chéo xem description của operation.
+    getRecipeQuery:
+      type: object
+      properties:
+        variantId:
+          type: string
+          format: uuid
+          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+          description: ID tham chiếu variantId; xem resource tương ứng và kiểm tra quyền ở service.
+        includeSubstitutions:
+          type: string
+          enum:
+            - "true"
+            - "false"
+          description: "Trường include Substitutions trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. Giá trị cho phép: true, false."
+        excludeAllergenIds:
+          maxItems: 50
+          type: array
+          items:
+            type: string
+            pattern: ^[a-f\d]{24}$
+            description: Trường exclude Allergen Ids item trong đối tượng hiện tại; kiểu và giới hạn được khai báo trong schema. ObjectId gồm 24 ký tự hexadecimal.
+          description: Loại thực phẩm/nội dung có chất gây dị ứng được chỉ định; API cá nhân còn áp dụng dị ứng hồ sơ.
+      additionalProperties: false
+      description: Dữ liệu Query của getRecipe; required/default/enum/giới hạn theo validator thật, các quy tắc kiểm tra chéo xem description của operation.
     getRecipeResponse:
       type: object
       properties:

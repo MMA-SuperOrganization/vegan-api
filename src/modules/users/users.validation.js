@@ -62,6 +62,16 @@ export const profileSchema = z
       .optional(),
     locale: optionalNonBlank(text(35).regex(/^[a-zA-Z]{2,3}(?:[-_][a-zA-Z0-9]{2,8})*$/)),
     timezone: optionalNonBlank(timezone),
+    kitchenAutomation: z
+      .object({
+        autoDeductOnMealCompletion: z.boolean(),
+        expiryTrackingEnabled: z.boolean(),
+        expiryLeadDays: z.number().int().min(0).max(30),
+        restockSuggestionsEnabled: z.boolean(),
+        restockThresholdGrams: z.number().min(0).max(100000),
+      })
+      .strict()
+      .optional(),
   })
   .strict()
   .transform((profile) =>

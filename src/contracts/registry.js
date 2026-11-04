@@ -198,7 +198,14 @@ export function createContractRegistry(container = createContractContainer()) {
       "updatedAt",
       "deletedAt",
     ]),
-    { userId: id, avatarUrl: nullable(string), avatarMediaId: nullable(id), avatarExpiresAt: date },
+    {
+      userId: id,
+      avatarUrl: nullable(string),
+      avatarMediaId: nullable(id),
+      avatarExpiresAt: date,
+      isNewAccount: boolean,
+      passwordSetupRequired: boolean,
+    },
     ["userId"],
   );
   schemas.PublicUser = object(
@@ -379,6 +386,21 @@ export function createContractRegistry(container = createContractContainer()) {
       key === "videos" ? ["playback"] : [],
     );
   }
+  schemas.RecipeSubstitutionOption = object({
+    food: entity("foodItems"),
+    quantityRatio: number,
+    recommendedQuantity: number,
+    unit: string,
+    reason: string,
+    guidance: string,
+  });
+  schemas.RecipeSubstitution = object({
+    ingredient: model("recipes").properties.ingredients.items,
+    alternatives: array(ref("RecipeSubstitutionOption")),
+  });
+  schemas.RecipesDetail = extend(schemas.RecipesDetail, {
+    substitutions: array(ref("RecipeSubstitution")),
+  });
   schemas.Pantry = omit(model("PantriesModel"), ["bulkRequests"]);
   schemas.DiaryEntry = omit(model("DiaryModel"), ["nutritionBasis", "basisQuantity", "basisUnit"]);
   schemas.HistoryEntry = extend(model("viewHistories"), {

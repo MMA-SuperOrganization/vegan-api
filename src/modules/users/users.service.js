@@ -52,6 +52,7 @@ const profile = (value) =>
         "dislikedFoodItemIds",
         "locale",
         "timezone",
+        "kitchenAutomation",
         "createdAt",
         "updatedAt",
       ])

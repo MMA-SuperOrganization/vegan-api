@@ -43,6 +43,20 @@ describe("recipe variants and auditable nutrition", () => {
     });
     expect(result.variants[0].countryCode).toBe("VN");
   });
+
+  it("accepts allergen-aware substitution queries for a selected variant", () => {
+    const schema = createRecipesValidation().getRecipe;
+    const result = {
+      params: schema.params.parse({ idOrSlug: foodItemId }),
+      query: schema.query.parse({
+        variantId: "6ba7b810-9dad-51d1-80b4-00c04fd430c8",
+        includeSubstitutions: "true",
+        excludeAllergenIds: foodItemId,
+      }),
+    };
+    expect(result.query.excludeAllergenIds).toEqual([foodItemId]);
+    expect(result.query.includeSubstitutions).toBe(true);
+  });
 });
 
 describe("reusable meal-plan templates", () => {

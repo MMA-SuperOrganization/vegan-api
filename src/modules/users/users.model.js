@@ -72,6 +72,13 @@ const profileSchema = new Schema(
     excludedFoodItemIds: [{ type: Schema.Types.ObjectId, ref: "FoodItems" }],
     locale: String,
     timezone: String,
+    kitchenAutomation: {
+      autoDeductOnMealCompletion: { type: Boolean, default: false },
+      expiryTrackingEnabled: { type: Boolean, default: true },
+      expiryLeadDays: { type: Number, min: 0, max: 30, default: 2 },
+      restockSuggestionsEnabled: { type: Boolean, default: true },
+      restockThresholdGrams: { type: Number, min: 0, max: 100000, default: 100 },
+    },
   },
   { timestamps: true, versionKey: false, collection: "userProfiles" },
 );
