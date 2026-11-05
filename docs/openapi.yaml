@@ -54719,13 +54719,14 @@ paths:
         - name: type
           in: query
           required: false
-          description: 'Loại resource/hành động theo enum của endpoint, không dùng chung enum giữa mọi API. Mặc định: "all". Giá trị cho phép: all, recipe, video.'
+          description: 'Loại resource/hành động theo enum của endpoint, không dùng chung enum giữa mọi API. Mặc định: "all". Giá trị cho phép: all, recipe, post, video.'
           schema:
             default: all
             type: string
             enum:
               - all
               - recipe
+              - post
               - video
           example: all
         - name: q
@@ -54745,6 +54746,22 @@ paths:
             type: string
             pattern: ^[a-f\d]{24}$
           example: 507f1f77bcf86cd799439011
+        - name: status
+          in: query
+          required: false
+          description: "Trạng thái resource; chỉ dùng các enum cho phép ở endpoint này. Giá trị cho phép: all, draft, pending_review, published, rejected, archived, hidden, deleted."
+          schema:
+            type: string
+            enum:
+              - all
+              - draft
+              - pending_review
+              - published
+              - rejected
+              - archived
+              - hidden
+              - deleted
+          example: all
       responses:
         "200":
           description: Success
@@ -81139,8 +81156,9 @@ components:
           enum:
             - all
             - recipe
+            - post
             - video
-          description: 'Loại resource/hành động theo enum của endpoint, không dùng chung enum giữa mọi API. Mặc định: "all". Giá trị cho phép: all, recipe, video.'
+          description: 'Loại resource/hành động theo enum của endpoint, không dùng chung enum giữa mọi API. Mặc định: "all". Giá trị cho phép: all, recipe, post, video.'
         q:
           type: string
           minLength: 1
@@ -81150,6 +81168,18 @@ components:
           type: string
           pattern: ^[a-f\d]{24}$
           description: ID tham chiếu authorId; xem resource tương ứng và kiểm tra quyền ở service. ObjectId gồm 24 ký tự hexadecimal.
+        status:
+          type: string
+          enum:
+            - all
+            - draft
+            - pending_review
+            - published
+            - rejected
+            - archived
+            - hidden
+            - deleted
+          description: "Trạng thái resource; chỉ dùng các enum cho phép ở endpoint này. Giá trị cho phép: all, draft, pending_review, published, rejected, archived, hidden, deleted."
       additionalProperties: false
       description: Dữ liệu Query của getPendingContent; required/default/enum/giới hạn theo validator thật, các quy tắc kiểm tra chéo xem description của operation.
     getPendingContentResponse:

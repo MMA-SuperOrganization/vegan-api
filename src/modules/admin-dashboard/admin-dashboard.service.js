@@ -13,7 +13,19 @@ import {
   service,
   summarizeContent,
 } from "../app-config/index.js";
-const pendingType = z.enum(["all", "recipe", "video"]);
+const pendingType = z.enum(["all", "recipe", "post", "video"]);
+const managedStatus = z
+  .enum([
+    "all",
+    "draft",
+    "pending_review",
+    "published",
+    "rejected",
+    "archived",
+    "hidden",
+    "deleted",
+  ])
+  .optional();
 const trendsQuery = rangeSchema({ interval: z.enum(["day", "week", "month"]).default("day") });
 export const dashboardValidation = {
   getDashboardSummary: { query: rangeSchema() },
@@ -26,11 +38,12 @@ export const dashboardValidation = {
       type: pendingType.default("all"),
       q: text(120).optional(),
       authorId: id.optional(),
+      status: managedStatus,
     }),
   },
 };
 const keys = { recipe: "recipes", post: "posts", video: "videos" };
-const reviewableKeys = { recipe: "recipes", video: "videos" };
+const reviewableKeys = { recipe: "recipes", post: "posts", video: "videos" };
 const buckets = (deps, query, field, category) => [
   { $match: { [field]: range(deps, query).filter, ...category.filter } },
   {
@@ -46,7 +59,7 @@ export const createAdminDashboardService = (deps) => ({
   async getDashboardSummary({ actor, query = {} }) {
     admin(actor);
     const selectedRange = range(deps, query);
-    const [users, content, reports, ai] = await Promise.all([
+    const [users, content, reports, engagement, ai] = await Promise.all([
       Promise.all([
         repository(deps, "users").count({ deletedAt: null }),
         repository(deps, "users").count({ deletedAt: null, status: "active" }),
@@ -82,6 +95,28 @@ export const createAdminDashboardService = (deps) => ({
           await repository(deps, "reports").count({ status, createdAt: selectedRange.filter }),
         ]),
       ).then(Object.fromEntries),
+      Promise.all([
+        repository(deps, "comments").count({ status: { $ne: "deleted" }, deletedAt: null }),
+        repository(deps, "reactions").count({}),
+        repository(deps, "savedItems").count({}),
+        repository(deps, "posts").aggregate([
+          { $match: { status: "published", visibility: "public", deletedAt: null } },
+          {
+            $group: {
+              _id: null,
+              views: { $sum: { $ifNull: ["$viewCount", 0] } },
+              saves: { $sum: { $ifNull: ["$saveCount", 0] } },
+              comments: { $sum: { $ifNull: ["$commentCount", 0] } },
+              reactions: { $sum: { $ifNull: ["$reactionCount", 0] } },
+            },
+          },
+        ]),
+      ]).then(([comments, reactions, savedItems, postTotals]) => ({
+        comments,
+        reactions,
+        savedItems,
+        postTotals: postTotals[0] ?? { views: 0, saves: 0, comments: 0, reactions: 0 },
+      })),
       service(deps, "aiMonitoring", "metrics")({ actor, query }),
     ]);
     return {
@@ -89,6 +124,7 @@ export const createAdminDashboardService = (deps) => ({
       users,
       content,
       reports,
+      engagement,
       ai,
       definitions: {
         pendingAndHidden: "Current content inventory",
@@ -173,7 +209,11 @@ export const createAdminDashboardService = (deps) => ({
     const types = query.type && query.type !== "all" ? [query.type] : Object.keys(reviewableKeys);
     const result = await unionPage(
       types.map((type) => {
-        const filter = { status: "pending_review", deletedAt: null };
+        const status = query.status ?? "pending_review";
+        const filter = {
+          status: status === "all" ? { $ne: "deleted" } : status,
+          ...(status === "deleted" ? {} : { deletedAt: null }),
+        };
         if (query.from || query.to) {
           const bounds = {};
           if (query.from) bounds.$gte = new Date(query.from);
@@ -188,7 +228,19 @@ export const createAdminDashboardService = (deps) => ({
           repository: repository(deps, reviewableKeys[type]),
           filter,
           type,
-          projection: contentCardProjection,
+          projection:
+            type === "post"
+              ? {
+                  ...contentCardProjection,
+                  content: 1,
+                  visibility: 1,
+                  version: 1,
+                  viewCount: 1,
+                  saveCount: 1,
+                  commentCount: 1,
+                  reactionCount: 1,
+                }
+              : contentCardProjection,
         };
       }),
       { page, limit, sort: { createdAt: 1, _id: 1, type: 1 } },
@@ -197,6 +249,16 @@ export const createAdminDashboardService = (deps) => ({
       ...result,
       data: result.data.map((item) => ({
         ...summarizeContent(item),
+        ...(item.type === "post"
+          ? {
+              content: item.content,
+              visibility: item.visibility,
+              version: item.version,
+              saveCount: item.saveCount,
+              commentCount: item.commentCount,
+              reactionCount: item.reactionCount,
+            }
+          : {}),
         type: item.type,
         status: item.status,
       })),

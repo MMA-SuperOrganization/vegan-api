@@ -987,7 +987,7 @@ describe("Real aggregation pipeline contracts (stubbed responses, no Mongo calcu
         .data,
     ).toEqual([]);
   });
-  it("excludes posts from pending review statistics and inventory", async () => {
+  it("keeps posts out of review counts but supports admin post inventory", async () => {
     const fixtures = fixtureSeed();
     const legacyPendingPostId = "200000000000000000000099";
     const h = harness({
@@ -1013,13 +1013,22 @@ describe("Real aggregation pipeline contracts (stubbed responses, no Mongo calcu
       actor: administrator,
       query: { ...query, type: "all" },
     });
-    expect(pending.data.map((row) => row._id)).not.toContain(legacyPendingPostId);
-    await expect(
-      h.call("getPendingContent", {
-        actor: administrator,
-        query: { ...query, type: "post" },
-      }),
-    ).rejects.toThrow();
+    expect(pending.data.map((row) => row._id)).toContain(legacyPendingPostId);
+
+    const managedPosts = await h.call("getPendingContent", {
+      actor: administrator,
+      query: { type: "post", status: "all" },
+    });
+    expect(managedPosts.data).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          _id: IDS.post,
+          type: "post",
+          status: "published",
+          content: expect.any(String),
+        }),
+      ]),
+    );
   });
 });
 
